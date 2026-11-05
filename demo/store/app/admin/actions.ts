@@ -2,6 +2,7 @@
 // Merchant actions. Each one is a Sableye call; results come back as a banner message on /admin.
 import { redirect } from 'next/navigation'
 import type { Hex } from 'viem'
+import { requireAdmin } from '@/lib/admin-auth'
 import { sendInvoiceEmail } from '@/lib/mail'
 import { merchant } from '@/lib/sableye'
 import { cleanCustomer, links, orders } from '@/lib/store'
@@ -21,6 +22,7 @@ const attempt = async (what: string, fn: () => Promise<string>) => {
 }
 
 export async function createInvoice(form: FormData) {
+  await requireAdmin()
   const item = String(form.get('item') ?? '').trim().slice(0, 200)
   const amount = String(form.get('amount') ?? '').trim()
   const customer = cleanCustomer(form.get('name'), form.get('email'))
@@ -45,6 +47,7 @@ export async function createInvoice(form: FormData) {
 }
 
 export async function refund(form: FormData) {
+  await requireAdmin()
   const orderId = String(form.get('orderId'))
   const amount = String(form.get('amount') ?? '').trim() || undefined
   await attempt('Refund', async () => {
@@ -56,6 +59,7 @@ export async function refund(form: FormData) {
 }
 
 export async function enableRefunds() {
+  await requireAdmin()
   await attempt('Enable refunds', async () => {
     // <sableye:extra>
     const r = await merchant().sableye.refunds.enable()
@@ -65,6 +69,7 @@ export async function enableRefunds() {
 }
 
 export async function cancelInvoice(form: FormData) {
+  await requireAdmin()
   const orderId = String(form.get('orderId')).trim()
   await attempt('Cancel', async () => {
     // <sableye:extra>
@@ -75,6 +80,7 @@ export async function cancelInvoice(form: FormData) {
 }
 
 export async function createLink(form: FormData) {
+  await requireAdmin()
   const name = String(form.get('name') || 'Masala chai')
   const amount = String(form.get('amount') || '1.00')
   await attempt('Create link', async () => {
@@ -87,6 +93,7 @@ export async function createLink(form: FormData) {
 }
 
 export async function deactivateLink(form: FormData) {
+  await requireAdmin()
   const id = String(form.get('id'))
   await attempt('Deactivate', async () => {
     // <sableye:extra>
@@ -97,6 +104,7 @@ export async function deactivateLink(form: FormData) {
 }
 
 export async function runRenewals() {
+  await requireAdmin()
   await attempt('Renewals', async () => {
     // <sableye:extra>
     const results = await merchant().sableye.subscriptions.runDue()
@@ -106,6 +114,7 @@ export async function runRenewals() {
 }
 
 export async function cancelSubscription(form: FormData) {
+  await requireAdmin()
   const subId = String(form.get('subId')) as Hex
   await attempt('Cancel subscription', async () => {
     await merchant().sableye.subscriptions.cancel(subId)

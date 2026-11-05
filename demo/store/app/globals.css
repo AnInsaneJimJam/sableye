@@ -39,9 +39,9 @@ th { color: var(--muted); font-weight: 600; }
 .stat b { display: block; font-size: 22px; }
 .stat span { color: var(--muted); font-size: 12.5px; }
 .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: #eee; }
-.pill.paid, .pill.active, .pill.final, .pill.safe { background: #e3f3e8; color: var(--ok); }
-.pill.pending, .pill.past_due, .pill.partially_refunded { background: #fdf3dc; color: #8a6200; }
-.pill.refunded, .pill.cancelled { background: #f6e3e3; color: var(--bad); }
+.pill.paid, .pill.active, .pill.final, .pill.safe, .pill.sent { background: #e3f3e8; color: var(--ok); }
+.pill.pending, .pill.past_due, .pill.partially_refunded, .pill.not_sent { background: #fdf3dc; color: #8a6200; }
+.pill.refunded, .pill.cancelled, .pill.failed { background: #f6e3e3; color: var(--bad); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 input { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .buy-form { display: grid; gap: 8px; }

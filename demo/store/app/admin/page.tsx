@@ -3,8 +3,9 @@
 import QRCode from 'qrcode'
 import { createPublicClient, erc20Abi, http } from 'viem'
 import { formatAmount, networks } from '@sableye/server'
+import { requireAdmin } from '@/lib/admin-auth'
 import { merchant } from '@/lib/sableye'
-import { fileLinkStore, links, orders, webhookLog } from '@/lib/store'
+import { fileLinkStore, links, mailLog, orders, webhookLog } from '@/lib/store'
 import { SdkPanel } from '@/components/SdkPanel'
 import { cancelInvoice, cancelSubscription, createInvoice, createLink, deactivateLink, enableRefunds, refund, runRenewals } from './actions'
 
@@ -17,6 +18,7 @@ const short = (a?: string) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '')
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  await requireAdmin()
   const { msg } = await searchParams
   const { sableye, indexer } = merchant()
 
@@ -36,6 +38,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   )
   const hooks = webhookLog.all().slice(0, 12)
   const customerInvoices = orders.invoices()
+  const mails = mailLog.all().slice(0, 20)
 
   return (
     <main>
@@ -180,6 +183,26 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                 </tr>
               ))}
             </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Emails</h2>
+        <p className="muted">Every email the shop tried to send, newest first.</p>
+        {mails.length === 0 ? <p className="muted">None yet.</p> : (
+          <table>
+            <thead><tr><th>Status</th><th>Type</th><th>To</th><th>Subject</th><th>Attachment</th><th>When</th></tr></thead>
+            <tbody>{mails.map((m) => (
+              <tr key={m.id}>
+                <td><span className={`pill ${m.status}`}>{m.status.replace('_', ' ')}</span>{m.error && <div className="muted">{m.error}</div>}</td>
+                <td>{m.kind.replace('_', ' ')}</td>
+                <td>{m.to}</td>
+                <td>{m.subject}</td>
+                <td>{m.attachment ?? ''}</td>
+                <td>{new Date(m.at).toLocaleTimeString()}</td>
+              </tr>
+            ))}</tbody>
           </table>
         )}
       </section>
