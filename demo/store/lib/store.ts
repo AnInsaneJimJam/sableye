@@ -42,10 +42,16 @@ export interface Order {
   customerName?: string
   customerEmail?: string
   createdAt: number
+  /** Set on invoices the merchant raises for a customer: the signed pay link behind /i/<orderRef>. */
+  checkoutUrl?: string
+  /** When the signed invoice expires, in ms. */
+  expiresAt?: number
 }
 
 export const orders = {
   all: () => read<Order[]>('orders.json', []),
+  /** Invoices raised from /admin, as opposed to shop purchases. */
+  invoices: () => read<Order[]>('orders.json', []).filter((o) => o.checkoutUrl),
   get: (ref: string) => read<Order[]>('orders.json', []).find((o) => o.orderRef === ref || o.orderId === ref),
   add: (o: Order) => write('orders.json', [o, ...read<Order[]>('orders.json', [])]),
 }

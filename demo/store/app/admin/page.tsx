@@ -6,7 +6,7 @@ import { formatAmount, networks } from '@sableye/server'
 import { merchant } from '@/lib/sableye'
 import { fileLinkStore, links, orders, webhookLog } from '@/lib/store'
 import { SdkPanel } from '@/components/SdkPanel'
-import { cancelInvoice, cancelSubscription, createLink, deactivateLink, enableRefunds, refund, runRenewals } from './actions'
+import { cancelInvoice, cancelSubscription, createInvoice, createLink, deactivateLink, enableRefunds, refund, runRenewals } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +35,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     links.all().map(async (l) => ({ ...l, active: !(await store.isDeactivated(l.id)), qr: await QRCode.toDataURL(l.url, { margin: 1, width: 264 }) })),
   )
   const hooks = webhookLog.all().slice(0, 12)
+  const customerInvoices = orders.invoices()
 
   return (
     <main>
@@ -101,6 +102,39 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           <input name="orderId" placeholder="order ref, e.g. order_abc" required />
           <button>Cancel invoice</button>
         </form>
+      </section>
+
+      <section className="card">
+        <h2>Invoices</h2>
+        <p className="muted">Raise an invoice for a named customer. It can be paid once and stays valid for 7 days.</p>
+        <form action={createInvoice} className="row">
+          <input name="name" placeholder="Customer name" required />
+          <input name="email" type="email" placeholder="Customer email" required />
+          <input name="item" placeholder="Catering for 20" required />
+          <input name="amount" placeholder="1.00" size={6} required />
+          <button className="primary">Create invoice</button>
+        </form>
+        {customerInvoices.length > 0 && (
+          <table style={{ marginTop: 12 }}>
+            <thead><tr><th>Invoice</th><th>Customer</th><th>Item</th><th>Amount</th><th>Status</th><th>Due</th><th>Pay link</th></tr></thead>
+            <tbody>
+              {customerInvoices.map((o) => {
+                const status = invoices.find((i) => i.orderId === o.orderId)?.status ?? ((o.expiresAt ?? 0) < Date.now() ? 'expired' : 'open')
+                return (
+                  <tr key={o.orderRef}>
+                    <td><code>{o.orderRef}</code></td>
+                    <td>{o.customerName}<div className="muted">{o.customerEmail}</div></td>
+                    <td>{o.items.map((x) => x.name).join(', ')}</td>
+                    <td>{o.amount} USDT</td>
+                    <td><span className={`pill ${status}`}>{status.replace('_', ' ')}</span></td>
+                    <td>{o.expiresAt ? new Date(o.expiresAt).toLocaleDateString() : ''}</td>
+                    <td><a href={`/i/${o.orderRef}`} target="_blank" rel="noreferrer">Open ↗</a></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section className="card">

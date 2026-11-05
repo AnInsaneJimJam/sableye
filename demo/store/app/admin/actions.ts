@@ -3,7 +3,9 @@
 import { redirect } from 'next/navigation'
 import type { Hex } from 'viem'
 import { merchant } from '@/lib/sableye'
-import { links } from '@/lib/store'
+import { cleanCustomer, links, orders } from '@/lib/store'
+
+const INVOICE_DAYS = 7 // the 30-minute default would expire before the customer opens the email
 
 const done = (msg: string): never => redirect(`/admin?msg=${encodeURIComponent(msg)}`)
 const attempt = async (what: string, fn: () => Promise<string>) => {
@@ -15,6 +17,26 @@ const attempt = async (what: string, fn: () => Promise<string>) => {
     msg = `❌ ${what}: ${(err.message ?? String(e)).split(' Remedy:')[0]}${err.remedy ? ` → ${err.remedy}` : ''}`
   }
   done(msg)
+}
+
+export async function createInvoice(form: FormData) {
+  const item = String(form.get('item') ?? '').trim().slice(0, 200)
+  const amount = String(form.get('amount') ?? '').trim()
+  const customer = cleanCustomer(form.get('name'), form.get('email'))
+  await attempt('Create invoice', async () => {
+    if (!item) throw new Error('Add an item description.')
+    if (!customer?.customerName || !customer.customerEmail) throw new Error('Add the customer name and a valid email.')
+    const orderRef = `inv_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`
+    const expiresIn = INVOICE_DAYS * 86400
+    // <sableye:extra>
+    const invoice = await merchant().sableye.invoices.create({ amount, orderId: orderRef, expiresIn })
+    // </sableye:extra>
+    orders.add({
+      orderRef, orderId: invoice.invoice.orderId, items: [{ name: item, price: amount }], amount, ...customer,
+      createdAt: Date.now(), checkoutUrl: invoice.checkoutUrl, expiresAt: Date.now() + expiresIn * 1000,
+    })
+    return `Invoice ${orderRef} created for ${customer.customerName}`
+  })
 }
 
 export async function refund(form: FormData) {
