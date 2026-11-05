@@ -33,5 +33,14 @@
     "jsdom": "^26.0.0",
     "@sableye/server": "workspace:*",
     "@types/node": "^22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnInsaneJimJam/sableye.git",
+    "directory": "sdk/packages/react"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

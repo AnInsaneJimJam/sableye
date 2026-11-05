@@ -31,5 +31,14 @@
   },
   "bin": {
     "sableye": "./bin/sableye.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnInsaneJimJam/sableye.git",
+    "directory": "sdk/packages/server"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
