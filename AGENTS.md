@@ -5,173 +5,141 @@ If you change a decision here, change this file in the same commit.
 
 ## 1. What we're building
 
-**Sableye is "Stripe for Web3".** It provides non-custodial USDT payments on Whitechain, with an SDK a merchant adds in **≤15 lines**.
+**Sableye is "Stripe for Web3":** non-custodial USDT payments on Whitechain. A stranger integrates it in **≤20 lines**.
 
-The merchant's sales records live on **Arkiv, owned by the merchant's wallet**. Any compatible app can read them without our database, our API or our permission. There is **no Sableye server**: if our team disappears, payments and records keep working.
+The merchant signs an **EIP-712 invoice** on their server; there's no transaction and no gas at that step. The customer pays it with one on-chain call. Funds go **straight to the merchant's payout address**: Sableye and the contract never hold them.
 
-Hackathon: **ETHGlobal Mumbai, Nov 5–7 2026**. Prize details: https://ethglobal.com/events/mumbai/prizes
+Hackathon: **ETHGlobal Mumbai, Nov 5–7 2026**. Prizes: https://ethglobal.com/events/mumbai/prizes
+Target tracks: **Whitechain Operate** (main), **Arkiv** (Phase 2), **EF CROPS** (Phase 3).
 
-### Target prizes (3 partner picks; all Arkiv prizes count as one)
+### Phases
+| Phase | Scope | Tracking |
+|---|---|---|
+| **1 (now)** | **Core SDK.** Level 1 Accept + Level 2 Operate | Umbrella **#21**: Part A #22 (contracts + server), Part B #23 (React, demo, developer experience) |
+| 2 | Arkiv as the merchant-owned records database + analytics | later |
+| 3 | Swarm hosting of the static checkout (censorship resistance) | later |
 
-| Pick | Track |
-|---|---|
-| 1 | **Whitechain: Operate, Stablecoin Payments for Business** ($2.5k / 1.5k / 1k) |
-| 2 | **Arkiv: Build on Arkiv (from scratch)** ($3k / 1k) **+ Arkiv + Swarm bonus** ($500) |
-| 3 | **Ethereum Foundation: Best CROPS App** ($2k / 1k / 500). Lead property: **C**ensorship resistance |
+**Do not build Phase 2/3 things in Phase 1.**
 
-### Submission checklist (do not skip; judges check these)
-
-**Whitechain**
-- [ ] Contracts deployed **and verified** on Whitechain Sepolia (chain 1874).
-- [ ] At least one **real USDT** payment (`0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`) settled in the main flow, with the explorer link in the README. Self-minted test tokens don't count.
-- [ ] README line explaining why the flow needs onchain stablecoin settlement and what a normal payment rail couldn't do.
-- [ ] Public repo with **steady commits** across the hackathon (not one big upload). README covers setup, architecture and limitations.
-- [ ] 2–4 minute demo video showing **both the merchant view and the customer view**.
-- [ ] `WHITECHAIN_FEEDBACK.md`.
-- [ ] Extra credit: refunds, renewals, an accountant export. `demo/books` covers the export.
-- Won't place: a plain-transfer pay button. Our intents, events, refunds and records go well beyond that.
-
-**Arkiv**
-- [ ] Writes to Arkiv testnet via `@arkiv-network/sdk`, and **at least one user-visible feature reads from Arkiv**. Arkiv used only as a write-only log does not count.
-- [ ] README lists the writing wallet address(es) and one query judges can run.
-- [ ] `arkiv/schema.md` (entities, queried fields, owners, expiry) and `arkiv/friction.md` (feedback).
-- [ ] Judging files: `arkiv/reach.md`, `arkiv/why-arkiv.md`, `arkiv/how-you-use-arkiv.md`.
-- [ ] Swarm bonus: `arkiv/swarm.md` covering:
-  - what lives on Swarm vs Arkiv;
-  - one entity key and its Swarm reference;
-  - postage batch ID, buyer wallet and Bee node;
-  - upload and read steps;
-  - the demo timestamp where Swarm is used;
-  - what got in the way.
-- [ ] Never store a raw *encrypted* Swarm reference in an entity: it contains its key.
-- [ ] Open-source license and an AI-usage disclosure in the README.
-
-**EF / CROPS**
-- [ ] FOSS license (MIT), and a README that lets anyone build and run the project from the repo alone.
-- [ ] README section titled **CROPS** with 1–2 lines per letter:
-  - **C:** what we control that users depend on, and what happens if it goes away.
-  - **O:** license and build-from-repo.
-  - **P:** what each third party (RPC, indexers) learns.
-  - **S:** key protection and trust assumptions.
-- [ ] Demo video ≤3 minutes showing the moment C matters: **stop our servers and show it still works.**
-- [ ] No third-party trackers or analytics in any client.
+### Whitechain qualification (tracked in #38)
+- Contracts deployed **and verified** on Whitechain Sepolia (1874).
+- One **real USDT** payment (`0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`), with the explorer link in the README.
+- README: setup, architecture, limitations, and why the flow needs onchain stablecoin settlement.
+- Steady public commit history. `WHITECHAIN_FEEDBACK.md`. A 2–4 minute video showing the merchant and customer views.
 
 ## 2. Architecture
 
 ```
- Merchant server ─── @sableye/sdk ───┬──► Whitechain Sepolia (1874): CREATE2 deposit addresses, USDT, sweep
-   (their infra,                     │
-    their key)                       └──► Arkiv (7794095): payment records, OWNED by merchant wallet
-                                                 ▲                        ▲
- Customer ──► Checkout (static, on Swarm) ───────┘ reads intent           │ reads records (no Sableye code)
-                 watches Whitechain directly                     demo/books (accountant app)
+ Merchant server                        Browser                              Whitechain
+ ───────────────                        ───────                              ──────────
+ @sableye/server
+  invoices.create() ── EIP-712 sign ──► SignedInvoice (JSON / link #fragment)
+                                        @sableye/react <Checkout/>
+                                          connect → switch chain → approve ─► PaymentProcessor.pay(invoice, sig)
+                                                                               payer ──USDT──► payout (direct)
+  verifyPayment(orderId) ◄──────────────────────────── reads receipt + InvoicePaid log
 ```
 
-**Rules**
-- **No Sableye-hosted backend.** Anything that needs a server runs in the merchant's process, through the SDK.
-- **Arkiv is the database.** No Postgres. On restart, the SDK rebuilds its state by querying Arkiv for open intents.
-- **The merchant's key signs Arkiv writes**, so the merchant owns the records. Sableye never holds keys.
-- **Swarm** hosts the checkout page, the merchant dashboard and receipt files.
-- Webhooks are replaced by in-process events: `sableye.on(...)`.
+**Packages** (`sdk/packages/`):
+- `@sableye/core`: browser-safe. Network/token config, ABI, EIP-712 types, payment-link encoding, typed errors.
+- `@sableye/server`: holds the merchant key. `invoices.create`, `verifyPayment`; in Level 2 also the indexer, webhooks, reconcile and CSV.
+- `@sableye/react`: `<Checkout/>`.
 
-## 3. Payment flow
+**Contracts** (`sdk/contracts/`): `PaymentProcessor.sol`, with its interface in `IPaymentProcessor.sol`.
 
+## 3. Contract rules (PaymentProcessor)
+
+- `pay(invoice, merchantSig)`:
+  - Checks the signature with OpenZeppelin `SignatureChecker`, so EOA and **ERC-1271** (Safe) merchants both work.
+  - Checks `expiry`, `nonce >= minNonce[merchant]`, and that the status is `None`.
+  - Writes the receipt **before** transferring.
+  - Transfers with `SafeERC20.safeTransferFrom(payer → payout)`.
+  - Rejects fee-on-transfer tokens by checking the payout balance delta.
+- `refund(orderId, amount)`: merchant only (`msg.sender`). Pulls `payout → payer`, so the payout must approve the processor. Cumulative refunds are capped at the amount paid.
+- `cancelInvoice(orderId)` revokes one unpaid invoice. `bumpNonce()` revokes every older invoice.
+- **Invariants:**
+  - The processor's token balance is always 0.
+  - Refunded ≤ paid.
+  - No invoice can be paid twice.
+  - Status only moves forward: `None → Paid → PartiallyRefunded → Refunded`, or `None → Cancelled`.
+- Slither must stay clean. Every suppression needs a written justification next to it.
+
+## 4. Frozen interfaces (#24). Change only through that issue
+
+**EIP-712**
 ```
-requires_payment ──USDT Transfer seen──► processing ──`safe` block──► succeeded ──swept──► settled
-       └──── expires_at passed ────► expired   (late payments still detected → event)
+domain  = { name: "Sableye", version: "1", chainId, verifyingContract: <PaymentProcessor> }
+Invoice(bytes32 orderId,address merchant,address payout,address token,uint256 amount,uint64 expiry,uint256 nonce)
 ```
+- `orderId = keccak256(utf8(yourOrderString))`, or a raw bytes32 (`toOrderId()` in core).
+- The server signs with `nonce = minNonce(merchant)` at creation time.
 
-- **Deposit address:** `CREATE2(factory, salt = keccak256(merchant, intentId))`. It's computed locally, with no network call and no deployment until the sweep.
-- **Sweep:** `DepositFactory.sweep(merchant, intentId, token)` deploys a minimal Forwarder at that address and moves its whole balance to `merchant`. The call is **permissionless**: anyone can trigger it, but the destination is fixed by the salt, so nobody can redirect funds.
-- **Watcher:** one `eth_getLogs` per block range on the USDT `Transfer` topic, matching recipients against open deposit addresses.
-- **Edge cases:**
-  - Underpaid: stays `processing`, and `amountReceived` is shown.
-  - Overpaid: `succeeded`, with the overpayment flagged.
-  - Late payment after expiry: emits an event.
-- Amounts are always **bigint base units** internally (USDT = 6 decimals). The API takes human strings ("5.00").
-
-## 4. SDK contract (≤15 lines for a simple gateway)
-
+**Server (≤20-line integration)**
 ```ts
-import { Sableye } from '@sableye/sdk'
+import { Sableye } from '@sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia' })
-const pi = await sableye.paymentIntents.create({ amount: '5.00', currency: 'USDT', metadata: { orderId } })
-// redirect customer to pi.checkoutUrl
-sableye.on('payment_intent.succeeded', (pi) => markPaid(pi.metadata.orderId))
-await sableye.listen()
+
+// create (server route) → send `inv` to the browser, or redirect to inv.checkoutUrl
+const inv = await sableye.invoices.create({ amount: '5.00', orderId: 'order_123' })
+
+// fulfil only after verifying on the server
+const { paid } = await sableye.verifyPayment('order_123')
+```
+- **`invoices.create({ amount, token?='USDT', orderId?, expiresIn?=1800, payout? })`** returns `CreatedInvoice` = `{ invoice, signature, chainId, processor, orderRef, checkoutUrl }`.
+- **`verifyPayment(orderId)`** returns `{ status, paid, payer, token, amount, amountFormatted, refunded, paidAt, txHash, explorerUrl }`.
+- **Config:** `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, checkoutUrl? }`. `signer` is any `{ address, signTypedData }`, so a KMS can be plugged in.
+- **Payment link:** `checkoutUrl = <checkoutUrl>#<base64url(JSON SignedInvoice)>` (`encodeSignedInvoice` / `decodeSignedInvoice` in core). It contains no secrets.
+
+**React**
+```tsx
+<Checkout invoice={signedInvoice} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />
 ```
 
-Full surface (stubs in `sdk/packages/sdk/src/index.ts`):
-- `paymentIntents.create / retrieve / list`
-- `refunds.create({ paymentIntent, amount?, to? })`. Pass `to` when the payer used an exchange withdrawal.
-- `on(event, handler)`, `listen()`, and `viewKey()` (shareable key for decrypting private fields).
+**Errors:** every error is a `SableyeError` with a stable `code` and a `remedy`. Codes:
+- `wrong_chain`, `unknown_network`, `unknown_token`, `invalid_amount`;
+- `processor_not_deployed`, `secret_in_client`, `invalid_payment_link`, `rpc_unreachable`.
 
-Events: `payment_intent.processing | succeeded | settled | expired`, `refund.created`.
+## 5. Network constants
 
-## 5. Arkiv data model
-
-**Frozen in [`arkiv/schema.md`](arkiv/schema.md).** That file is the contract; `sdk/packages/sdk/src/schema.ts` mirrors it. The essentials:
-
-- Two named schemas: `sableye.payment_intent.v1` and `sableye.refund.v1`.
-- **Owner = the merchant wallet.** Readers must filter with `.ownedBy(merchant)`, because anyone can write a look-alike entity.
-- Amounts are `u256` base units.
-- Public columns hold only what's already on-chain. `metadata` is AES-256-GCM-encrypted with `viewKey = keccak256(personal_sign("Sableye view key v1"))`.
-- Expiry: 180 days (Arkiv max ≈182). The SDK extends records with less than 30 days left.
-- `checkoutUrl = <CHECKOUT_BASE_URL>?id=<pi_…>&m=<merchant>`.
-
-## 6. Demo highlight rule
-
-- In `demo/store`, every SDK call sits between `// <sableye>` and `// </sableye>` markers.
-- The store UI shows a **"⚡ Powered by Sableye"** badge on each SDK-backed action, plus a side panel rendering those exact snippets with the total line count.
-- `pnpm check:sdk-lines` fails if the count is over 15, or if `demo/books` imports `@sableye/*`.
-- `demo/books` is the interoperability proof: it uses only `@arkiv-network/sdk` and viem.
-
-## 7. Scope and build order
-
-**Level 1 (must ship):** intents, deposit addresses, watcher, sweep, events, edge cases, Arkiv records, checkout, refunds, store demo, books demo with CSV export.
-**Level 2 (if time):** Payment Links, renewals/subscriptions (approval-capped pulls), Connect-style revenue splits.
-**Level 3:** not this hackathon.
-
-| # | Step | Owner | Done |
-|---|---|---|---|
-| 1 | Contracts (`DepositFactory`, `Forwarder`) + Foundry tests, deployed and verified on Whitechain Sepolia | | [ ] |
-| 2 | SDK: create, watcher, sweep, events, edge cases | | [ ] |
-| 3 | SDK: Arkiv writes (merchant-owned) + restart-from-Arkiv | | [ ] |
-| 4 | Checkout: reads the intent from Arkiv, QR/address, live status from the chain | | [ ] |
-| 5 | `demo/store` + highlighting; one real USDT payment, explorer link in the README | | [ ] |
-| 6 | `demo/books`: Arkiv query, on-chain verification, CSV, view-key decrypt | | [ ] |
-| 7 | Refunds + merchant dashboard | | [ ] |
-| 8 | Swarm deploy; fill in `arkiv/*.md`, the CROPS section and `WHITECHAIN_FEEDBACK.md`; record videos | | [ ] |
-| 9 | Stretch: Payment Links → renewals → Anon-RPC for checkout reads | | [ ] |
-
-## 8. Conventions
-
-- **Tooling:** pnpm workspaces, TypeScript `strict`, **viem only** (no ethers), Foundry for contracts, with tests for every contract function.
-- **Money:** bigint base units only. Never floats.
-- **Privacy:** no analytics or trackers in any client.
-- **Secrets:** only in `.env` (never commit); `.env.example` stays up to date.
-- **Commits:** small and frequent. Judges look at commit history. Use conventional messages (`feat:`, `fix:`, `docs:`).
-- **AI use:** disclose it in the README.
-- **Feedback files:** log friction as you hit it in `arkiv/friction.md` and `WHITECHAIN_FEEDBACK.md`. Don't leave it for the end.
-
-## 9. Network constants
-
-| | Value |
+| | |
 |---|---|
-| Whitechain Sepolia chain ID | `1874` |
-| USDT (Whitechain Sepolia) | `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` |
-| Arkiv testnet chain ID | `7794095` |
-| Arkiv RPC | `https://rpc.rabdi.db-chain.testnet.arkiv.network` |
-| Arkiv faucet | https://hub.arkiv.network/faucet |
+| Whitechain Sepolia | chain `1874`, gas token WBT (18 decimals), block time ~1 s |
+| RPC | `https://rpc.testnet.whitechain.io`, `wss://rpc.testnet.whitechain.io/ws` (50 req/s per IP) |
+| Explorer (Blockscout) | `https://explorer.testnet.whitechain.io`, verifier URL `…/api/` |
+| USDT | `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` (6 decimals) |
+| WBT faucet | https://faucet.testnet.whitechain.io (GitHub login, 0.5 WBT / 24 h) |
+| Finality | `safe` lags the tip by ~19 min and `finalized` by ~48 min (measured). Expose pending/safe/final states and let the merchant choose. |
+| PaymentProcessor | not deployed yet (#27) |
+
+## 6. Demo highlight rule (demo/store)
+
+- Every SDK call sits between `// <sableye>` and `// </sableye>` markers.
+- The UI shows a **"⚡ Powered by Sableye"** badge plus a panel that renders those exact lines and their count.
+- `pnpm check:sdk-lines` fails above **20** lines.
+
+## 7. Conventions
+
+- **Tooling:** pnpm workspaces, TypeScript `strict`, **viem only** (no ethers), Foundry with `solc 0.8.30`, `evm_version prague`, OpenZeppelin v5.4.0.
+- **Money:** amounts are **bigint base units**. The API takes decimal strings (`"5.00"`), never JS numbers.
+- **Docs:** TSDoc on every export. Every error has a remedy.
+- **Secrets:** the merchant key stays on the server only (`.env`, never committed). The client never sees it. Always check the chain ID.
+- **No trackers or analytics** in any client.
+- **Commits:** small and frequent; judges read the history. Reference issues (`Closes #NN`).
+- **Workflow:** after changing the contract, run `forge build && node scripts/gen-abi.mjs` to refresh the ABI in core.
+- **Tests:**
+  - `forge test` in `sdk/contracts`;
+  - `pnpm --filter @sableye/server test` (end to end on anvil);
+  - `pnpm check:sdk-lines`.
 
 ## Repo layout
 
 ```
-sdk/contracts/          Foundry: DepositFactory, Forwarder
-sdk/packages/sdk/       @sableye/sdk
-sdk/packages/checkout/  static checkout + merchant dashboard (→ Swarm)
-demo/store/             Next.js shop using the SDK (highlighted)
-demo/books/             accountant app, Arkiv-only (no Sableye imports)
-arkiv/                  Arkiv judging files
-scripts/                repo checks
+sdk/contracts/          Foundry: PaymentProcessor, tests, deploy script
+sdk/packages/core/      @sableye/core
+sdk/packages/server/    @sableye/server (+ test/e2e on anvil)
+sdk/packages/react/     @sableye/react
+sdk/packages/checkout/  static checkout page (payment links, #40)
+demo/store/             Next.js demo shop
+demo/books/             Phase 2 (Arkiv reader); untouched in Phase 1
+scripts/                gen-abi, check-sdk-lines
 ```

@@ -1,0 +1,13 @@
+{
+  "name": "@sableye/react",
+  "version": "0.1.0",
+  "description": "Sableye React checkout component",
+  "license": "MIT",
+  "type": "module",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": { "build": "tsc" },
+  "dependencies": { "@sableye/core": "workspace:*" },
+  "peerDependencies": { "react": ">=18", "viem": "^2.30.0" },
+  "devDependencies": { "react": "^19.0.0", "@types/react": "^19.0.0", "viem": "^2.57.16", "typescript": "^5.9.0" }
+}

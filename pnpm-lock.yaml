@@ -38,9 +38,12 @@ importers:
 
   demo/store:
     dependencies:
-      '@sableye/sdk':
+      '@sableye/react':
         specifier: workspace:*
-        version: link:../../sdk/packages/sdk
+        version: link:../../sdk/packages/react
+      '@sableye/server':
+        specifier: workspace:*
+        version: link:../../sdk/packages/server
       next:
         specifier: ^16.0.0
         version: 16.4.5(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -77,14 +80,39 @@ importers:
         specifier: ^7.0.0
         version: 7.3.7(@types/node@22.20.5)
 
-  sdk/packages/sdk:
-    dependencies:
-      '@arkiv-network/sdk':
-        specifier: ^1.0.1
-        version: 1.0.1(typescript@5.9.3)(viem@2.57.16(typescript@5.9.3))
+  sdk/packages/core:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
       viem:
         specifier: ^2.57.16
         version: 2.57.16(typescript@5.9.3)
+
+  sdk/packages/react:
+    dependencies:
+      '@sableye/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.3.0
+      react:
+        specifier: ^19.0.0
+        version: 19.3.1
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      viem:
+        specifier: ^2.57.16
+        version: 2.57.16(typescript@5.9.3)
+
+  sdk/packages/server:
+    dependencies:
+      '@sableye/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -92,6 +120,9 @@ importers:
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
+      viem:
+        specifier: ^2.57.16
+        version: 2.57.16(typescript@5.9.3)
 
 packages:
 
