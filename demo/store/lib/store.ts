@@ -66,6 +66,26 @@ export function cleanCustomer(name: unknown, email: unknown): { customerName?: s
   return { ...(customerName && { customerName }), ...(customerEmail && { customerEmail }) }
 }
 
+export type MailKind = 'invoice' | 'receipt' | 'merchant_notice' | 'refund'
+
+/** One email the shop tried to send. */
+export interface MailEntry {
+  id: string
+  key: string
+  kind: MailKind
+  to: string
+  subject: string
+  at: number
+  status: 'sent' | 'failed' | 'not_sent'
+  attachment?: string
+  error?: string
+}
+
+export const mailLog = {
+  all: () => read<MailEntry[]>('mail.json', []),
+  add: (e: MailEntry) => write('mail.json', [e, ...read<MailEntry[]>('mail.json', [])].slice(0, 200)),
+}
+
 export const webhookLog = {
   all: () => read<WebhookEvent[]>('webhooks.json', []),
   /** Idempotent: an event id already seen is ignored (that's what receivers must do). */

@@ -19,7 +19,9 @@ export async function invoiceDocument(orderRef: string): Promise<Uint8Array | nu
 /** The receipt PDF, or null if the chain doesn't show this order as paid. Customer details only with `includeCustomer`. */
 export async function receiptDocument(reference: string, opts: { includeCustomer?: boolean } = {}): Promise<Uint8Array | null> {
   const { sableye } = merchant()
+  // <sableye:extra>
   const payment = await sableye.verifyPayment(reference)
+  // </sableye:extra>
   if (!payment.paid) return null
   return receiptPdf(
     reference,

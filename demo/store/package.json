@@ -11,6 +11,7 @@
     "@sableye/react": "workspace:*",
     "@sableye/server": "workspace:*",
     "next": "^16.0.0",
+    "nodemailer": "6.10.1",
     "pdf-lib": "1.17.1",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/nodemailer": "6.4.17",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.0.0",
     "typescript": "^5.9.0"

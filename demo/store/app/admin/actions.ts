@@ -2,6 +2,7 @@
 // Merchant actions. Each one is a Sableye call; results come back as a banner message on /admin.
 import { redirect } from 'next/navigation'
 import type { Hex } from 'viem'
+import { sendInvoiceEmail } from '@/lib/mail'
 import { merchant } from '@/lib/sableye'
 import { cleanCustomer, links, orders } from '@/lib/store'
 
@@ -31,11 +32,15 @@ export async function createInvoice(form: FormData) {
     // <sableye:extra>
     const invoice = await merchant().sableye.invoices.create({ amount, orderId: orderRef, expiresIn })
     // </sableye:extra>
-    orders.add({
+    const order = {
       orderRef, orderId: invoice.invoice.orderId, items: [{ name: item, price: amount }], amount, ...customer,
       createdAt: Date.now(), checkoutUrl: invoice.checkoutUrl, expiresAt: Date.now() + expiresIn * 1000,
-    })
-    return `Invoice ${orderRef} created for ${customer.customerName}`
+    }
+    orders.add(order)
+    const mailError = await sendInvoiceEmail(order)
+    return mailError
+      ? `Invoice ${orderRef} created, but the email was not sent: ${mailError}`
+      : `Invoice ${orderRef} emailed to ${customer.customerEmail}`
   })
 }
 
