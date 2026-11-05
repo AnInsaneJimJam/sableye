@@ -1,3 +1,8 @@
 packages:
   - sdk/packages/*
   - demo/*
+  - frontend
+
+onlyBuiltDependencies:
+  - sharp
+  - unrs-resolver
