@@ -1,5 +1,5 @@
 import { defineChain, formatUnits, parseUnits, zeroAddress, type Address, type Chain } from 'viem'
-import { InvalidAmountError, ProcessorNotDeployedError, UnknownNetworkError, UnknownTokenError } from './errors.js'
+import { InvalidAmountError, ProcessorNotDeployedError, SubscriptionsNotDeployedError, UnknownNetworkError, UnknownTokenError } from './errors.js'
 
 /** Whitechain Sepolia testnet (chain 1874, gas token WBT). */
 export const whitechainSepolia: Chain = defineChain({
@@ -31,6 +31,8 @@ export interface NetworkConfig {
   chain: Chain
   /** PaymentProcessor address. `zeroAddress` = not deployed yet. */
   processor: Address
+  /** SubscriptionManager address. `zeroAddress` = not deployed yet. */
+  subscriptions: Address
   tokens: Record<string, TokenConfig>
 }
 
@@ -49,6 +51,7 @@ export const networks = {
     name: 'whitechain-sepolia',
     chain: whitechainSepolia,
     processor: zeroAddress, // set in #27 after deployment
+    subscriptions: zeroAddress,
     tokens: {
       // The test USDT named in the Whitechain prize rules. Verified on-chain: permit + EIP-3009, domain ("Tether USD", "1").
       USDT: {
@@ -64,6 +67,7 @@ export const networks = {
     name: 'whitechain',
     chain: whitechain,
     processor: zeroAddress, // mainnet deployment pending
+    subscriptions: zeroAddress,
     tokens: {}, // official USDT arrives on mainnet "in later releases" (Whitechain docs, Nov 2026)
   },
 } as const satisfies Record<string, NetworkConfig>
@@ -75,15 +79,25 @@ export type NetworkName = keyof typeof networks
  * Look up a network, optionally overriding its processor address (e.g. a local anvil deployment).
  * @throws {UnknownNetworkError} for an unknown name.
  */
-export function getNetwork(name: string, overrides: { processor?: Address; chain?: Chain; tokens?: Record<string, TokenConfig> } = {}): NetworkConfig {
+export function getNetwork(
+  name: string,
+  overrides: { processor?: Address; subscriptions?: Address; chain?: Chain; tokens?: Record<string, TokenConfig> } = {},
+): NetworkConfig {
   const base = (networks as Record<string, NetworkConfig>)[name]
   if (!base && !overrides.chain) throw new UnknownNetworkError(name, Object.keys(networks))
   return {
     name,
     chain: overrides.chain ?? base!.chain,
     processor: overrides.processor ?? base?.processor ?? zeroAddress,
+    subscriptions: overrides.subscriptions ?? base?.subscriptions ?? zeroAddress,
     tokens: { ...base?.tokens, ...overrides.tokens },
   }
+}
+
+/** @throws {SubscriptionsNotDeployedError} when the network has no SubscriptionManager address. */
+export function requireSubscriptions(net: NetworkConfig): Address {
+  if (net.subscriptions === zeroAddress) throw new SubscriptionsNotDeployedError(net.name)
+  return net.subscriptions
 }
 
 /** @throws {ProcessorNotDeployedError} when the network has no processor address. */

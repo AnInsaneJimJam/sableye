@@ -8,6 +8,13 @@ import {
   invoiceDomain,
   invoiceTypes,
   normalizeSignedInvoice,
+  planDomain,
+  planTypes,
+  requireSubscriptions,
+  subscriptionManagerAbi,
+  SubscriptionStatus,
+  type Plan,
+  type SignedPlan,
   parseAmount,
   PaymentFailedError,
   paymentProcessorAbi,
@@ -61,6 +68,8 @@ export interface SableyeConfig {
   rpcUrl?: string
   /** Override the PaymentProcessor address (e.g. a local deployment). */
   processor?: Address
+  /** Override the SubscriptionManager address. */
+  subscriptions?: Address
   /** Override the chain (e.g. local anvil). */
   chain?: Chain
   /** Extra / overriding tokens, keyed by symbol. */
@@ -136,7 +145,7 @@ export class Sableye {
 
   constructor(config: SableyeConfig) {
     if (typeof window !== 'undefined' && config.privateKey) throw new SecretInClientError()
-    this.network = getNetwork(config.network, { processor: config.processor, chain: config.chain, tokens: config.tokens })
+    this.network = getNetwork(config.network, { processor: config.processor, subscriptions: config.subscriptions, chain: config.chain, tokens: config.tokens })
     this.signer = config.signer ?? privateKeyToAccount(requiredKey(config.privateKey))
     this.merchant = this.signer.address
     this.client = createPublicClient({ chain: this.network.chain, transport: http(config.rpcUrl) }) as PublicClient
@@ -240,6 +249,101 @@ export class Sableye {
       })
       await this.mined(txHash, 'the refund reverted')
       return { txHash, amount }
+    },
+  }
+
+  /**
+   * Subscriptions: merchant-signed plans, customer-authorized caps, one charge per interval, on-chain cancel,
+   * `past_due` with retries (cancelled after 3 consecutive failures).
+   */
+  readonly subscriptions = {
+    /**
+     * Sign a plan offer. Free (no tx). Send the result to the browser; the customer calls `subscribe` with a cap.
+     * @param params.interval seconds between charges (e.g. 2592000 for 30 days; 120 for a demo)
+     */
+    createPlan: async (params: { planId: string; amount: string; interval: number; token?: string; expiresIn?: number; payout?: Address }): Promise<SignedPlan> => {
+      const subscriptions = requireSubscriptions(this.network)
+      await this.checkChain()
+      const token = getToken(this.network, params.token ?? 'USDT')
+      if (!Number.isInteger(params.interval) || params.interval <= 0) {
+        throw new SableyeError('invalid_interval', `Invalid interval ${params.interval}.`, 'Pass a positive whole number of seconds, e.g. 2592000 for 30 days.')
+      }
+      const plan: Plan = {
+        planId: toOrderId(params.planId), merchant: this.merchant, payout: params.payout ?? this.merchant, token: token.address,
+        amount: parseAmount(params.amount, token.decimals), interval: BigInt(params.interval),
+        expiry: BigInt(Math.floor(Date.now() / 1000) + (params.expiresIn ?? 30 * 86400)),
+      }
+      const chainId = this.network.chain.id
+      const signature = await this.signer.signTypedData({ domain: planDomain(chainId, subscriptions), types: planTypes, primaryType: 'Plan', message: plan })
+      const signed: SignedPlan = { plan, signature, chainId, subscriptions }
+      Object.defineProperty(signed, 'toJSON', {
+        enumerable: false,
+        value: () => ({ ...signed, plan: { ...plan, amount: plan.amount.toString(), interval: plan.interval.toString(), expiry: plan.expiry.toString() } }),
+      })
+      return signed
+    },
+
+    /** Id of a customer's subscription to one of your plans. */
+    id: async (planId: string, payer: Address): Promise<Hex> =>
+      this.client.readContract({ address: requireSubscriptions(this.network), abi: subscriptionManagerAbi, functionName: 'subscriptionId', args: [this.merchant, toOrderId(planId), payer] }),
+
+    /** Read one subscription. */
+    get: async (subId: Hex) => {
+      const x = await this.client.readContract({ address: requireSubscriptions(this.network), abi: subscriptionManagerAbi, functionName: 'getSubscription', args: [subId] })
+      return {
+        subId, status: SubscriptionStatus[x.status] ?? 'none', payer: x.payer, merchant: x.merchant, token: x.token, amount: x.amount,
+        interval: Number(x.interval), cap: x.cap, charged: x.charged, failedCharges: x.failedCharges,
+        startedAt: new Date(Number(x.startedAt) * 1000), nextChargeAt: new Date(Number(x.nextChargeAt) * 1000),
+      }
+    },
+
+    /** Every subscription to this merchant's plans (from `Subscribed` events), with current on-chain state. */
+    list: async (fromBlock = 0n) => {
+      const logs = await this.client.getContractEvents({
+        address: requireSubscriptions(this.network), abi: subscriptionManagerAbi, eventName: 'Subscribed', args: { merchant: this.merchant }, fromBlock,
+      })
+      const ids = [...new Set(logs.map((l) => l.args.subId!))]
+      return Promise.all(ids.map((id) => this.subscriptions.get(id)))
+    },
+
+    /**
+     * Charge one due cycle. Simulated first, so nothing is sent (no gas) when it isn't due, the cap is reached
+     * or it's cancelled. A failed transfer (empty wallet, revoked allowance) is a successful tx that marks
+     * the subscription `past_due`.
+     */
+    charge: async (subId: Hex): Promise<{ result: 'charged' | 'failed' | 'not_due' | 'cap_reached' | 'inactive'; txHash?: Hex }> => {
+      const address = requireSubscriptions(this.network)
+      await this.checkChain()
+      let ok: boolean
+      try {
+        ok = (await this.client.simulateContract({ account: this.merchant, address, abi: subscriptionManagerAbi, functionName: 'charge', args: [subId] })).result
+      } catch (e) {
+        const name = (e as { cause?: { data?: { errorName?: string } } }).cause?.data?.errorName
+        if (name === 'NotDue') return { result: 'not_due' }
+        if (name === 'CapReached') return { result: 'cap_reached' }
+        if (name === 'NotActive') return { result: 'inactive' }
+        throw e
+      }
+      const txHash = await this.wallet().writeContract({ account: this.signer as LocalAccount, chain: this.network.chain, address, abi: subscriptionManagerAbi, functionName: 'charge', args: [subId] })
+      await this.mined(txHash, 'the charge reverted')
+      return { result: ok ? 'charged' : 'failed', txHash }
+    },
+
+    /** Charge every due subscription once. Run it on a timer (your keeper). Uses chain time, not the server clock. */
+    runDue: async (fromBlock = 0n) => {
+      const now = Number((await this.client.getBlock({ blockTag: 'latest' })).timestamp) * 1000
+      const due = (await this.subscriptions.list(fromBlock)).filter((x) => (x.status === 'active' || x.status === 'past_due') && x.nextChargeAt.getTime() <= now)
+      const results = []
+      for (const x of due) results.push({ subId: x.subId, ...(await this.subscriptions.charge(x.subId)) })
+      return results
+    },
+
+    /** Cancel on-chain as the merchant. */
+    cancel: async (subId: Hex): Promise<{ txHash: Hex }> => {
+      const address = requireSubscriptions(this.network)
+      const txHash = await this.wallet().writeContract({ account: this.signer as LocalAccount, chain: this.network.chain, address, abi: subscriptionManagerAbi, functionName: 'cancel', args: [subId] })
+      await this.mined(txHash, 'the cancellation reverted')
+      return { txHash }
     },
   }
 

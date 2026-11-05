@@ -125,6 +125,16 @@ const event = verifyWebhook(rawBody, req.headers.get('sableye-signature'), secre
 - **CLI:** `npx sableye doctor` checks the RPC, chain, key + gas, processor, the SDK-vs-contract EIP-712 hash, and token decimals/capabilities/domain.
 - **New error codes:** `refunds_not_enabled`, `refund_exceeds_paid`, `not_refundable`, `rate_limited`, `not_our_invoice`, `invalid_signature`, `gasless_unsupported`, `invoice_expired`, `would_revert`, `gas_cap`, `webhook_signature_invalid`.
 
+**Subscriptions** (#46, contract `SubscriptionManager`)
+```ts
+const offer = await sableye.subscriptions.createPlan({ planId: 'pro', amount: '5', interval: 2592000 }) // signed, no gas
+// browser: approve(cap) then SubscriptionManager.subscribe(offer.plan, offer.signature, cap); first cycle is charged now
+await sableye.subscriptions.runDue()      // keeper: charge every due sub once (chain time); call on a timer
+await sableye.subscriptions.get(subId)    // status: active | past_due | cancelled, charged, cap, nextChargeAt
+await sableye.subscriptions.cancel(subId) // merchant; the payer can also cancel on-chain
+```
+Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `past_due` (it doesn't revert) and retries; after 3 consecutive failures it's `cancelled`. Use a 120 s interval for the demo.
+
 **React**
 ```tsx
 <Checkout invoice={signedInvoice} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />

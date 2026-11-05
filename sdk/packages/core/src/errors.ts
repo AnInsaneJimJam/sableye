@@ -161,3 +161,14 @@ export class SignerCannotTransactError extends SableyeError {
     super('signer_cannot_transact', 'This signer cannot send transactions.', 'Add `signTransaction` to your custom signer, or use `privateKey`.')
   }
 }
+
+/** The SubscriptionManager is not deployed on this network yet (or the address is wrong). */
+export class SubscriptionsNotDeployedError extends SableyeError {
+  constructor(network: string) {
+    super(
+      'subscriptions_not_deployed',
+      `No SubscriptionManager address configured for ${network}.`,
+      'Pass `subscriptions` in the Sableye config, or upgrade @sableye/core once it is deployed.',
+    )
+  }
+}
