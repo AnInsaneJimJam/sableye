@@ -21,7 +21,7 @@ cp .env.example .env
 | `MERCHANT_EMAIL` | Where "you got paid" notices go. Defaults to `SMTP_USER`. |
 | `PUBLIC_URL` | The URL customers can reach. Defaults to `http://localhost:3000`, see step 4. |
 
-Check the merchant setup with `npx sableye doctor` from `sdk/packages/server`.
+Check the merchant setup with `pnpm --filter @sableye/server exec sableye doctor`, with `MERCHANT_KEY` set in your shell.
 
 ## 3. Run
 
@@ -54,7 +54,7 @@ The customer wallet needs test USDT:
 1. Get WBT from https://faucet.testnet.whitechain.io.
 2. Swap it for USDT on https://testnet.yetitrade.fi.
 
-Gasless checkout means the customer doesn't spend WBT, but other wallets and paths may need a little.
+With gasless checkout the customer spends no WBT. A little WBT lets them fall back to the regular payment paths if the relayer is unavailable.
 
 ## 6. Try the full flow
 

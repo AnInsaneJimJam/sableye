@@ -34,7 +34,7 @@ Whitechain Sepolia; nothing is mocked.
 - **"What stops the gasless relayer being drained?"** It only relays its own invoices, simulates before sending, sends one transaction per invoice, caps gas and rate-limits.
 - **"Chargebacks / disputes?"** None by design; merchant-initiated refunds, enforced and capped on-chain.
 - **"Mainnet?"** Deploy script targets chain 1875; we're waiting on official USDT there.
-- **"How do I integrate?"** `npx create-whitechain-checkout --name my-store`, then `npx sableye doctor`, then 20 lines.
+- **"How do I integrate?"** One scaffolder command, then `npx sableye doctor`, then 20 lines. The packages go on npm next; today the README installs them from the repo.
 
 ## Demo video (2–4 min, required by Whitechain): shot list
 

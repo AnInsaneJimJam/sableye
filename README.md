@@ -18,12 +18,18 @@ const { paid } = await sableye.verifyPayment('order_123') // fulfil only after t
 
 ## Quickstart
 
-In a blank Next.js app (`npx create-next-app@latest --ts --app`), or skip all this with `npx create-whitechain-checkout --name my-store --framework next`.
+**The packages aren't on npm yet**, so install from a clone of this repo. You need Node 22+ and pnpm (`corepack enable`). This scaffolds a working store with the SDK packed into it:
 
 ```sh
-npm install @sableye/server @sableye/react viem
-echo 'MERCHANT_KEY=0x<a fresh testnet key>' >> .env.local
+pnpm install && pnpm build
+node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk
+cd my-store && npm install
+cp .env.example .env     # set MERCHANT_KEY to a fresh testnet key
+npx sableye doctor       # every check should pass before you sell anything
+npm run dev
 ```
+
+The integration it generates is these three files:
 
 ```ts
 // app/api/invoice/route.ts
@@ -55,8 +61,6 @@ export default function Page() {
   return invoice ? <Checkout invoice={invoice} /> : 'Loading…'
 }
 ```
-
-> **Current status:** the packages aren't on npm yet, and until the contract is deployed (#27) `invoices.create` returns `processor_not_deployed`. Pass your own `processor` to both `Sableye` and `<Checkout/>` to run against a local deployment.
 
 For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skills/whitechain-pay`](skills/whitechain-pay/SKILL.md) is an installable Agent Skill.
 
