@@ -43,7 +43,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   return (
     <main>
       <h1>Merchant dashboard</h1>
-      <p className="sub">Wallet <code>{sableye.merchant}</code> · everything here is read from Whitechain, not from a database.</p>
+      <p className="sub">Wallet <code>{sableye.merchant}</code> · payments are read from Whitechain. Customer details and emails stay in this shop's own store.</p>
       {msg && <div className="card" style={{ marginBottom: 16 }}>{msg}</div>}
 
       <section>
