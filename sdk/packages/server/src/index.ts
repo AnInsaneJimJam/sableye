@@ -601,7 +601,7 @@ export class Sableye {
   /** SubscriptionManager events for this merchant, fetched in RPC-sized block ranges (Whitechain caps at 10,000). */
   private async eventsInChunks(eventName: 'Subscribed' | 'Charged' | 'ChargeFailed', fromBlock: bigint) {
     const address = requireSubscriptions(this.network)
-    const head = await this.client.getBlockNumber()
+    const head = await this.client.getBlockNumber({ cacheTime: 0 }) // viem caches the head for seconds by default
     const span = this.network.maxLogRange ?? 10_000n
     const out = []
     for (let a = fromBlock; a <= head; a += span) {
