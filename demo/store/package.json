@@ -1,7 +1,26 @@
 {
   "name": "store",
   "private": true,
-  "scripts": { "dev": "next dev -p 3000", "build": "next build" },
-  "dependencies": { "@sableye/server": "workspace:*", "@sableye/react": "workspace:*", "next": "^16.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" },
-  "devDependencies": { "typescript": "^5.9.0", "@types/react": "^19.0.0", "@types/node": "^22.0.0" }
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000"
+  },
+  "dependencies": {
+    "@sableye/server": "workspace:*",
+    "@sableye/react": "workspace:*",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@sableye/core": "workspace:*",
+    "viem": "^2.57.16",
+    "qrcode": "^1.5.4",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/react": "^19.0.0",
+    "@types/node": "^22.0.0",
+    "@types/qrcode": "^1.5.5"
+  }
 }
