@@ -225,8 +225,8 @@ export class Indexer {
     }
 
     // 2. Backfill / follow
-    const from = s.cursor ? s.cursor.block + 1 : Number(this.opts.fromBlock ?? BigInt(Math.max(0, headNum - 100_000)))
-    const step = this.opts.chunkSize ?? 2000
+    const from = s.cursor ? s.cursor.block + 1 : Number(this.opts.fromBlock ?? this.network.deployBlock ?? BigInt(Math.max(0, headNum - 100_000)))
+    const step = Math.min(this.opts.chunkSize ?? 2000, Number(this.network.maxLogRange ?? 10_000n))
     const timestamps = new Map<number, number>()
     for (let a = from; a <= headNum; a += step) {
       const b = Math.min(a + step - 1, headNum)

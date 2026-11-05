@@ -411,10 +411,8 @@ export class Sableye {
     },
 
     /** Every subscription to this merchant's plans (from `Subscribed` events), with current on-chain state. */
-    list: async (fromBlock = 0n) => {
-      const logs = await this.client.getContractEvents({
-        address: requireSubscriptions(this.network), abi: subscriptionManagerAbi, eventName: 'Subscribed', args: { merchant: this.merchant }, fromBlock,
-      })
+    list: async (fromBlock = this.network.deployBlock ?? 0n) => {
+      const logs = await this.eventsInChunks('Subscribed', fromBlock)
       const ids = [...new Set(logs.map((l) => l.args.subId!))]
       return Promise.all(ids.map((id) => this.subscriptions.get(id)))
     },
@@ -443,7 +441,7 @@ export class Sableye {
     },
 
     /** Charge every due subscription once. Run it on a timer (your keeper). Uses chain time, not the server clock. */
-    runDue: async (fromBlock = 0n) => {
+    runDue: async (fromBlock = this.network.deployBlock ?? 0n) => {
       const now = Number((await this.client.getBlock({ blockTag: 'latest' })).timestamp) * 1000
       const due = (await this.subscriptions.list(fromBlock)).filter((x) => (x.status === 'active' || x.status === 'past_due') && x.nextChargeAt.getTime() <= now)
       const results = []
@@ -455,14 +453,9 @@ export class Sableye {
      * Subscription analytics from on-chain state and events: active / past-due / cancelled counts, MRR (per token,
      * normalised to 30 days), churn (cancelled ÷ all) and failed-charge rate (failed ÷ attempted renewals).
      */
-    stats: async (fromBlock = 0n) => {
-      const address = requireSubscriptions(this.network)
+    stats: async (fromBlock = this.network.deployBlock ?? 0n) => {
       const subs = await this.subscriptions.list(fromBlock)
-      const common = { address, abi: subscriptionManagerAbi, args: { merchant: this.merchant }, fromBlock } as const
-      const [charged, failed] = await Promise.all([
-        this.client.getContractEvents({ ...common, eventName: 'Charged' }),
-        this.client.getContractEvents({ ...common, eventName: 'ChargeFailed' }),
-      ])
+      const [charged, failed] = await Promise.all([this.eventsInChunks('Charged', fromBlock), this.eventsInChunks('ChargeFailed', fromBlock)])
       const renewals = charged.length - subs.length // the first cycle is charged on subscribe, not a renewal
       const mrr: Record<string, bigint> = {}
       for (const x of subs) {
@@ -603,6 +596,19 @@ export class Sableye {
       value: () => ({ ...verification, amount: r.amount.toString(), refunded: r.refunded.toString() }),
     })
     return verification
+  }
+
+  /** SubscriptionManager events for this merchant, fetched in RPC-sized block ranges (Whitechain caps at 10,000). */
+  private async eventsInChunks(eventName: 'Subscribed' | 'Charged' | 'ChargeFailed', fromBlock: bigint) {
+    const address = requireSubscriptions(this.network)
+    const head = await this.client.getBlockNumber()
+    const span = this.network.maxLogRange ?? 10_000n
+    const out = []
+    for (let a = fromBlock; a <= head; a += span) {
+      const b = a + span - 1n > head ? head : a + span - 1n
+      out.push(...(await this.client.getContractEvents({ address, abi: subscriptionManagerAbi, eventName, args: { merchant: this.merchant }, fromBlock: a, toBlock: b })))
+    }
+    return out
   }
 
   private wallet(): WalletClient {

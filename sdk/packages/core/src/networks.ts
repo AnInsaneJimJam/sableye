@@ -33,6 +33,10 @@ export interface NetworkConfig {
   processor: Address
   /** SubscriptionManager address. `zeroAddress` = not deployed yet. */
   subscriptions: Address
+  /** Block the contracts were deployed in: the earliest block worth scanning for events. */
+  deployBlock?: bigint
+  /** Max block span the RPC accepts per eth_getLogs (Whitechain: 10,000). */
+  maxLogRange?: bigint
   tokens: Record<string, TokenConfig>
 }
 
@@ -53,6 +57,8 @@ export const networks = {
     // Deployed + verified Nov 5 2026 (#27): https://explorer.testnet.whitechain.io/address/0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5
     processor: '0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5',
     subscriptions: '0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78',
+    deployBlock: 12302897n,
+    maxLogRange: 10_000n,
     tokens: {
       // The test USDT named in the Whitechain prize rules. Verified on-chain: permit + EIP-3009, domain ("Tether USD", "1").
       USDT: {
@@ -69,6 +75,7 @@ export const networks = {
     chain: whitechain,
     processor: zeroAddress, // mainnet deployment pending
     subscriptions: zeroAddress,
+    maxLogRange: 10_000n,
     tokens: {}, // official USDT arrives on mainnet "in later releases" (Whitechain docs, Nov 2026)
   },
 } as const satisfies Record<string, NetworkConfig>
@@ -91,6 +98,9 @@ export function getNetwork(
     chain: overrides.chain ?? base!.chain,
     processor: overrides.processor ?? base?.processor ?? zeroAddress,
     subscriptions: overrides.subscriptions ?? base?.subscriptions ?? zeroAddress,
+    // A custom processor means a different deployment, so the built-in deploy block no longer applies.
+    deployBlock: overrides.processor ? undefined : base?.deployBlock,
+    maxLogRange: base?.maxLogRange,
     tokens: { ...base?.tokens, ...overrides.tokens },
   }
 }
