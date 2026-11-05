@@ -113,6 +113,8 @@ pnpm --filter create-whitechain-checkout test
 pnpm --filter store dev                # demo shop on :3000
 ```
 
+Full demo setup, including the dashboard password, email and a public URL: [docs/DEMO.md](docs/DEMO.md).
+
 **Testnet funds:**
 1. Get WBT for gas from https://faucet.testnet.whitechain.io (2 WBT/day).
 2. Swap WBT for USDT on https://testnet.yetitrade.fi.

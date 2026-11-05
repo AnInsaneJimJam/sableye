@@ -176,6 +176,8 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 - Every SDK call sits between `// <sableye>` and `// </sableye>` markers.
 - The UI shows a **"⚡ Powered by Sableye"** badge plus a panel that renders those exact lines and their count.
 - `pnpm check:sdk-lines` fails above **20** lines.
+- Customer names, emails and items stay in the merchant's store (`.sableye/`), never on-chain. Public routes can be reached by on-chain order id, so they never show customer details.
+- Every `/admin` page and server action checks `requireAdmin()` itself. Setup: `docs/DEMO.md`.
 
 ## 7. Conventions
 
@@ -200,7 +202,7 @@ sdk/packages/server/    @sableye/server (+ test/e2e on anvil)
 sdk/packages/react/     @sableye/react
 sdk/packages/checkout/  static checkout page (payment links, #40)
 sdk/packages/create-whitechain-checkout/  scaffolder (#43)
-demo/store/             Next.js demo shop
+demo/store/             Next.js demo shop (setup: docs/DEMO.md)
 demo/books/             Phase 2 (Arkiv reader); untouched in Phase 1
 skills/whitechain-pay/  Agent Skill (#42)
 llms.txt                SDK docs for AI agents (#37): update it when an API changes
