@@ -1,0 +1,25 @@
+name: contracts
+on:
+  push:
+    paths: ["sdk/contracts/**", ".github/workflows/contracts.yml"]
+  pull_request:
+    paths: ["sdk/contracts/**"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: sdk/contracts } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge build --sizes
+      - run: forge test -vvv
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - uses: crytic/slither-action@v0.4.1
+        with:
+          target: sdk/contracts
+          slither-args: --filter-paths "lib|test|script"
