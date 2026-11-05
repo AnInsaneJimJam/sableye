@@ -4,7 +4,7 @@
 
 Sableye is **B2B2C**: we serve the business, and the business serves its customers. Customers pay from any wallet. On tokens that support it, they need **no gas token at all**: the business sponsors the fee.
 
-> Built at ETHGlobal Mumbai 2026 for the Whitechain **Operate** and **Scale** tracks. The team spec is in [AGENTS.md](AGENTS.md).
+> Built at ETHGlobal Mumbai 2026 for the Whitechain **Operate** and **Scale** tracks. **New here? Read [docs/PROJECT.md](docs/PROJECT.md)** (the whole project, all four phases). Engineering rules: [AGENTS.md](AGENTS.md).
 
 ```ts
 import { Sableye } from '@sableye/server'
