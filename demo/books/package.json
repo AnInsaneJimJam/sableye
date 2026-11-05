@@ -1,0 +1,7 @@
+{
+  "name": "books",
+  "private": true,
+  "scripts": { "dev": "next dev -p 3001", "build": "next build" },
+  "dependencies": { "@arkiv-network/sdk": "^1.0.1", "viem": "^2.57.16", "next": "^16.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" },
+  "devDependencies": { "typescript": "^5.9.0", "@types/react": "^19.0.0", "@types/node": "^22.0.0" }
+}

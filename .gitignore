@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.next/
+out/
+.env
+*.log
+sdk/contracts/out/
+sdk/contracts/cache/
+sdk/contracts/broadcast/*/31337/
+*.tsbuildinfo
