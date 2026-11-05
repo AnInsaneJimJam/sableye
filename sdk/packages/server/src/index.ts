@@ -33,7 +33,7 @@ import {
   type TokenConfig,
 } from '@sableye/core'
 import {
-  createPublicClient, createWalletClient, erc20Abi, http, maxUint256, parseSignature, recoverTypedDataAddress,
+  createPublicClient, createWalletClient, encodeFunctionData, erc20Abi, http, maxUint256, parseSignature, recoverTypedDataAddress,
   type Address, type Chain, type Hex, type LocalAccount, type PublicClient, type WalletClient,
 } from 'viem'
 import { Indexer, type IndexerOptions } from './indexer.js'
@@ -105,6 +105,19 @@ export interface CreatedInvoice extends SignedInvoice {
   checkoutUrl: string
 }
 
+/** An unsigned refund transaction from {@link Sableye.refunds.prepare}, for the merchant to sign. */
+export interface PreparedRefund {
+  to: Address
+  data: Hex
+  value: bigint
+  chainId: number
+  /** The merchant address that must send it. */
+  from: Address
+  amount: bigint
+  /** Human-readable description to show before signing. */
+  summary: string
+}
+
 /** Result of {@link Sableye.verifyPayment}. */
 export interface PaymentVerification {
   status: InvoiceStatus
@@ -135,7 +148,8 @@ export class Sableye {
   private readonly signer: InvoiceSigner
   private readonly client: PublicClient
   private readonly checkoutUrl: string
-  private readonly rpcUrl?: string
+  /** The RPC URL in use (undefined = the network's public default). */
+  readonly rpcUrl?: string
   private readonly relayUrl?: string
   private chainChecked?: Promise<void>
   private attachedIndexer?: Indexer
@@ -222,21 +236,23 @@ export class Sableye {
     },
 
     /**
-     * Refund a paid invoice, fully (default) or partially. Funds go from the payout back to the original payer.
+     * Build (but don't send) a refund transaction: validates status, the cap and the payout's allowance, and returns
+     * calldata for the merchant to sign in their own wallet. This is what AI agents / the MCP server use, so no
+     * agent ever holds spending power.
      * @param params.amount decimal string; default: everything not yet refunded.
-     * @throws {RefundsNotEnabledError} when the payout hasn't approved the processor; call `refunds.enable()`.
      */
-    create: async (params: { orderId: string; amount?: string }): Promise<{ txHash: Hex; amount: bigint }> => {
+    prepare: async (params: { orderId: string; amount?: string }): Promise<PreparedRefund> => {
       const processor = requireProcessor(this.network)
       await this.checkChain()
       const id = toOrderId(params.orderId)
       const r = await this.client.readContract({ address: processor, abi: paymentProcessorAbi, functionName: 'getReceipt', args: [this.merchant, id] })
+      const status = InvoiceStatus[r.status] ?? 'none'
+      if (status !== 'paid' && status !== 'partially_refunded') {
+        throw new SableyeError('not_refundable', `Order is ${status}, not refundable.`, 'Only paid or partially refunded invoices can be refunded.')
+      }
       const remaining = r.amount - r.refunded
       const token = getToken(this.network, r.token)
       const amount = params.amount === undefined ? remaining : parseAmount(params.amount, token.decimals)
-      if (InvoiceStatus[r.status] !== 'paid' && InvoiceStatus[r.status] !== 'partially_refunded') {
-        throw new SableyeError('not_refundable', `Order is ${InvoiceStatus[r.status] ?? 'unknown'}, not refundable.`, 'Only paid or partially refunded invoices can be refunded.')
-      }
       if (amount > remaining) {
         throw new SableyeError('refund_exceeds_paid', `Refund exceeds what is left (${formatAmount(remaining, token.decimals)}).`, 'Refund at most the remaining amount.')
       }
@@ -244,11 +260,27 @@ export class Sableye {
       if (allowance < amount) {
         throw new SableyeError('refunds_not_enabled', 'The payout address has not approved the PaymentProcessor.', r.payout.toLowerCase() === this.merchant.toLowerCase() ? 'Call `sableye.refunds.enable()` once.' : `Approve the processor (${processor}) from the payout wallet ${r.payout}.`)
       }
-      const txHash = await this.wallet().writeContract({
-        account: this.signer as LocalAccount, chain: this.network.chain, address: processor, abi: paymentProcessorAbi, functionName: 'refund', args: [id, amount],
-      })
+      return {
+        to: processor,
+        data: encodeFunctionData({ abi: paymentProcessorAbi, functionName: 'refund', args: [id, amount] }),
+        value: 0n,
+        chainId: this.network.chain.id,
+        from: this.merchant,
+        amount,
+        summary: `Refund ${formatAmount(amount, token.decimals)} ${token.symbol} to ${r.payer} for order ${params.orderId}`,
+      }
+    },
+
+    /**
+     * Refund a paid invoice, fully (default) or partially. Funds go from the payout back to the original payer.
+     * @param params.amount decimal string; default: everything not yet refunded.
+     * @throws {SableyeError} `refunds_not_enabled` when the payout hasn't approved the processor; call `refunds.enable()`.
+     */
+    create: async (params: { orderId: string; amount?: string }): Promise<{ txHash: Hex; amount: bigint }> => {
+      const tx = await this.refunds.prepare(params)
+      const txHash = await this.wallet().sendTransaction({ account: this.signer as LocalAccount, chain: this.network.chain, to: tx.to, data: tx.data })
       await this.mined(txHash, 'the refund reverted')
-      return { txHash, amount }
+      return { txHash, amount: tx.amount }
     },
   }
 

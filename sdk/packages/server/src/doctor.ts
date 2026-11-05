@@ -24,6 +24,8 @@ export interface DoctorCheck {
 export interface DoctorOptions {
   network: string
   privateKey?: string
+  /** Check this merchant's gas balance without handing over the key (e.g. from the MCP server). */
+  merchant?: Address
   rpcUrl?: string
   processor?: Address
   chain?: Chain
@@ -69,13 +71,18 @@ export async function doctor(opts: DoctorOptions): Promise<DoctorCheck[]> {
 
   // Merchant key + gas balance
   let merchant: Address | undefined
-  if (!opts.privateKey) {
+  if (!opts.privateKey && opts.merchant) {
+    merchant = opts.merchant
+    add({ name: 'merchant', status: 'ok', detail: `${merchant} (key held by the server, not checked here)` })
+  } else if (!opts.privateKey) {
     add({ name: 'merchant key', status: 'fail', detail: 'MERCHANT_KEY not set', remedy: 'Add MERCHANT_KEY=0x… to your server .env (never to client code).' })
   } else if (!isHex(opts.privateKey) || opts.privateKey.length !== 66) {
     add({ name: 'merchant key', status: 'fail', detail: 'MERCHANT_KEY is not a 32-byte hex key', remedy: 'Use a 0x-prefixed 64-hex-char private key.' })
   } else {
     merchant = privateKeyToAccount(opts.privateKey as Hex).address
     add({ name: 'merchant key', status: 'ok', detail: merchant })
+  }
+  if (merchant) {
     const bal = await client.getBalance({ address: merchant })
     const sym = net.chain.nativeCurrency.symbol
     add(

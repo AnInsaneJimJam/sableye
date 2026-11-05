@@ -135,6 +135,10 @@ await sableye.subscriptions.cancel(subId) // merchant; the payer can also cancel
 ```
 Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `past_due` (it doesn't revert) and retries; after 3 consecutive failures it's `cancelled`. Use a 120 s interval for the demo.
 
+**MCP server** (#49, `@sableye/mcp`): `claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye-mcp`
+- Read tools: `get_invoice`, `list_invoices`, `stats`, `export_csv`, `doctor`. Create tools: `create_invoice`, `create_payment_link`. Both only ever move money *in*.
+- `prepare_refund` returns an **unsigned** transaction plus a summary; the merchant signs it. Agents never move money out. The SDK equivalent is `sableye.refunds.prepare()`.
+
 **React**
 ```tsx
 <Checkout invoice={signedInvoice} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />
