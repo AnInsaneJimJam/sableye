@@ -38,12 +38,14 @@ import {
 } from 'viem'
 import { Indexer, type IndexerOptions } from './indexer.js'
 import { RateLimiter, RelayRejectedError, relayRouteHandler, type RelayOptions } from './relay.js'
+import { decodeLink, encodeLink, memoryLinkStore, PaymentLinkError, type LinkStore, type PaymentLink, type PaymentLinkData } from './links.js'
 import { privateKeyToAccount } from 'viem/accounts'
 
 export * from '@sableye/core'
 export { doctor, printDoctor, type DoctorCheck, type DoctorOptions } from './doctor.js'
 export * from './indexer.js'
 export * from './relay.js'
+export * from './links.js'
 export * from './webhooks.js'
 
 /**
@@ -54,6 +56,8 @@ export interface InvoiceSigner {
   signTypedData: LocalAccount['signTypedData']
   /** Needed only for on-chain merchant actions such as {@link Sableye.invoices.cancel}. */
   signTransaction?: LocalAccount['signTransaction']
+  /** Needed only for reusable payment links (they're signed with EIP-191). */
+  signMessage?: LocalAccount['signMessage']
 }
 
 /** Configuration for {@link Sableye}. */
@@ -81,6 +85,13 @@ export interface SableyeConfig {
    * absolute URL if you share payment links, because the hosted checkout page may be on another origin.
    */
   relayUrl?: string
+  /**
+   * Absolute URL of your payment-link route (the one serving `sableye.paymentLinks.handler()`).
+   * Default `http://localhost:3000/api/pay`.
+   */
+  paymentLinkUrl?: string
+  /** Where link deactivations are kept. Default: in memory. */
+  linkStore?: LinkStore
 }
 
 /** Parameters for {@link Sableye.invoices.create}. */
@@ -156,6 +167,8 @@ export class Sableye {
   private relayLimiter?: RateLimiter
   private relayOpts: RelayOptions = {}
   private readonly relaying = new Map<Hex, Promise<{ txHash: Hex }>>()
+  private readonly paymentLinkUrl: string
+  private readonly linkStore: LinkStore
 
   constructor(config: SableyeConfig) {
     if (typeof window !== 'undefined' && config.privateKey) throw new SecretInClientError()
@@ -166,6 +179,8 @@ export class Sableye {
     this.checkoutUrl = config.checkoutUrl ?? 'http://localhost:3000/pay'
     this.rpcUrl = config.rpcUrl
     this.relayUrl = config.relayUrl
+    this.paymentLinkUrl = config.paymentLinkUrl ?? 'http://localhost:3000/api/pay'
+    this.linkStore = config.linkStore ?? memoryLinkStore()
   }
 
   /** Invoices: signed payment requests the customer pays on-chain. */
@@ -215,6 +230,72 @@ export class Sableye {
       const receipt = await this.client.waitForTransactionReceipt({ hash: txHash })
       if (receipt.status !== 'success') throw new PaymentFailedError('the cancellation reverted; the invoice may already be paid or cancelled')
       return { txHash }
+    },
+  }
+
+  /**
+   * Reusable payment links (like Stripe Payment Links): one permanent URL for a product that any number of
+   * customers can pay. Each visit mints a fresh single-use invoice (`<linkId>_<random>` order id) and redirects to
+   * checkout, so refunds, webhooks and CSV still work per order.
+   */
+  readonly paymentLinks = {
+    /** Create a link. Free and instant (signed with the merchant key; nothing on-chain). */
+    create: async (params: { amount: string; token?: string; name?: string; expiresIn?: number; invoiceExpiresIn?: number }): Promise<PaymentLink> => {
+      const token = getToken(this.network, params.token ?? 'USDT')
+      parseAmount(params.amount, token.decimals) // validate now, not at the first visit
+      if (!this.signer.signMessage) {
+        throw new SableyeError('signer_cannot_sign_messages', 'This signer cannot sign messages.', 'Use a privateKey, or a signer with signMessage, to create payment links.')
+      }
+      const data: PaymentLinkData = {
+        id: `plink_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
+        amount: params.amount, token: token.symbol, ...(params.name && { name: params.name }),
+        ...(params.expiresIn && { expiresAt: Math.floor(Date.now() / 1000) + params.expiresIn }),
+        invoiceExpiresIn: params.invoiceExpiresIn ?? 1800, merchant: this.merchant,
+      }
+      const payload = JSON.stringify(data)
+      const signature = await this.signer.signMessage({ message: payload })
+      const url = `${this.paymentLinkUrl}${this.paymentLinkUrl.includes('?') ? '&' : '?'}l=${encodeLink(payload, signature)}`
+      return { ...data, url }
+    },
+
+    /**
+     * A customer opened the link: verify it and mint their own invoice.
+     * @param link the full URL or just its `l` parameter
+     * @throws {PaymentLinkError} invalid, tampered, expired or deactivated
+     */
+    open: async (link: string): Promise<{ link: PaymentLinkData; invoice: CreatedInvoice }> => {
+      const token = link.includes('l=') ? new URL(link, 'http://x').searchParams.get('l') ?? '' : link
+      const data = await decodeLink(token, this.merchant)
+      if (data.expiresAt && data.expiresAt < Math.floor(Date.now() / 1000)) {
+        throw new PaymentLinkError('link_expired', 'This payment link has expired.', 'Ask the merchant for a new link.', 410)
+      }
+      if (await this.linkStore.isDeactivated(data.id)) {
+        throw new PaymentLinkError('link_deactivated', 'This payment link has been deactivated by the merchant.', 'Ask the merchant for a new link.', 410)
+      }
+      const invoice = await this.invoices.create({
+        amount: data.amount, token: data.token, expiresIn: data.invoiceExpiresIn,
+        orderId: `${data.id}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`,
+      })
+      return { link: data, invoice }
+    },
+
+    /** Stop the link minting new invoices. Invoices already minted stay payable until they expire. */
+    deactivate: async (id: string): Promise<void> => this.linkStore.deactivate(id),
+
+    /**
+     * Fetch-style GET route handler. Next.js App Router: `export const GET = sableye.paymentLinks.handler()`.
+     * Answers 303 → checkout for a valid link, or a small HTML page with the reason and remedy.
+     */
+    handler: () => async (req: Request): Promise<Response> => {
+      try {
+        const { invoice } = await this.paymentLinks.open(req.url)
+        return new Response(null, { status: 303, headers: { location: invoice.checkoutUrl, 'cache-control': 'no-store' } })
+      } catch (e) {
+        const err = e instanceof SableyeError ? e : new SableyeError('link_failed', 'Could not open this payment link.', 'Try again in a moment.')
+        const esc = (t: string) => t.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)
+        const status = e instanceof PaymentLinkError ? e.status : 500
+        return new Response(`<!doctype html><meta charset="utf-8"><title>Payment link</title><p>${esc(err.message.split(' Remedy:')[0]!)}</p><p>${esc(err.remedy)}</p>`, { status, headers: { 'content-type': 'text/html; charset=utf-8' } })
+      }
     },
   }
 
