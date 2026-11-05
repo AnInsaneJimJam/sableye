@@ -4,7 +4,7 @@
 
 ## 1. Install
 
-You need Node 22+ and pnpm (`corepack enable`).
+You need Node 24, which is what this was tested on, and pnpm (`corepack enable`).
 
 ```sh
 pnpm install && pnpm build
@@ -21,7 +21,7 @@ cp .env.example .env
 | `MERCHANT_EMAIL` | Where "you got paid" notices go. Defaults to `SMTP_USER`. |
 | `PUBLIC_URL` | The URL customers can reach. Defaults to `http://localhost:3000`, see step 4. |
 
-Check the merchant setup with `pnpm --filter @sableye/server exec sableye doctor`, with `MERCHANT_KEY` set in your shell.
+Check the merchant setup from the repo root with `node sdk/packages/server/bin/sableye.mjs doctor`. It reads `.env`.
 
 ## 3. Run
 

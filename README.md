@@ -18,7 +18,7 @@ const { paid } = await sableye.verifyPayment('order_123') // fulfil only after t
 
 ## Quickstart
 
-**The packages aren't on npm yet**, so install from a clone of this repo. You need Node 22+ and pnpm (`corepack enable`). This scaffolds a working store with the SDK packed into it:
+**The packages aren't on npm yet**, so install from a clone of this repo. You need Node 24, which is what this was tested on, and pnpm (`corepack enable`). This scaffolds a working store with the SDK packed into it:
 
 ```sh
 pnpm install && pnpm build
