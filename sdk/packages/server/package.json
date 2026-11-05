@@ -4,10 +4,32 @@
   "description": "Sableye server SDK: sign EIP-712 invoices and verify USDT payments on Whitechain",
   "license": "MIT",
   "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist"],
-  "scripts": { "build": "tsc", "test": "node --test test/*.test.mjs" },
-  "dependencies": { "@sableye/core": "workspace:*" },
-  "peerDependencies": { "viem": "^2.30.0" },
-  "devDependencies": { "viem": "^2.57.16", "typescript": "^5.9.0", "@types/node": "^22.0.0" }
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@sableye/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "viem": "^2.30.0"
+  },
+  "devDependencies": {
+    "viem": "^2.57.16",
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0"
+  },
+  "bin": {
+    "sableye": "./bin/sableye.mjs"
+  }
 }

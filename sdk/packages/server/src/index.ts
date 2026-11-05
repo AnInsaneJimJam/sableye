@@ -27,6 +27,7 @@ import { createPublicClient, createWalletClient, http, type Address, type Chain,
 import { privateKeyToAccount } from 'viem/accounts'
 
 export * from '@sableye/core'
+export { doctor, printDoctor, type DoctorCheck, type DoctorOptions } from './doctor.js'
 
 /**
  * Anything that can sign EIP-712 typed data for the merchant: a viem `LocalAccount`, or your own KMS/HSM adapter.
