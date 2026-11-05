@@ -52,3 +52,17 @@ test('refuses to overwrite a non-empty directory', () => {
   assert.equal(readFileSync(join(cwd, 'taken', 'keep.txt'), 'utf8'), 'x')
   assert.ok(!existsSync(join(cwd, 'taken', 'package.json')))
 })
+
+test('--local-sdk packs this repo\'s SDK and points package.json at it (until @sableye/* is on npm)', () => {
+  const cwd = tmp()
+  const r = run(cwd, '--name', 'local-store', '--local-sdk')
+  assert.equal(r.status, 0, r.stderr)
+  const dir = join(cwd, 'local-store')
+  const m = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
+  for (const pkg of ['server', 'react']) {
+    assert.match(m.dependencies[`@sableye/${pkg}`], /^file:\.\/\.sableye-sdk\/sableye-.+\.tgz$/)
+    assert.ok(existsSync(join(dir, m.dependencies[`@sableye/${pkg}`].slice('file:'.length))))
+  }
+  assert.match(m.overrides['@sableye/core'], /sableye-core-.+\.tgz$/)
+  assert.match(r.stdout, /npx sableye doctor/)
+})

@@ -5,6 +5,7 @@ A USDT store on Whitechain Sepolia, scaffolded by `create-whitechain-checkout`.
 ```sh
 npm install
 cp .env.example .env    # set MERCHANT_KEY to a fresh testnet key
+npx sableye doctor      # every check should be ✓ before you sell anything
 npm run dev             # http://localhost:3000
 ```
 
@@ -16,4 +17,4 @@ npm run dev             # http://localhost:3000
 | `app/page.tsx` | The shop: Buy, then `<Checkout/>`. |
 | `app/pay/page.tsx` | Payment links: `invoice.checkoutUrl` opens here. |
 
-To pay, the customer needs Whitechain Sepolia USDT: get WBT at https://faucet.testnet.whitechain.io, then swap it on Whitechain's DEX.
+To pay, the customer needs Whitechain Sepolia USDT: get WBT at https://faucet.testnet.whitechain.io, then swap it for USDT on https://testnet.yetitrade.fi.
