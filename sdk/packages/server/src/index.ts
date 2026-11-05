@@ -7,6 +7,7 @@ import {
   InvoiceStatus,
   invoiceDomain,
   invoiceTypes,
+  normalizeSignedInvoice,
   parseAmount,
   PaymentFailedError,
   paymentProcessorAbi,
@@ -20,14 +21,23 @@ import {
   WrongChainError,
   type Invoice,
   type NetworkConfig,
+  type RelayRequest,
   type SignedInvoice,
   type TokenConfig,
 } from '@sableye/core'
-import { createPublicClient, createWalletClient, http, type Address, type Chain, type Hex, type LocalAccount, type PublicClient } from 'viem'
+import {
+  createPublicClient, createWalletClient, erc20Abi, http, maxUint256, parseSignature, recoverTypedDataAddress,
+  type Address, type Chain, type Hex, type LocalAccount, type PublicClient, type WalletClient,
+} from 'viem'
+import { Indexer, type IndexerOptions } from './indexer.js'
+import { RateLimiter, RelayRejectedError, relayRouteHandler, type RelayOptions } from './relay.js'
 import { privateKeyToAccount } from 'viem/accounts'
 
 export * from '@sableye/core'
 export { doctor, printDoctor, type DoctorCheck, type DoctorOptions } from './doctor.js'
+export * from './indexer.js'
+export * from './relay.js'
+export * from './webhooks.js'
 
 /**
  * Anything that can sign EIP-712 typed data for the merchant: a viem `LocalAccount`, or your own KMS/HSM adapter.
@@ -119,6 +129,10 @@ export class Sableye {
   private readonly rpcUrl?: string
   private readonly relayUrl?: string
   private chainChecked?: Promise<void>
+  private attachedIndexer?: Indexer
+  private relayLimiter?: RateLimiter
+  private relayOpts: RelayOptions = {}
+  private readonly relaying = new Map<Hex, Promise<{ txHash: Hex }>>()
 
   constructor(config: SableyeConfig) {
     if (typeof window !== 'undefined' && config.privateKey) throw new SecretInClientError()
@@ -160,6 +174,7 @@ export class Sableye {
       })
       const signed: SignedInvoice = { invoice, signature, chainId, processor, ...(this.relayUrl ? { relayUrl: this.relayUrl } : {}) }
       const created: CreatedInvoice = { ...signed, orderRef, checkoutUrl: `${this.checkoutUrl}#${encodeSignedInvoice(signed)}` }
+      await this.attachedIndexer?.rememberRef(invoice.orderId, orderRef)
       // Lets `Response.json(inv)` / `res.json(inv)` work: plain JSON.stringify throws on the bigint fields.
       Object.defineProperty(created, 'toJSON', { enumerable: false, value: () => ({ ...serializeSignedInvoice(signed), orderRef, checkoutUrl: created.checkoutUrl }) })
       return created
@@ -173,13 +188,141 @@ export class Sableye {
     cancel: async (orderId: string): Promise<{ txHash: Hex }> => {
       const processor = requireProcessor(this.network)
       await this.checkChain()
-      if (!this.signer.signTransaction) throw new SignerCannotTransactError()
-      const wallet = createWalletClient({ account: this.signer as LocalAccount, chain: this.network.chain, transport: http(this.rpcUrl) })
-      const txHash = await wallet.writeContract({ address: processor, abi: paymentProcessorAbi, functionName: 'cancelInvoice', args: [toOrderId(orderId)] })
+      const txHash = await this.wallet().writeContract({ account: this.signer as LocalAccount, chain: this.network.chain, address: processor, abi: paymentProcessorAbi, functionName: 'cancelInvoice', args: [toOrderId(orderId)] })
       const receipt = await this.client.waitForTransactionReceipt({ hash: txHash })
       if (receipt.status !== 'success') throw new PaymentFailedError('the cancellation reverted; the invoice may already be paid or cancelled')
       return { txHash }
     },
+  }
+
+  /** Refunds: on-chain, capped at the amount paid, sent from the payout address back to the payer. */
+  readonly refunds = {
+    /**
+     * One-time setup: let the PaymentProcessor pull refunds from your payout wallet (an ERC-20 approve).
+     * Only possible when the payout is this merchant key. Costs gas once.
+     */
+    enable: async (token = 'USDT'): Promise<{ txHash: Hex }> => {
+      const processor = requireProcessor(this.network)
+      await this.checkChain()
+      const t = getToken(this.network, token)
+      const txHash = await this.wallet().writeContract({
+        account: this.signer as LocalAccount, chain: this.network.chain, address: t.address, abi: erc20Abi, functionName: 'approve', args: [processor, maxUint256],
+      })
+      await this.mined(txHash, 'the approval reverted')
+      return { txHash }
+    },
+
+    /**
+     * Refund a paid invoice, fully (default) or partially. Funds go from the payout back to the original payer.
+     * @param params.amount decimal string; default: everything not yet refunded.
+     * @throws {RefundsNotEnabledError} when the payout hasn't approved the processor; call `refunds.enable()`.
+     */
+    create: async (params: { orderId: string; amount?: string }): Promise<{ txHash: Hex; amount: bigint }> => {
+      const processor = requireProcessor(this.network)
+      await this.checkChain()
+      const id = toOrderId(params.orderId)
+      const r = await this.client.readContract({ address: processor, abi: paymentProcessorAbi, functionName: 'getReceipt', args: [this.merchant, id] })
+      const remaining = r.amount - r.refunded
+      const token = getToken(this.network, r.token)
+      const amount = params.amount === undefined ? remaining : parseAmount(params.amount, token.decimals)
+      if (InvoiceStatus[r.status] !== 'paid' && InvoiceStatus[r.status] !== 'partially_refunded') {
+        throw new SableyeError('not_refundable', `Order is ${InvoiceStatus[r.status] ?? 'unknown'}, not refundable.`, 'Only paid or partially refunded invoices can be refunded.')
+      }
+      if (amount > remaining) {
+        throw new SableyeError('refund_exceeds_paid', `Refund exceeds what is left (${formatAmount(remaining, token.decimals)}).`, 'Refund at most the remaining amount.')
+      }
+      const allowance = await this.client.readContract({ address: r.token, abi: erc20Abi, functionName: 'allowance', args: [r.payout, processor] })
+      if (allowance < amount) {
+        throw new SableyeError('refunds_not_enabled', 'The payout address has not approved the PaymentProcessor.', r.payout.toLowerCase() === this.merchant.toLowerCase() ? 'Call `sableye.refunds.enable()` once.' : `Approve the processor (${processor}) from the payout wallet ${r.payout}.`)
+      }
+      const txHash = await this.wallet().writeContract({
+        account: this.signer as LocalAccount, chain: this.network.chain, address: processor, abi: paymentProcessorAbi, functionName: 'refund', args: [id, amount],
+      })
+      await this.mined(txHash, 'the refund reverted')
+      return { txHash, amount }
+    },
+  }
+
+  /**
+   * Submit a customer's gasless (EIP-3009) payment and pay the gas from the merchant key. See relay.ts for the
+   * drain-protection rules. Most apps use {@link relayHandler} instead of calling this directly.
+   * @param clientKey rate-limit key, e.g. the caller's IP.
+   */
+  async relay(req: RelayRequest, clientKey = 'anonymous'): Promise<{ txHash: Hex }> {
+    const processor = requireProcessor(this.network)
+    this.relayLimiter ??= new RateLimiter(this.relayOpts.perMinute ?? 10)
+    if (!this.relayLimiter.allow(clientKey)) {
+      throw new RelayRejectedError('rate_limited', 'Too many relay requests.', 'Wait a minute, or pay with the wallet (approve + pay).', 429)
+    }
+    let signed: SignedInvoice
+    try {
+      signed = normalizeSignedInvoice({ invoice: req.invoice, signature: req.signature, chainId: this.network.chain.id, processor })
+    } catch {
+      throw new RelayRejectedError('bad_request', 'Malformed relay request.', 'POST the RelayRequest produced by the Sableye checkout.')
+    }
+    const inv = signed.invoice
+    // 1. Only our own invoices: checked locally, before spending anything.
+    if (inv.merchant.toLowerCase() !== this.merchant.toLowerCase()) {
+      throw new RelayRejectedError('not_our_invoice', 'This relayer only sponsors its own merchant\'s invoices.', 'Use the relayUrl that came with the invoice.', 403)
+    }
+    const signer = await recoverTypedDataAddress({ domain: invoiceDomain(this.network.chain.id, processor), types: invoiceTypes, primaryType: 'Invoice', message: inv, signature: req.signature })
+    if (signer.toLowerCase() !== this.merchant.toLowerCase()) {
+      throw new RelayRejectedError('invalid_signature', 'Invoice signature is not from this merchant.', 'Create a fresh invoice.', 403)
+    }
+    const token = getToken(this.network, inv.token)
+    if (!token.capabilities?.includes('eip3009')) {
+      throw new RelayRejectedError('gasless_unsupported', `${token.symbol} has no EIP-3009 support configured.`, 'Pay with the wallet (permit or approve + pay).')
+    }
+    if (inv.expiry < BigInt(Math.floor(Date.now() / 1000))) {
+      throw new RelayRejectedError('invoice_expired', 'Invoice expired.', 'Ask the merchant for a new invoice.')
+    }
+    // 2. One submission per invoice, even under concurrent requests.
+    const inflight = this.relaying.get(inv.orderId)
+    if (inflight) return inflight
+    const job = (async () => {
+      await this.checkChain()
+      const { r, s, v, yParity } = parseSignature(req.authSignature)
+      const args = [inv, req.signature, req.payer, BigInt(req.validAfter), BigInt(req.validBefore), Number(v ?? BigInt(27 + yParity)), r, s] as const
+      // 3. Simulate first: a call that would revert is rejected without sending (no gas spent).
+      try {
+        await this.client.simulateContract({ account: this.merchant, address: processor, abi: paymentProcessorAbi, functionName: 'payWithAuthorization', args })
+      } catch (e) {
+        const reason = (e as { cause?: { data?: { errorName?: string } }; shortMessage?: string }).cause?.data?.errorName ?? (e as { shortMessage?: string }).shortMessage ?? 'reverted'
+        throw new RelayRejectedError('would_revert', `Payment would fail on-chain: ${reason}.`, 'Check the invoice is unpaid and unexpired, and the payer has enough USDT; or pay with the wallet.', 409)
+      }
+      // 4. Gas cap.
+      const gas = await this.client.estimateContractGas({ account: this.merchant, address: processor, abi: paymentProcessorAbi, functionName: 'payWithAuthorization', args })
+      if (gas > (this.relayOpts.maxGas ?? 400_000n)) {
+        throw new RelayRejectedError('gas_cap', `Needs ${gas} gas, above the relayer cap.`, 'Pay with the wallet instead.', 409)
+      }
+      const txHash = await this.wallet().writeContract({
+        account: this.signer as LocalAccount, chain: this.network.chain, address: processor, abi: paymentProcessorAbi, functionName: 'payWithAuthorization', args, gas,
+      })
+      await this.mined(txHash, 'the gasless payment reverted')
+      return { txHash }
+    })().finally(() => this.relaying.delete(inv.orderId))
+    this.relaying.set(inv.orderId, job)
+    return job
+  }
+
+  /**
+   * A fetch-style route handler for the relayer (Next.js App Router: `export const POST = sableye.relayHandler()`).
+   * Set `relayUrl` in the config to this route's absolute URL so invoices advertise it.
+   */
+  relayHandler(options: RelayOptions = {}): (req: Request) => Promise<Response> {
+    this.relayOpts = options
+    this.relayLimiter = new RateLimiter(options.perMinute ?? 10)
+    return relayRouteHandler((req, key) => this.relay(req, key))
+  }
+
+  /**
+   * Create the indexer: follows this merchant's invoices on-chain (cursor, backfill, reorgs, pending/safe/final),
+   * sends signed webhooks, and offers `reconcile()`, `stats()` and `exportCsv()`.
+   */
+  indexer(options: IndexerOptions = {}): Indexer {
+    requireProcessor(this.network)
+    this.attachedIndexer = new Indexer(this.client, this.network, this.merchant, options)
+    return this.attachedIndexer
   }
 
   /**
@@ -216,6 +359,16 @@ export class Sableye {
       value: () => ({ ...verification, amount: r.amount.toString(), refunded: r.refunded.toString() }),
     })
     return verification
+  }
+
+  private wallet(): WalletClient {
+    if (!this.signer.signTransaction) throw new SignerCannotTransactError()
+    return createWalletClient({ account: this.signer as LocalAccount, chain: this.network.chain, transport: http(this.rpcUrl) })
+  }
+
+  private async mined(hash: Hex, what: string) {
+    const receipt = await this.client.waitForTransactionReceipt({ hash })
+    if (receipt.status !== 'success') throw new PaymentFailedError(what)
   }
 
   private checkChain(): Promise<void> {

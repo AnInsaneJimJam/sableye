@@ -90,6 +90,17 @@ The browser picks the best payment path by itself, falling back automatically: g
 | `create-whitechain-checkout` | Scaffolds a working store |
 | `sdk/contracts` | `PaymentProcessor.sol`: OpenZeppelin `SignatureChecker` (EOA + ERC-1271 / Safe), `SafeERC20`, reentrancy guard |
 
+## Gasless relayer: who pays and why it can't be drained (Scale track)
+
+The customer only signs; the **business's own server** submits the transaction and pays the WBT gas, about 0.0001 WBT per payment. The relayer is just the merchant key inside `@sableye/server` (`export const POST = sableye.relayHandler()`), and the merchant tops it up with WBT from the faucet (testnet) or an exchange (mainnet). `npx sableye doctor` warns when the balance runs low.
+
+**Why a stranger can't drain it:**
+1. **It only relays its own invoices.** Anything not signed by this merchant is rejected before any RPC call.
+2. **Each invoice can be paid exactly once on-chain**, so there's at most one sponsored transaction per invoice. Concurrent requests for the same invoice share one submission.
+3. **Every request is simulated first.** Anything that would revert is refused, so no gas is spent.
+4. **Gas is capped per transaction**, and requests are **rate-limited per IP**.
+5. **The customer's authorization is bound to the invoice hash.** A relayer can't reuse it for another invoice or redirect the funds; the contract enforces this.
+
 ## Setup
 
 ```sh

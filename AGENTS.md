@@ -104,6 +104,27 @@ const { paid } = await sableye.verifyPayment('order_123')
 - **Config:** `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, checkoutUrl? }`. `signer` is any `{ address, signTypedData }`, so a KMS can be plugged in.
 - **Payment link:** `checkoutUrl = <checkoutUrl>#<base64url(JSON SignedInvoice)>` (`encodeSignedInvoice` / `decodeSignedInvoice` in core). It contains no secrets.
 
+**Level 2 server APIs** (#32, #33, #45, #34)
+```ts
+// Refunds (on-chain, capped). One-time approve from the payout wallet first:
+await sableye.refunds.enable()                                   // payout == merchant key
+await sableye.refunds.create({ orderId: 'order_123', amount: '2.00' }) // default: everything left
+
+// Gasless relayer (Scale track). Next.js: app/api/relay/route.ts
+export const POST = sableye.relayHandler()   // + OPTIONS for CORS; set relayUrl in the Sableye config
+
+// Indexer: cursor + backfill + reorg rollback; pending → safe → final; signed idempotent webhooks
+const indexer = sableye.indexer({ store: fileStore('.sableye/state.json'), webhooks: [{ url, secret }] })
+indexer.on('invoice.paid', (e) => …)          // also invoice.safe | .final | .refunded | .cancelled | .reorged
+await indexer.start()
+indexer.invoices(); indexer.stats(); indexer.exportCsv(); await indexer.reconcile()
+
+// Receiving a webhook
+const event = verifyWebhook(rawBody, req.headers.get('sableye-signature'), secret) // dedupe on event.id
+```
+- **CLI:** `npx sableye doctor` checks the RPC, chain, key + gas, processor, the SDK-vs-contract EIP-712 hash, and token decimals/capabilities/domain.
+- **New error codes:** `refunds_not_enabled`, `refund_exceeds_paid`, `not_refundable`, `rate_limited`, `not_our_invoice`, `invalid_signature`, `gasless_unsupported`, `invoice_expired`, `would_revert`, `gas_cap`, `webhook_signature_invalid`.
+
 **React**
 ```tsx
 <Checkout invoice={signedInvoice} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />
