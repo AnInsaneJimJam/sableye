@@ -160,6 +160,7 @@ sdk/packages/core/      @sableye/core
 sdk/packages/server/    @sableye/server (+ test/e2e on anvil)
 sdk/packages/react/     @sableye/react
 sdk/packages/checkout/  static checkout page (payment links, #40)
+sdk/packages/create-whitechain-checkout/  scaffolder (#43)
 demo/store/             Next.js demo shop
 demo/books/             Phase 2 (Arkiv reader); untouched in Phase 1
 scripts/                gen-abi, check-sdk-lines

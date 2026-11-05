@@ -110,6 +110,8 @@ importers:
         specifier: ^2.57.16
         version: 2.57.16(typescript@5.9.3)
 
+  sdk/packages/create-whitechain-checkout: {}
+
   sdk/packages/react:
     dependencies:
       '@sableye/core':

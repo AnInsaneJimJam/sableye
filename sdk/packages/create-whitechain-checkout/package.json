@@ -1,0 +1,10 @@
+{
+  "name": "create-whitechain-checkout",
+  "version": "0.1.0",
+  "description": "Scaffold a working USDT store on Whitechain with Sableye",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "create-whitechain-checkout": "./bin.mjs" },
+  "files": ["bin.mjs", "template"],
+  "scripts": { "test": "node --test test/*.test.mjs" }
+}

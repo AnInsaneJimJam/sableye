@@ -1,0 +1,14 @@
+{
+  "name": "__NAME__",
+  "private": true,
+  "scripts": { "dev": "next dev", "build": "next build", "start": "next start" },
+  "dependencies": {
+    "@sableye/react": "^0.1.0",
+    "@sableye/server": "^0.1.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "viem": "^2.57.16"
+  },
+  "devDependencies": { "@types/node": "^22.0.0", "@types/react": "^19.0.0", "typescript": "^5.9.0" }
+}

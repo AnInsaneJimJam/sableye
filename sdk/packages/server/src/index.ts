@@ -202,13 +202,19 @@ export class Sableye {
     })
     const decimals = Object.values(this.network.tokens).find((t) => t.address.toLowerCase() === r.token.toLowerCase())?.decimals
     const explorer = this.network.chain.blockExplorers?.default.url
-    return {
+    const verification: PaymentVerification = {
       status, paid, payer: r.payer, token: r.token, amount: r.amount, refunded: r.refunded,
       amountFormatted: decimals === undefined ? undefined : formatAmount(r.amount, decimals),
       paidAt: new Date(Number(r.paidAt) * 1000),
       txHash: log?.transactionHash ?? undefined,
       explorerUrl: log && explorer ? `${explorer}/tx/${log.transactionHash}` : undefined,
     }
+    // Lets `Response.json(verification)` work: plain JSON.stringify throws on the bigint fields.
+    Object.defineProperty(verification, 'toJSON', {
+      enumerable: false,
+      value: () => ({ ...verification, amount: r.amount.toString(), refunded: r.refunded.toString() }),
+    })
+    return verification
   }
 
   private checkChain(): Promise<void> {

@@ -128,6 +128,7 @@ test('gasless: a payer with no gas pays through the relayer', async () => {
   assert.equal(v.paid, true)
   assert.equal(v.payer, wallet.account.address)
   assert.equal(v.txHash, s.txHash)
+  assert.equal(JSON.parse(JSON.stringify(v)).amount, '5000000') // what Response.json(v) sends
 })
 
 test('permit: one transaction, no approve', async () => {
