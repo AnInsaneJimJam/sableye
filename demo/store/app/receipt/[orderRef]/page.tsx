@@ -1,6 +1,7 @@
 // Customer receipt. Verified on the server against the chain; never trusts the browser.
 import Link from 'next/link'
 import { merchant } from '@/lib/sableye'
+import { orders } from '@/lib/store'
 import { SdkPanel } from '@/components/SdkPanel'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,8 @@ export default async function Receipt({ params }: { params: Promise<{ orderRef: 
   // <sableye>
   const payment = await sableye.verifyPayment(orderRef)
   // </sableye>
+  // This page is public, so it shows the items but never the customer's name or email.
+  const order = orders.get(decodeURIComponent(orderRef))
   return (
     <main className="narrow">
       <h1>{payment.paid ? '✅ Payment received' : '⏳ Not paid yet'}</h1>
@@ -18,6 +21,7 @@ export default async function Receipt({ params }: { params: Promise<{ orderRef: 
       <div className="card">
         {payment.paid ? (
           <table><tbody>
+            {order && <tr><th>Item</th><td>{order.items.map((i) => i.name).join(', ')}</td></tr>}
             <tr><th>Amount</th><td>{payment.amountFormatted} USDT</td></tr>
             <tr><th>Status</th><td><span className={`pill ${payment.status}`}>{payment.status.replace('_', ' ')}</span></td></tr>
             <tr><th>Paid by</th><td><code>{payment.payer}</code></td></tr>

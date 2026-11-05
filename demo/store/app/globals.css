@@ -44,6 +44,8 @@ th { color: var(--muted); font-weight: 600; }
 .pill.refunded, .pill.cancelled { background: #f6e3e3; color: var(--bad); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 input { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.buy-form { display: grid; gap: 8px; }
+.buy-form p { margin: 0; }
 section { margin-bottom: 28px; }
 h2 { font-size: 18px; margin: 0 0 12px; }
 .muted { color: var(--muted); }

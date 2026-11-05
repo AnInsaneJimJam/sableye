@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
 import { createPublicClient, erc20Abi, http } from 'viem'
 import { formatAmount, networks } from '@sableye/server'
 import { merchant } from '@/lib/sableye'
-import { fileLinkStore, links, webhookLog } from '@/lib/store'
+import { fileLinkStore, links, orders, webhookLog } from '@/lib/store'
 import { SdkPanel } from '@/components/SdkPanel'
 import { cancelInvoice, cancelSubscription, createLink, deactivateLink, enableRefunds, refund, runRenewals } from './actions'
 
@@ -67,11 +67,15 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         <h2>Payments</h2>
         {invoices.length === 0 ? <p className="muted">No payments yet. Buy something in the shop.</p> : (
           <table>
-            <thead><tr><th>Order</th><th>Amount</th><th>Status</th><th>Confirmation</th><th>Payer</th><th>Tx</th><th>Refund</th></tr></thead>
+            <thead><tr><th>Order</th><th>Item</th><th>Customer</th><th>Amount</th><th>Status</th><th>Confirmation</th><th>Payer</th><th>Tx</th><th>Refund</th></tr></thead>
             <tbody>
-              {invoices.map((i) => (
+              {invoices.map((i) => {
+                const order = orders.get(i.orderId)
+                return (
                 <tr key={i.orderId}>
                   <td><a href={`/receipt/${i.orderRef ?? i.orderId}`}><code>{i.orderRef ?? short(i.orderId)}</code></a></td>
+                  <td>{order?.items.map((x) => x.name).join(', ')}</td>
+                  <td>{order?.customerName}{order?.customerEmail && <div className="muted">{order.customerEmail}</div>}</td>
                   <td>{fmt(i.amount)}{i.refunded > 0n && <div className="muted">−{fmt(i.refunded)} refunded</div>}</td>
                   <td><span className={`pill ${i.status}`}>{i.status.replace('_', ' ')}</span></td>
                   <td><span className={`pill ${i.confirmation}`}>{i.confirmation}</span></td>
@@ -87,7 +91,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                     )}
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         )}
