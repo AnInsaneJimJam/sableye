@@ -127,6 +127,10 @@ pnpm --filter store dev                # demo shop on :3000
 
 **Real USDT payment:** 1 USDT for order `chai_order_3`, paid through the hosted checkout with `payWithPermit` (one transaction, no approve): [0x4229f7de…c4e9](https://explorer.testnet.whitechain.io/tx/0x4229f7de327de2a1c9e48660cc225483cba6430e3ec5ee51152ed4a99149c4e9). Payer `0x3Cf8…897a` → merchant `0xF9B1…EE08`; the processor's balance stayed 0.
 
+## AI integration
+
+An AI agent given only our Agent Skill and `llms.txt` integrated Sableye into a blank Next.js app in **3/3 trials** (about 2 min and ~$0.50 each). Every trial passed seven automatic checks, including server-side signing and verification, key safety, a successful build and `sableye doctor`. Details and reproduction: [docs/AI_EVAL.md](docs/AI_EVAL.md).
+
 ## Security
 
 - Contract invariants:
