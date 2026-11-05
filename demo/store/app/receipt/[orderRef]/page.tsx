@@ -33,6 +33,7 @@ export default async function Receipt({ params }: { params: Promise<{ orderRef: 
           <p>No payment found on-chain for this order yet. <Link href="">Refresh</Link></p>
         )}
       </div>
+      {payment.paid && <p><a href={`/api/pdf/receipt/${orderRef}`}>⬇ Download receipt (PDF)</a></p>}
       <p><Link href="/">← Back to the shop</Link></p>
       <SdkPanel files={['app/receipt/[orderRef]/page.tsx']} title="How this receipt is verified" />
     </main>

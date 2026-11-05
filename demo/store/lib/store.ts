@@ -53,6 +53,8 @@ export const orders = {
   /** Invoices raised from /admin, as opposed to shop purchases. */
   invoices: () => read<Order[]>('orders.json', []).filter((o) => o.checkoutUrl),
   get: (ref: string) => read<Order[]>('orders.json', []).find((o) => o.orderRef === ref || o.orderId === ref),
+  /** Lookup by our own random ref only. Use this for anything showing customer details: on-chain ids are public. */
+  byRef: (ref: string) => read<Order[]>('orders.json', []).find((o) => o.orderRef === ref),
   add: (o: Order) => write('orders.json', [o, ...read<Order[]>('orders.json', [])]),
 }
 

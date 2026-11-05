@@ -128,7 +128,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                     <td>{o.amount} USDT</td>
                     <td><span className={`pill ${status}`}>{status.replace('_', ' ')}</span></td>
                     <td>{o.expiresAt ? new Date(o.expiresAt).toLocaleDateString() : ''}</td>
-                    <td><a href={`/i/${o.orderRef}`} target="_blank" rel="noreferrer">Open ↗</a></td>
+                    <td><a href={`/i/${o.orderRef}`} target="_blank" rel="noreferrer">Open ↗</a> · <a href={`/api/pdf/invoice/${o.orderRef}`}>PDF</a></td>
                   </tr>
                 )
               })}
