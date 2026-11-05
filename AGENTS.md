@@ -108,16 +108,16 @@ Full surface (stubs in `sdk/packages/sdk/src/index.ts`):
 
 Events: `payment_intent.processing | succeeded | settled | expired`, `refund.created`.
 
-## 5. Arkiv data model: open schema `sableye.payment.v1`
+## 5. Arkiv data model
 
-- **Entity types:** `payment_intent`, `refund`.
-- **Public attributes** (queryable): `schema=sableye.payment.v1, type, merchant, status, currency, network, amount, deposit_address, expires_at, tx_hash, day`.
-  - Payment amounts and tx hashes are already public on-chain, so publishing them leaks nothing new.
-- **Encrypted content:** `metadata`, customer and order data. The key is derived from a merchant wallet signature over a fixed message, so the SDK and the browser dashboard derive the same key. `viewKey()` shares it, for example with an accountant.
-- **Owner:** the merchant wallet.
-- **Expiry:** long (≥1 year), with renewal by the SDK.
-- Status changes update the same entity; refunds are separate entities linked by `payment_intent`.
-- Document every change in `arkiv/schema.md`. Other apps depend on this schema.
+**Frozen in [`arkiv/schema.md`](arkiv/schema.md).** That file is the contract; `sdk/packages/sdk/src/schema.ts` mirrors it. The essentials:
+
+- Two named schemas: `sableye.payment_intent.v1` and `sableye.refund.v1`.
+- **Owner = the merchant wallet.** Readers must filter with `.ownedBy(merchant)`, because anyone can write a look-alike entity.
+- Amounts are `u256` base units.
+- Public columns hold only what's already on-chain. `metadata` is AES-256-GCM-encrypted with `viewKey = keccak256(personal_sign("Sableye view key v1"))`.
+- Expiry: 180 days (Arkiv max ≈182). The SDK extends records with less than 30 days left.
+- `checkoutUrl = <CHECKOUT_BASE_URL>?id=<pi_…>&m=<merchant>`.
 
 ## 6. Demo highlight rule
 
