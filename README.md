@@ -139,6 +139,8 @@ pnpm --filter store dev                # demo shop on :3000
 - Fee-on-transfer tokens are rejected.
 - The merchant key never leaves the server: the SDK throws `secret_in_client` if it's used in a browser.
 
+Full threat model and contract spec: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+
 ## Limitations
 
 - **USDT only.** Official USDT isn't on Whitechain mainnet yet, so production use waits for that bridge.

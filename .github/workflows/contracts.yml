@@ -14,6 +14,7 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
       - run: forge build --sizes
       - run: forge test -vvv
+      - run: forge snapshot --check --no-match-test "Fuzz|invariant" --no-match-contract "CryticToFoundry|Invariants"
   slither:
     runs-on: ubuntu-latest
     steps:
