@@ -50,8 +50,9 @@ export const networks = {
   'whitechain-sepolia': {
     name: 'whitechain-sepolia',
     chain: whitechainSepolia,
-    processor: zeroAddress, // set in #27 after deployment
-    subscriptions: zeroAddress,
+    // Deployed + verified Nov 5 2026 (#27): https://explorer.testnet.whitechain.io/address/0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5
+    processor: '0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5',
+    subscriptions: '0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78',
     tokens: {
       // The test USDT named in the Whitechain prize rules. Verified on-chain: permit + EIP-3009, domain ("Tether USD", "1").
       USDT: {

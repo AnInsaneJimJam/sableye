@@ -122,7 +122,7 @@ pnpm --filter store dev                # demo shop on :3000
 
 | Network | PaymentProcessor | Explorer |
 |---|---|---|
-| Whitechain Sepolia (1874) | _pending (#27)_ | |
+| Whitechain Sepolia (1874) | PaymentProcessor `0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5` · SubscriptionManager `0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78` | [processor ✅ verified](https://explorer.testnet.whitechain.io/address/0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5) · [subscriptions ✅ verified](https://explorer.testnet.whitechain.io/address/0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78) |
 | Whitechain mainnet (1875) | _pending; official USDT isn't on mainnet yet_ | |
 
 **Real USDT payment:** _link pending (#38)_

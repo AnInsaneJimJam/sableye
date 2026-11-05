@@ -168,7 +168,8 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 | Faster RPC | Free Ankr RPC, 1,500 req/s for 7 days: https://www.ankr.com/rpc/?utm_referral=Whitechain2026 |
 | AI quick start | https://docs.whitechain.io/learn/get-started/start-with-ai |
 | Finality | `safe` lags the tip by ~19 min and `finalized` by ~48 min (measured). Expose pending/safe/final states and let the merchant choose. |
-| PaymentProcessor | not deployed yet (#27) |
+| PaymentProcessor (1874) | `0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5` (verified) |
+| SubscriptionManager (1874) | `0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78` (verified) |
 
 ## 6. Demo highlight rule (demo/store)
 
