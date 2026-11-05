@@ -111,7 +111,7 @@ Whitechain's judges said this line **filters out projects**: they reject product
 6. **The live judging slot is strictly 2–3 minutes.**
 7. **Mainnet (chain 1875) went live in late October.** "Build on testnet, launch on mainnet."
 8. **Builders Program:** up to $300k per project, paid in milestones, and hackathon winners get priority. So pitch Sableye as a real product with a roadmap.
-9. **Getting test USDT:** claim WBT at the faucet, swap it for USDT on Whitechain's DEX, then pay.
+9. **Getting test USDT:** claim WBT at the faucet (2/day), swap it for USDT on https://testnet.yetitrade.fi, then pay. `0xcedf…` is **the only USDT that counts** for prizes.
 
 ### Whitechain written rules (all tracks)
 - Contracts deployed **and verified** on Whitechain Sepolia (chain 1874).
@@ -579,9 +579,8 @@ pnpm check:sdk-lines                             # demo stays ≤20 SDK lines
 
 ### Blockers ⛔
 1. **Testnet WBT.** The merchant/deployer wallet `0xF9B1a7c3374ca8d2AC63aca87D9664aa2E0bEE08` needs WBT from https://faucet.testnet.whitechain.io (GitHub login required) to deploy (#27).
-2. **Test USDT.** Swap WBT for USDT on Whitechain's DEX (ask at the booth: the docs don't name it), for the required real payment.
-3. **Which test USDT counts?** The prize page says `0xcedf…`, but the docs list `0xaa79…` ("USDT.e"). We use the prize-page one. Confirm at the booth.
-4. **The repo is private.** It must be **public** before submission.
+2. **Test USDT.** Swap WBT for USDT on https://testnet.yetitrade.fi, for the required real payment. (Whitechain confirmed `0xcedf…` is the only USDT that counts.)
+3. **The repo is private.** It must be **public** before submission.
 
 ### Next steps (in order)
 1. Deploy + verify (#27), then one real USDT payment.

@@ -94,7 +94,7 @@ The browser picks the best payment path by itself, falling back automatically: g
 
 ```sh
 pnpm install && pnpm build
-cd sdk/contracts && forge test        # 23 unit + fuzz tests
+cd sdk/contracts && forge test        # unit, fuzz, invariant and token-variant tests
 pnpm --filter @sableye/server test     # end to end on anvil: deploy → create → pay → verify
 pnpm --filter @sableye/react test      # <Checkout/> in a DOM, clicking through a real payment on anvil
 pnpm --filter @sableye/checkout test   # the built payment-link page
@@ -103,8 +103,8 @@ pnpm --filter store dev                # demo shop on :3000
 ```
 
 **Testnet funds:**
-1. Get WBT for gas from https://faucet.testnet.whitechain.io.
-2. Swap WBT for USDT on Whitechain's DEX.
+1. Get WBT for gas from https://faucet.testnet.whitechain.io (2 WBT/day).
+2. Swap WBT for USDT on https://testnet.yetitrade.fi.
 3. Pay with USDT `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`.
 
 ## Deployments
@@ -123,7 +123,7 @@ pnpm --filter store dev                # demo shop on :3000
   - Refunded ≤ paid.
   - An invoice can't be paid twice.
   - Status only moves forward.
-- Covered by unit and fuzz tests, with invariant tests coming in #31.
+- Covered by unit and fuzz tests plus Foundry invariant tests (256 runs × 64 calls of random pay/refund/cancel/nonce-bump, with a check that the handler really moves money), and token-variant mocks (no-bool returns, fee-on-transfer, blacklist).
 - Slither runs clean in CI. Each suppressed finding has its justification written next to it in the code.
 - Fee-on-transfer tokens are rejected.
 - The merchant key never leaves the server: the SDK throws `secret_in_client` if it's used in a browser.

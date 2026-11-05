@@ -33,7 +33,7 @@ Target tracks: **Whitechain Operate** (checkout, invoices, subscriptions, refund
 
 ### Whitechain qualification (tracked in #38)
 - Contracts deployed **and verified** on Whitechain Sepolia (1874).
-- One **real USDT** payment (`0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`), with the explorer link in the README. To get test USDT: claim WBT at the faucet, then swap it for USDT on Whitechain's DEX (ask at the booth if you can't find it).
+- One **real USDT** payment (`0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`), with the explorer link in the README. To get test USDT: claim WBT at the faucet (2 WBT/day), then swap it for USDT on **https://testnet.yetitrade.fi**. Whitechain confirmed this USDT is **the only one that counts** for prizes.
 - README: setup, architecture, limitations, and why the flow needs onchain stablecoin settlement.
 - Steady public commit history. `WHITECHAIN_FEEDBACK.md`. A 2–4 minute video showing the merchant and customer views.
 
@@ -126,9 +126,12 @@ const { paid } = await sableye.verifyPayment('order_123')
 | Whitechain Sepolia | chain `1874`, gas token WBT (18 decimals), block time ~1 s |
 | RPC | `https://rpc.testnet.whitechain.io`, `wss://rpc.testnet.whitechain.io/ws` (50 req/s per IP) |
 | Explorer (Blockscout) | `https://explorer.testnet.whitechain.io`, verifier URL `…/api/` |
-| USDT | `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` (6 decimals). Supports **EIP-2612 permit + EIP-3009**; EIP-712 domain `("Tether USD", "1")`. The docs also list a bridged `USDT.e` at `0xaa79…`; we use the prize-rule address. |
+| USDT | `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` (6 decimals). Supports **EIP-2612 permit + EIP-3009**; EIP-712 domain `("Tether USD", "1")`. Confirmed by Whitechain as the only prize-eligible USDT (ignore the docs' `USDT.e` at `0xaa79…`). |
 | Mainnet | chain `1875`, `https://rpc.whitechain.io`, explorer `https://explorer.whitechain.io`. **No official USDT yet.** |
-| WBT faucet | https://faucet.testnet.whitechain.io (GitHub login; docs say 0.5 WBT / 24 h, the talk said 2) |
+| WBT faucet | https://faucet.testnet.whitechain.io (2 WBT/day; GitHub account older than 30 days) |
+| Test USDT DEX | https://testnet.yetitrade.fi (swap WBT → USDT) |
+| Faster RPC | Free Ankr RPC, 1,500 req/s for 7 days: https://www.ankr.com/rpc/?utm_referral=Whitechain2026 |
+| AI quick start | https://docs.whitechain.io/learn/get-started/start-with-ai |
 | Finality | `safe` lags the tip by ~19 min and `finalized` by ~48 min (measured). Expose pending/safe/final states and let the merchant choose. |
 | PaymentProcessor | not deployed yet (#27) |
 
