@@ -154,3 +154,10 @@ export class PaymentFailedError extends SableyeError {
     super('payment_failed', `The payment did not go through: ${reason}.`, 'No funds moved unless your wallet shows otherwise. Check the wallet activity and try again.', { cause })
   }
 }
+
+/** The configured custom signer can sign invoices, but this action needs an on-chain transaction. */
+export class SignerCannotTransactError extends SableyeError {
+  constructor() {
+    super('signer_cannot_transact', 'This signer cannot send transactions.', 'Add `signTransaction` to your custom signer, or use `privateKey`.')
+  }
+}

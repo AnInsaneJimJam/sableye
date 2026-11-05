@@ -8,12 +8,14 @@ import {
   invoiceDomain,
   invoiceTypes,
   parseAmount,
+  PaymentFailedError,
   paymentProcessorAbi,
   requireProcessor,
   RpcError,
   SableyeError,
   SecretInClientError,
   serializeSignedInvoice,
+  SignerCannotTransactError,
   toOrderId,
   WrongChainError,
   type Invoice,
@@ -21,7 +23,7 @@ import {
   type SignedInvoice,
   type TokenConfig,
 } from '@sableye/core'
-import { createPublicClient, http, type Address, type Chain, type Hex, type LocalAccount, type PublicClient } from 'viem'
+import { createPublicClient, createWalletClient, http, type Address, type Chain, type Hex, type LocalAccount, type PublicClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 export * from '@sableye/core'
@@ -32,6 +34,8 @@ export * from '@sableye/core'
 export interface InvoiceSigner {
   address: Address
   signTypedData: LocalAccount['signTypedData']
+  /** Needed only for on-chain merchant actions such as {@link Sableye.invoices.cancel}. */
+  signTransaction?: LocalAccount['signTransaction']
 }
 
 /** Configuration for {@link Sableye}. */
@@ -158,6 +162,22 @@ export class Sableye {
       // Lets `Response.json(inv)` / `res.json(inv)` work: plain JSON.stringify throws on the bigint fields.
       Object.defineProperty(created, 'toJSON', { enumerable: false, value: () => ({ ...serializeSignedInvoice(signed), orderRef, checkoutUrl: created.checkoutUrl }) })
       return created
+    },
+
+    /**
+     * Revoke one unpaid invoice or payment link. This is an on-chain transaction, so the merchant pays the gas.
+     * @param orderId the `orderRef` from `create` (or the bytes32 orderId).
+     * @throws {SignerCannotTransactError} when a custom `signer` has no `signTransaction`.
+     */
+    cancel: async (orderId: string): Promise<{ txHash: Hex }> => {
+      const processor = requireProcessor(this.network)
+      await this.checkChain()
+      if (!this.signer.signTransaction) throw new SignerCannotTransactError()
+      const wallet = createWalletClient({ account: this.signer as LocalAccount, chain: this.network.chain, transport: http(this.rpcUrl) })
+      const txHash = await wallet.writeContract({ address: processor, abi: paymentProcessorAbi, functionName: 'cancelInvoice', args: [toOrderId(orderId)] })
+      const receipt = await this.client.waitForTransactionReceipt({ hash: txHash })
+      if (receipt.status !== 'success') throw new PaymentFailedError('the cancellation reverted; the invoice may already be paid or cancelled')
+      return { txHash }
     },
   }
 

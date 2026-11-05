@@ -99,6 +99,7 @@ const inv = await sableye.invoices.create({ amount: '5.00', orderId: 'order_123'
 const { paid } = await sableye.verifyPayment('order_123')
 ```
 - **`invoices.create({ amount, token?='USDT', orderId?, expiresIn?=1800, payout? })`** returns `CreatedInvoice` = `{ invoice, signature, chainId, processor, orderRef, checkoutUrl }`.
+- **`invoices.cancel(orderId)`** revokes one unpaid invoice or payment link on-chain (merchant pays gas) and returns `{ txHash }`.
 - **`verifyPayment(orderId)`** returns `{ status, paid, payer, token, amount, amountFormatted, refunded, paidAt, txHash, explorerUrl }`.
 - **Config:** `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, checkoutUrl? }`. `signer` is any `{ address, signTypedData }`, so a KMS can be plugged in.
 - **Payment link:** `checkoutUrl = <checkoutUrl>#<base64url(JSON SignedInvoice)>` (`encodeSignedInvoice` / `decodeSignedInvoice` in core). It contains no secrets.
@@ -112,7 +113,7 @@ const { paid } = await sableye.verifyPayment('order_123')
 - `wrong_chain`, `unknown_network`, `unknown_token`, `invalid_amount`;
 - `processor_not_deployed`, `secret_in_client`, `invalid_payment_link`, `rpc_unreachable`.
 - `no_wallet`, `user_rejected`, `insufficient_balance`, `insufficient_gas`;
-- `invoice_expired`, `invoice_revoked`, `invalid_signature`, `untrusted_processor`, `payment_failed`.
+- `invoice_expired`, `invoice_revoked`, `invalid_signature`, `untrusted_processor`, `payment_failed`, `signer_cannot_transact`.
 
 **Browser trust rule:** payment links are attacker-controllable. `createCheckout` / `verifySignedInvoice` only accept the network's official processor (or an explicit `processor` option) and check the merchant signature before any wallet prompt.
 

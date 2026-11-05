@@ -282,6 +282,18 @@ test('nonce bump revokes every older invoice', async () => {
   assert.equal((await checkoutFor(old).load()).error?.code, 'invoice_revoked')
 })
 
+test('invoices.cancel revokes a payment link; a sign-only signer gets a remedy', async () => {
+  const inv = await sableye.invoices.create({ amount: '1.00', orderId: nextOrder() })
+  const { txHash } = await sableye.invoices.cancel(inv.orderRef)
+  assert.ok(txHash)
+  assert.equal((await checkoutFor(inv.checkoutUrl.split('#')[1]).load()).error?.code, 'invoice_revoked')
+  assert.equal((await sableye.verifyPayment(inv.orderRef)).status, 'cancelled')
+
+  const { address, signTypedData } = privateKeyToAccount(DEPLOYER_KEY)
+  const kms = new Sableye({ signer: { address, signTypedData }, network: 'local', chain, processor, rpcUrl: RPC, tokens: { USDT: token } })
+  await assert.rejects(kms.invoices.cancel('anything'), (e) => e.code === 'signer_cannot_transact' && e.remedy.length > 0)
+})
+
 test('no wallet has a remedy', async () => {
   const inv = await sableye.invoices.create({ amount: '1.00', orderId: nextOrder() })
   const s = await checkoutFor(inv).pay()
