@@ -48,6 +48,7 @@ interface IPaymentProcessor {
     error InvalidSignature();
     error InvalidStatus(Status current);
     error RefundExceedsPaid();
+    error ZeroRefund();
     error FeeOnTransferNotSupported();
 
     /// @notice Pay an invoice. Caller is the payer and must have approved `amount` of `token` to this contract.

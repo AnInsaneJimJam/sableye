@@ -653,6 +653,11 @@ export const paymentProcessorAbi = [
         "internalType": "string"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "ZeroRefund",
+    "inputs": []
   }
 ] as const
 

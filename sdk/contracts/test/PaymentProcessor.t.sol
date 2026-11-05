@@ -208,6 +208,16 @@ contract PaymentProcessorTest is Test {
         pp.refund("order-1", 5e6 + 1);
     }
 
+    /// Found by Halmos: a zero refund used to flip Paid -> PartiallyRefunded and emit a refund event.
+    function test_revert_zeroRefund() public {
+        IPaymentProcessor.Invoice memory inv = _invoice("order-1", 5e6);
+        _pay(inv, _sign(merchantKey, inv));
+        vm.prank(merchant);
+        vm.expectRevert(IPaymentProcessor.ZeroRefund.selector);
+        pp.refund("order-1", 0);
+        assertEq(uint8(pp.getReceipt(merchant, "order-1").status), uint8(IPaymentProcessor.Status.Paid));
+    }
+
     function test_revert_refundByNonMerchant() public {
         IPaymentProcessor.Invoice memory inv = _invoice("order-1", 5e6);
         _pay(inv, _sign(merchantKey, inv));
@@ -248,10 +258,10 @@ contract PaymentProcessorTest is Test {
         paid = bound(paid, 1, 1_000_000e6);
         IPaymentProcessor.Invoice memory inv = _invoice("fuzz", paid);
         _pay(inv, _sign(merchantKey, inv));
-        a = bound(a, 0, paid);
+        a = bound(a, 1, paid);
         vm.prank(merchant);
         pp.refund("fuzz", a);
-        b = bound(b, 0, 2 * paid);
+        b = bound(b, 1, 2 * paid);
         vm.prank(merchant);
         if (a == paid) {
             vm.expectRevert(abi.encodeWithSelector(IPaymentProcessor.InvalidStatus.selector, IPaymentProcessor.Status.Refunded));
