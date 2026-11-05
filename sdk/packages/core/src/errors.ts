@@ -88,3 +88,69 @@ export class RpcError extends SableyeError {
     )
   }
 }
+
+/** The browser has no EIP-1193 wallet to pay with. */
+export class NoWalletError extends SableyeError {
+  constructor() {
+    super('no_wallet', 'No browser wallet found.', 'Install a wallet such as MetaMask or Rabby, then reload this page.')
+  }
+}
+
+/** The customer declined a wallet prompt. Nothing was paid. */
+export class UserRejectedError extends SableyeError {
+  constructor(cause?: unknown) {
+    super('user_rejected', 'The request was declined in the wallet.', 'Nothing was paid. Press pay again and approve the wallet prompt.', { cause })
+  }
+}
+
+/** The payer does not hold enough of the invoice's token. */
+export class InsufficientBalanceError extends SableyeError {
+  constructor(need: string, have: string, symbol: string) {
+    super('insufficient_balance', `This wallet holds ${have} ${symbol}, and the invoice needs ${need} ${symbol}.`, `Add ${symbol} to this wallet or connect another one.`)
+  }
+}
+
+/** The payer has no native coin for gas, and no gasless path was available. */
+export class InsufficientGasError extends SableyeError {
+  constructor(symbol: string, cause?: unknown) {
+    super('insufficient_gas', `This wallet has no ${symbol} to pay the network fee.`, `Add a little ${symbol} to this wallet, or ask the merchant to enable the gasless relayer (\`relayUrl\`).`, { cause })
+  }
+}
+
+/** The invoice is past its expiry. */
+export class InvoiceExpiredError extends SableyeError {
+  constructor() {
+    super('invoice_expired', 'This invoice has expired.', 'Ask the merchant for a new invoice or payment link.')
+  }
+}
+
+/** The merchant revoked this invoice with `cancelInvoice` or `bumpNonce`. */
+export class InvoiceRevokedError extends SableyeError {
+  constructor() {
+    super('invoice_revoked', 'The merchant has revoked this invoice.', 'Ask the merchant for a new invoice or payment link.')
+  }
+}
+
+/** The merchant signature does not match the invoice. */
+export class InvalidSignatureError extends SableyeError {
+  constructor() {
+    super('invalid_signature', 'The invoice signature is not valid for this merchant.', 'Do not pay this invoice. It was altered or not signed by the merchant; ask them for a new one.')
+  }
+}
+
+/**
+ * The invoice names a processor contract other than the official one. Paying would approve tokens to an
+ * unknown contract, so this is treated as phishing unless you explicitly pass your own `processor`.
+ */
+export class UntrustedProcessorError extends SableyeError {
+  constructor(actual: string, expected: string) {
+    super('untrusted_processor', `The invoice uses processor ${actual}, but the trusted one is ${expected}.`, 'Do not pay this link. If you run your own deployment, pass it as the `processor` option.')
+  }
+}
+
+/** A payment attempt failed for a reason other than those above. */
+export class PaymentFailedError extends SableyeError {
+  constructor(reason: string, cause?: unknown) {
+    super('payment_failed', `The payment did not go through: ${reason}.`, 'No funds moved unless your wallet shows otherwise. Check the wallet activity and try again.', { cause })
+  }
+}

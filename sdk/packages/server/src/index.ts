@@ -13,6 +13,7 @@ import {
   RpcError,
   SableyeError,
   SecretInClientError,
+  serializeSignedInvoice,
   toOrderId,
   WrongChainError,
   type Invoice,
@@ -51,6 +52,11 @@ export interface SableyeConfig {
   tokens?: Record<string, TokenConfig>
   /** Base URL of your checkout page. Payment links are `<checkoutUrl>#<signed invoice>`. Default `http://localhost:3000/pay`. */
   checkoutUrl?: string
+  /**
+   * Your gasless relayer endpoint. Added to every invoice so customers can pay without holding WBT. Use an
+   * absolute URL if you share payment links, because the hosted checkout page may be on another origin.
+   */
+  relayUrl?: string
 }
 
 /** Parameters for {@link Sableye.invoices.create}. */
@@ -106,6 +112,7 @@ export class Sableye {
   private readonly client: PublicClient
   private readonly checkoutUrl: string
   private readonly rpcUrl?: string
+  private readonly relayUrl?: string
   private chainChecked?: Promise<void>
 
   constructor(config: SableyeConfig) {
@@ -116,6 +123,7 @@ export class Sableye {
     this.client = createPublicClient({ chain: this.network.chain, transport: http(config.rpcUrl) }) as PublicClient
     this.checkoutUrl = config.checkoutUrl ?? 'http://localhost:3000/pay'
     this.rpcUrl = config.rpcUrl
+    this.relayUrl = config.relayUrl
   }
 
   /** Invoices: signed payment requests the customer pays on-chain. */
@@ -145,8 +153,11 @@ export class Sableye {
       const signature = await this.signer.signTypedData({
         domain: invoiceDomain(chainId, processor), types: invoiceTypes, primaryType: 'Invoice', message: invoice,
       })
-      const signed: SignedInvoice = { invoice, signature, chainId, processor }
-      return { ...signed, orderRef, checkoutUrl: `${this.checkoutUrl}#${encodeSignedInvoice(signed)}` }
+      const signed: SignedInvoice = { invoice, signature, chainId, processor, ...(this.relayUrl ? { relayUrl: this.relayUrl } : {}) }
+      const created: CreatedInvoice = { ...signed, orderRef, checkoutUrl: `${this.checkoutUrl}#${encodeSignedInvoice(signed)}` }
+      // Lets `Response.json(inv)` / `res.json(inv)` work: plain JSON.stringify throws on the bigint fields.
+      Object.defineProperty(created, 'toJSON', { enumerable: false, value: () => ({ ...serializeSignedInvoice(signed), orderRef, checkoutUrl: created.checkoutUrl }) })
+      return created
     },
   }
 

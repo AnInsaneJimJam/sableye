@@ -1,4 +1,4 @@
-import { keccak256, stringToHex, type Address, type Hex } from 'viem'
+import { hashTypedData, isAddress, isHex, keccak256, stringToHex, type Address, type Hex } from 'viem'
 import { InvalidPaymentLinkError } from './errors.js'
 
 /** On-chain invoice, exactly as signed (EIP-712) and passed to `PaymentProcessor.pay`. */
@@ -47,12 +47,58 @@ export interface SignedInvoice {
   signature: Hex
   chainId: number
   processor: Address
+  /**
+   * The merchant's gasless relayer endpoint. Deliberately outside the signed fields: a tampered value cannot
+   * redirect funds, because the payer's authorization can only ever pay this exact invoice.
+   */
+  relayUrl?: string
+}
+
+/** A {@link SignedInvoice} after a JSON round trip: its bigints are decimal strings. */
+export type SerializedSignedInvoice = Omit<SignedInvoice, 'invoice'> & {
+  invoice: Omit<Invoice, 'amount' | 'expiry' | 'nonce'> & { amount: string; expiry: string; nonce: string }
+}
+
+/** The EIP-712 digest of an invoice. Equals `PaymentProcessor.hashInvoice`, and is the EIP-3009 nonce. */
+export const hashInvoice = (s: Pick<SignedInvoice, 'invoice' | 'chainId' | 'processor'>): Hex =>
+  hashTypedData({ domain: invoiceDomain(s.chainId, s.processor), types: invoiceTypes, primaryType: 'Invoice', message: s.invoice })
+
+/** Convert to a plain JSON-safe object (bigints become decimal strings). Inverse of {@link normalizeSignedInvoice}. */
+export function serializeSignedInvoice(s: SignedInvoice): SerializedSignedInvoice {
+  const { invoice: i, signature, chainId, processor, relayUrl } = s
+  return {
+    invoice: { orderId: i.orderId, merchant: i.merchant, payout: i.payout, token: i.token, amount: i.amount.toString(), expiry: i.expiry.toString(), nonce: i.nonce.toString() },
+    signature, chainId, processor,
+    ...(relayUrl === undefined ? {} : { relayUrl }),
+  }
 }
 
 /** Encode a signed invoice for a URL fragment (`/pay#<this>`). Contains no secrets. */
 export function encodeSignedInvoice(s: SignedInvoice): string {
-  const json = JSON.stringify(s, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))
-  return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return btoa(JSON.stringify(serializeSignedInvoice(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+/**
+ * Accept a signed invoice in any form it reaches the browser in: the object, its JSON form, or an encoded link
+ * payload. Checks the shape only: verify the signature and expiry before trusting it.
+ * @throws {InvalidPaymentLinkError}
+ */
+export function normalizeSignedInvoice(input: SignedInvoice | SerializedSignedInvoice | string): SignedInvoice {
+  if (typeof input === 'string') return decodeSignedInvoice(input)
+  try {
+    const { invoice: i, signature, chainId, processor, relayUrl } = input
+    const invoice: Invoice = { orderId: i.orderId, merchant: i.merchant, payout: i.payout, token: i.token, amount: BigInt(i.amount), expiry: BigInt(i.expiry), nonce: BigInt(i.nonce) }
+    if (!isHex(invoice.orderId) || invoice.orderId.length !== 66) throw new Error('bad orderId')
+    for (const [name, a] of Object.entries({ merchant: i.merchant, payout: i.payout, token: i.token, processor })) {
+      if (!isAddress(a)) throw new Error(`bad ${name} address`)
+    }
+    if (!isHex(signature)) throw new Error('bad signature')
+    if (!Number.isSafeInteger(Number(chainId))) throw new Error('bad chainId')
+    if (relayUrl !== undefined && typeof relayUrl !== 'string') throw new Error('bad relayUrl')
+    return { invoice, signature, chainId: Number(chainId), processor, ...(relayUrl === undefined ? {} : { relayUrl }) }
+  } catch (cause) {
+    throw new InvalidPaymentLinkError(cause instanceof Error ? cause.message : 'malformed')
+  }
 }
 
 /**
@@ -60,16 +106,11 @@ export function encodeSignedInvoice(s: SignedInvoice): string {
  * @throws {InvalidPaymentLinkError}
  */
 export function decodeSignedInvoice(encoded: string): SignedInvoice {
+  let parsed: SerializedSignedInvoice
   try {
-    const s = JSON.parse(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')))
-    const i = s.invoice
-    return {
-      invoice: { ...i, amount: BigInt(i.amount), expiry: BigInt(i.expiry), nonce: BigInt(i.nonce) },
-      signature: s.signature,
-      chainId: Number(s.chainId),
-      processor: s.processor,
-    }
+    parsed = JSON.parse(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')))
   } catch (cause) {
     throw new InvalidPaymentLinkError(cause instanceof Error ? cause.message : 'malformed')
   }
+  return normalizeSignedInvoice(parsed)
 }

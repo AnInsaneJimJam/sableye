@@ -51,7 +51,7 @@ Target tracks: **Whitechain Operate** (checkout, invoices, subscriptions, refund
 ```
 
 **Packages** (`sdk/packages/`):
-- `@sableye/core`: browser-safe. Network/token config, ABI, EIP-712 types, payment-link encoding, typed errors.
+- `@sableye/core`: browser-safe. Network/token config, ABI, EIP-712 types, payment-link encoding, typed errors, and the headless checkout engine (`createCheckout`), which runs the capability ladder.
 - `@sableye/server`: holds the merchant key. `invoices.create`, `verifyPayment`; in Level 2 also the indexer, webhooks, reconcile and CSV.
 - `@sableye/react`: `<Checkout/>`.
 
@@ -111,6 +111,12 @@ const { paid } = await sableye.verifyPayment('order_123')
 **Errors:** every error is a `SableyeError` with a stable `code` and a `remedy`. Codes:
 - `wrong_chain`, `unknown_network`, `unknown_token`, `invalid_amount`;
 - `processor_not_deployed`, `secret_in_client`, `invalid_payment_link`, `rpc_unreachable`.
+- `no_wallet`, `user_rejected`, `insufficient_balance`, `insufficient_gas`;
+- `invoice_expired`, `invoice_revoked`, `invalid_signature`, `untrusted_processor`, `payment_failed`.
+
+**Browser trust rule:** payment links are attacker-controllable. `createCheckout` / `verifySignedInvoice` only accept the network's official processor (or an explicit `processor` option) and check the merchant signature before any wallet prompt.
+
+**Gasless relay (#39 ↔ #45):** `SignedInvoice.relayUrl?` is set from the server config's `relayUrl` and sits outside the signed fields. The browser POSTs `RelayRequest` (`{ invoice, signature, payer, validAfter, validBefore, authSignature }`, bigints as decimal strings) and expects `200 { txHash }`. Any failure falls back down the ladder.
 
 ## 5. Network constants
 
