@@ -1,43 +1,88 @@
 # Sableye
 
-**Stripe for Web3.** Non-custodial USDT payments on Whitechain, added to an app in ≤15 lines. Merchant-owned sales records live on Arkiv, and the checkout is hosted on Swarm.
+**Stripe-style USDT checkout for real businesses, on Whitechain.** A coffee shop, a chai stall or a SaaS adds Sableye in **≤20 lines** and gets paid in USDT, **straight into its own wallet**.
 
-> Work in progress at ETHGlobal Mumbai 2026. The team spec is in [AGENTS.md](AGENTS.md).
+Sableye is **B2B2C**: we serve the business, and the business serves its customers. Customers pay from any wallet. On tokens that support it, they need **no gas token at all**: the business sponsors the fee.
+
+> Built at ETHGlobal Mumbai 2026 for the Whitechain **Operate** and **Scale** tracks. The team spec is in [AGENTS.md](AGENTS.md).
 
 ```ts
-import { Sableye } from '@sableye/sdk'
+import { Sableye } from '@sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia' })
-const pi = await sableye.paymentIntents.create({ amount: '5.00', currency: 'USDT', metadata: { orderId } })
-sableye.on('payment_intent.succeeded', (pi) => markPaid(pi.metadata.orderId))
-await sableye.listen()
+
+const invoice = await sableye.invoices.create({ amount: '5.00', orderId: 'order_123' }) // sign, no gas
+// → render <Checkout invoice={invoice} /> or redirect to invoice.checkoutUrl
+
+const { paid } = await sableye.verifyPayment('order_123') // fulfil only after this
 ```
+
+## Why this flow needs onchain stablecoin settlement
+
+A card rail (Stripe) can't do any of the following:
+- **Settle in about 1 second, final, into the merchant's own wallet.** There are no 2–7 day payout holds and no reserves.
+- **Avoid chargebacks** while still allowing merchant-issued refunds, which are enforced on-chain and capped at what was paid.
+- **Accept the 40M WhiteBIT users** who already hold USDT, with no card and no bank account.
+- **Serve merchants in countries Stripe doesn't support.**
+- **Stay non-custodial:** neither Sableye nor the contract ever holds the money.
+
+## How it works
+
+1. **The merchant's server** signs an **EIP-712 invoice** (`orderId, merchant, payout, token, amount, expiry, nonce`). It costs nothing and sends no transaction.
+2. **The customer** pays it with one call to `PaymentProcessor` on Whitechain. Funds move `payer → payout` directly.
+   - **Approve + pay**: works with any ERC-20.
+   - **`payWithPermit`**: one transaction, no separate approve (EIP-2612).
+   - **`payWithAuthorization`**: **gasless**. The customer only signs, and the business's relayer submits and pays the WBT fee (EIP-3009). The authorization is bound to the invoice hash, so a relayer can't redirect it.
+3. **The merchant's server** calls `verifyPayment(orderId)` (reads the on-chain receipt) and fulfils the order.
+4. **Refunds** (capped at the amount paid), cancelled invoices and revoked payment links (`bumpNonce`) are all on-chain.
+
+| Package | What it does |
+|---|---|
+| `@sableye/core` | Network/token config, ABI, EIP-712 types, payment links, typed errors with a remedy |
+| `@sableye/server` | `invoices.create`, `verifyPayment` (plus indexer, webhooks, reconcile and CSV in Level 2) |
+| `@sableye/react` | `<Checkout/>`: connect → switch chain → pay → receipt |
+| `sdk/contracts` | `PaymentProcessor.sol`: OpenZeppelin `SignatureChecker` (EOA + ERC-1271 / Safe), `SafeERC20`, reentrancy guard |
 
 ## Setup
+
 ```sh
-pnpm install
-pnpm build
-cd sdk/contracts && forge build
-pnpm --filter store dev   # demo shop on :3000
-pnpm --filter books dev   # accountant app on :3001
+pnpm install && pnpm build
+cd sdk/contracts && forge test        # 23 unit + fuzz tests
+pnpm --filter @sableye/server test     # end to end on anvil: deploy → create → pay → verify
+pnpm --filter store dev                # demo shop on :3000
 ```
 
-## Architecture
-See [AGENTS.md §2](AGENTS.md#2-architecture).
+**Testnet funds:**
+1. Get WBT for gas from https://faucet.testnet.whitechain.io.
+2. Swap WBT for USDT on Whitechain's DEX.
+3. Pay with USDT `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`.
 
-## Why onchain stablecoin settlement
-_TODO (required by Whitechain)_
+## Deployments
 
-## CROPS
-- **C:** _TODO_
-- **O:** MIT. Everything builds from this repo.
-- **P:** _TODO_
-- **S:** _TODO_
+| Network | PaymentProcessor | Explorer |
+|---|---|---|
+| Whitechain Sepolia (1874) | _pending (#27)_ | |
+| Whitechain mainnet (1875) | _pending; official USDT isn't on mainnet yet_ | |
 
-## Arkiv
-Writing wallet(s): _TODO_. Example query: _TODO_. See [arkiv/](arkiv/).
+**Real USDT payment:** _link pending (#38)_
+
+## Security
+
+- Contract invariants:
+  - The processor never holds tokens.
+  - Refunded ≤ paid.
+  - An invoice can't be paid twice.
+  - Status only moves forward.
+- Covered by unit and fuzz tests, with invariant tests coming in #31.
+- Slither runs clean in CI. Each suppressed finding has its justification written next to it in the code.
+- Fee-on-transfer tokens are rejected.
+- The merchant key never leaves the server: the SDK throws `secret_in_client` if it's used in a browser.
 
 ## Limitations
-_TODO_
+
+- **USDT only.** Official USDT isn't on Whitechain mainnet yet, so production use waits for that bridge.
+- **Refunds pull from the payout address**, which must approve the processor first.
+- **Finality is a trade-off.** `safe` lags the chain tip by about 19 minutes. The SDK reports pending, safe and final states, and each merchant chooses which one to fulfil on (#32).
 
 ## AI usage
-Parts of this project were written with AI coding assistants (Claude Code).
+
+Much of this project was written with AI coding assistants (Claude Code), with human review. Every contract change was checked by tests and Slither.

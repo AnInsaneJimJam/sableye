@@ -16,6 +16,13 @@ export interface TokenConfig {
   symbol: string
   address: Address
   decimals: number
+  /**
+   * Gasless / one-tx capabilities, best first. `eip3009` → `payWithAuthorization` (relayer pays gas),
+   * `permit` → `payWithPermit` (one tx, no approve). Absent → approve + `pay`.
+   */
+  capabilities?: readonly ('eip3009' | 'permit')[]
+  /** The token's own EIP-712 domain, needed to sign permits / authorizations. */
+  eip712?: { name: string; version: string }
 }
 
 /** Everything Sableye needs to know about a network. */
@@ -27,15 +34,37 @@ export interface NetworkConfig {
   tokens: Record<string, TokenConfig>
 }
 
-/** Supported networks. Mainnet (chain 1875) is added once Whitechain mainnet and our deployment are live. */
+/** Whitechain mainnet (chain 1875, live since 26 Oct 2026). Official USDT is not bridged to mainnet yet. */
+export const whitechain: Chain = defineChain({
+  id: 1875,
+  name: 'Whitechain',
+  nativeCurrency: { name: 'WhiteBIT Coin', symbol: 'WBT', decimals: 18 },
+  rpcUrls: { default: { http: ['https://rpc.whitechain.io'], webSocket: ['wss://rpc.whitechain.io/ws'] } },
+  blockExplorers: { default: { name: 'Blockscout', url: 'https://explorer.whitechain.io' } },
+})
+
+/** Supported networks. */
 export const networks = {
   'whitechain-sepolia': {
     name: 'whitechain-sepolia',
     chain: whitechainSepolia,
     processor: zeroAddress, // set in #27 after deployment
     tokens: {
-      USDT: { symbol: 'USDT', address: '0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7', decimals: 6 },
+      // The test USDT named in the Whitechain prize rules. Verified on-chain: permit + EIP-3009, domain ("Tether USD", "1").
+      USDT: {
+        symbol: 'USDT',
+        address: '0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7',
+        decimals: 6,
+        capabilities: ['eip3009', 'permit'],
+        eip712: { name: 'Tether USD', version: '1' },
+      },
     },
+  },
+  whitechain: {
+    name: 'whitechain',
+    chain: whitechain,
+    processor: zeroAddress, // mainnet deployment pending
+    tokens: {}, // official USDT arrives on mainnet "in later releases" (Whitechain docs, Nov 2026)
   },
 } as const satisfies Record<string, NetworkConfig>
 

@@ -10,7 +10,17 @@ If you change a decision here, change this file in the same commit.
 The merchant signs an **EIP-712 invoice** on their server; there's no transaction and no gas at that step. The customer pays it with one on-chain call. Funds go **straight to the merchant's payout address**: Sableye and the contract never hold them.
 
 Hackathon: **ETHGlobal Mumbai, Nov 5–7 2026**. Prizes: https://ethglobal.com/events/mumbai/prizes
-Target tracks: **Whitechain Operate** (main), **Arkiv** (Phase 2), **EF CROPS** (Phase 3).
+Target tracks: **Whitechain Operate** (checkout, invoices, subscriptions, refunds) **+ Whitechain Scale** (gasless USDT). Whitechain allows entering several of its tracks. **Arkiv** (Phase 2) and **EF CROPS** (Phase 3) come later.
+
+### What Whitechain judges want (kickoff talk, Toma Sadova, Nov 5)
+- **"Build what a business actually needs."** Their example: a coffee shop that needs to accept USDT. Position Sableye as **B2B2C**: we serve businesses, which serve consumers. Keep the demo a real shop.
+- **The "why onchain stablecoins" line is a filter.** They reject products that use a blockchain where Stripe would do. Ours is in the README: instant final settlement to the merchant's own wallet, no chargebacks, 40M WhiteBIT users, non-custodial.
+- **The Operate track names checkout, invoices, subscriptions and refunds in USDT.** Subscriptions are in scope (#46).
+- **The Scale track asks for gasless payments** and hiding the blockchain from the payer. Our `payWithAuthorization` plus the merchant relayer (#45).
+- **Mainnet (1875) is live.** "Build on testnet, then launch on mainnet": a mainnet deploy is a credibility bonus, but official USDT isn't there yet.
+- **Judging is a live pitch with a strict 2–3 minute limit,** plus the 2–4 minute video (#47).
+- **The feedback page matters to them.** Log friction in `WHITECHAIN_FEEDBACK.md` as you hit it.
+- **Builders Program:** up to $300k, and hackathon winners get priority. Keep a roadmap in the README; it's a real product.
 
 ### Phases
 | Phase | Scope | Tracking |
@@ -23,7 +33,7 @@ Target tracks: **Whitechain Operate** (main), **Arkiv** (Phase 2), **EF CROPS** 
 
 ### Whitechain qualification (tracked in #38)
 - Contracts deployed **and verified** on Whitechain Sepolia (1874).
-- One **real USDT** payment (`0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`), with the explorer link in the README.
+- One **real USDT** payment (`0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`), with the explorer link in the README. To get test USDT: claim WBT at the faucet, then swap it for USDT on Whitechain's DEX (ask at the booth if you can't find it).
 - README: setup, architecture, limitations, and why the flow needs onchain stablecoin settlement.
 - Steady public commit history. `WHITECHAIN_FEEDBACK.md`. A 2–4 minute video showing the merchant and customer views.
 
@@ -55,6 +65,9 @@ Target tracks: **Whitechain Operate** (main), **Arkiv** (Phase 2), **EF CROPS** 
   - Writes the receipt **before** transferring.
   - Transfers with `SafeERC20.safeTransferFrom(payer → payout)`.
   - Rejects fee-on-transfer tokens by checking the payout balance delta.
+- `payWithPermit(invoice, sig, deadline, v, r, s)`: one transaction using EIP-2612 instead of approve. Caller = payer. The permit is wrapped in try/catch, so a front-run permit can't block the payment.
+- `payWithAuthorization(invoice, sig, payer, validAfter, validBefore, v, r, s)`: **gasless**. Anyone (the merchant relayer) submits the payer's EIP-3009 `ReceiveWithAuthorization`, **whose nonce must be `hashInvoice(invoice)`**, binding it to that invoice. Funds pass through the processor and are forwarded to the payout in the same transaction.
+- All pay and refund functions are `nonReentrant` (transient storage).
 - `refund(orderId, amount)`: merchant only (`msg.sender`). Pulls `payout → payer`, so the payout must approve the processor. Cumulative refunds are capped at the amount paid.
 - `cancelInvoice(orderId)` revokes one unpaid invoice. `bumpNonce()` revokes every older invoice.
 - **Invariants:**
@@ -106,8 +119,9 @@ const { paid } = await sableye.verifyPayment('order_123')
 | Whitechain Sepolia | chain `1874`, gas token WBT (18 decimals), block time ~1 s |
 | RPC | `https://rpc.testnet.whitechain.io`, `wss://rpc.testnet.whitechain.io/ws` (50 req/s per IP) |
 | Explorer (Blockscout) | `https://explorer.testnet.whitechain.io`, verifier URL `…/api/` |
-| USDT | `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` (6 decimals) |
-| WBT faucet | https://faucet.testnet.whitechain.io (GitHub login, 0.5 WBT / 24 h) |
+| USDT | `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` (6 decimals). Supports **EIP-2612 permit + EIP-3009**; EIP-712 domain `("Tether USD", "1")`. The docs also list a bridged `USDT.e` at `0xaa79…`; we use the prize-rule address. |
+| Mainnet | chain `1875`, `https://rpc.whitechain.io`, explorer `https://explorer.whitechain.io`. **No official USDT yet.** |
+| WBT faucet | https://faucet.testnet.whitechain.io (GitHub login; docs say 0.5 WBT / 24 h, the talk said 2) |
 | Finality | `safe` lags the tip by ~19 min and `finalized` by ~48 min (measured). Expose pending/safe/final states and let the merchant choose. |
 | PaymentProcessor | not deployed yet (#27) |
 
