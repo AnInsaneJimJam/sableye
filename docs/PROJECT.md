@@ -210,7 +210,7 @@ None ──pay──► Paid ──refund(part)──► PartiallyRefunded ─�
 - `PaymentProcessor` with `pay(invoice, merchantSig)` over an EIP-712 invoice. Uses OpenZeppelin `SignatureChecker` (ERC-1271), `SafeERC20`, receipts and events. ✅ #25
 - `@sableye/core`: chain and token config, ABI, typed errors with a remedy, bigint amounts. ✅ #28
 - `@sableye/server`: `invoices.create` and `verifyPayment`. ✅ #29
-- `@sableye/react`: `<Checkout/>` covering wallet connect, add/switch chain, approve, pay and result states. #35
+- `@sableye/react`: `<Checkout/>` covering wallet connect, add/switch chain, approve, pay and result states, built on a headless checkout engine in core. ✅ #35
 - Demo store: the merchant sees invoices, and the customer gets a receipt page. #36
 - **Qualification:** deploy and verify on Whitechain Sepolia (#27); one real USDT payment; README; video (#38); pitch script (#47).
 - **AI-friendly developer experience:** typed API with TSDoc, a copy-paste quickstart, `llms.txt`, and errors that carry a remedy. #37
@@ -573,7 +573,8 @@ pnpm check:sdk-lines                             # demo stays ≤20 SDK lines
 - **Contract tests:** 23 Foundry unit and fuzz tests (1,000 runs each). Slither is clean, and CI runs both.
 - **`@sableye/core`:** config, ABI, EIP-712, amounts, payment links, typed errors; mainnet config.
 - **`@sableye/server`:** `invoices.create` and `verifyPayment`, with a pluggable signer (KMS-ready).
-- **End-to-end tests** on anvil: deploy → create → pay → verify, plus the error and remedy paths.
+- **End-to-end tests** on anvil: deploy → create → pay → verify, plus the error and remedy paths. Server + checkout: 23 passing.
+- **Part B:** headless checkout engine in `@sableye/core`, which implements the capability ladder (EIP-3009, then permit, then approve), plus `<Checkout/>` and `useCheckout` in `@sableye/react` (6 tests passing).
 - **Docs:** README (B2B2C pitch, why on-chain, security, limitations), `WHITECHAIN_FEEDBACK.md` (8 findings) and `AGENTS.md`.
 
 ### Blockers ⛔
@@ -584,7 +585,7 @@ pnpm check:sdk-lines                             # demo stays ≤20 SDK lines
 
 ### Next steps (in order)
 1. Deploy + verify (#27), then one real USDT payment.
-2. Part B: `<Checkout/>` (#35) and the demo store (#36). Level 1 is then done.
+2. Part B: the demo store (#36), now that `<Checkout/>` (#35) is done. Level 1 is then done.
 3. Part A: indexer (#32), webhooks + CSV (#33), relayer (#45). Then Level 2 (refund + CSV in the demo) and the Scale track.
 4. Subscriptions (#46).
 5. Phase 2 (Arkiv) → Phase 3 (Swarm) → Phase 4 (formal verification), as time allows.
