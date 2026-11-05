@@ -16,6 +16,50 @@ const invoice = await sableye.invoices.create({ amount: '5.00', orderId: 'order_
 const { paid } = await sableye.verifyPayment('order_123') // fulfil only after this
 ```
 
+## Quickstart
+
+In a blank Next.js app (`npx create-next-app@latest --ts --app`), or skip all this with `npx create-whitechain-checkout --name my-store --framework next`.
+
+```sh
+npm install @sableye/server @sableye/react viem
+echo 'MERCHANT_KEY=0x<a fresh testnet key>' >> .env.local
+```
+
+```ts
+// app/api/invoice/route.ts
+import { Sableye } from '@sableye/server'
+export async function POST() {
+  const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
+  return Response.json(await sableye.invoices.create({ amount: '5.00' })) // set the price here, never in the browser
+}
+```
+
+```ts
+// app/api/verify/route.ts
+import { Sableye } from '@sableye/server'
+export async function GET(req: Request) {
+  const orderId = new URL(req.url).searchParams.get('orderId')!
+  const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
+  return Response.json(await sableye.verifyPayment(orderId)) // fulfil only if `paid`
+}
+```
+
+```tsx
+// app/page.tsx
+'use client'
+import { Checkout } from '@sableye/react'
+import { useEffect, useState } from 'react'
+export default function Page() {
+  const [invoice, setInvoice] = useState<any>()
+  useEffect(() => { fetch('/api/invoice', { method: 'POST' }).then((r) => r.json()).then(setInvoice) }, [])
+  return invoice ? <Checkout invoice={invoice} /> : 'Loading…'
+}
+```
+
+> **Current status:** the packages aren't on npm yet, and until the contract is deployed (#27) `invoices.create` returns `processor_not_deployed`. Pass your own `processor` to both `Sableye` and `<Checkout/>` to run against a local deployment.
+
+For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skills/whitechain-pay`](skills/whitechain-pay/SKILL.md) is an installable Agent Skill.
+
 ## Why this flow needs onchain stablecoin settlement
 
 A card rail (Stripe) can't do any of the following:
@@ -33,13 +77,17 @@ A card rail (Stripe) can't do any of the following:
    - **`payWithPermit`**: one transaction, no separate approve (EIP-2612).
    - **`payWithAuthorization`**: **gasless**. The customer only signs, and the business's relayer submits and pays the WBT fee (EIP-3009). The authorization is bound to the invoice hash, so a relayer can't redirect it.
 3. **The merchant's server** calls `verifyPayment(orderId)` (reads the on-chain receipt) and fulfils the order.
-4. **Refunds** (capped at the amount paid), cancelled invoices and revoked payment links (`bumpNonce`) are all on-chain.
+4. **Refunds** (capped at the amount paid), cancelled invoices (`invoices.cancel`) and revoked payment links (`bumpNonce` revokes all older ones) are all on-chain.
+
+The browser picks the best payment path by itself, falling back automatically: gasless, then permit, then approve. Before any wallet prompt it checks the merchant's signature, the expiry, and that the invoice names the official contract, so a forged payment link can't trick a customer into approving tokens to an attacker.
 
 | Package | What it does |
 |---|---|
-| `@sableye/core` | Network/token config, ABI, EIP-712 types, payment links, typed errors with a remedy |
-| `@sableye/server` | `invoices.create`, `verifyPayment` (plus indexer, webhooks, reconcile and CSV in Level 2) |
-| `@sableye/react` | `<Checkout/>`: connect → switch chain → pay → receipt |
+| `@sableye/core` | Network/token config, ABI, EIP-712 types, payment links, typed errors with a remedy, and the framework-free checkout engine (`createCheckout`) |
+| `@sableye/server` | `invoices.create`, `invoices.cancel`, `verifyPayment` (plus indexer, webhooks, reconcile and CSV in Level 2) |
+| `@sableye/react` | `<Checkout/>` and `useCheckout`: connect → switch chain → pay → receipt |
+| `sdk/packages/checkout` | Static payment-link page: no server, host it anywhere |
+| `create-whitechain-checkout` | Scaffolds a working store |
 | `sdk/contracts` | `PaymentProcessor.sol`: OpenZeppelin `SignatureChecker` (EOA + ERC-1271 / Safe), `SafeERC20`, reentrancy guard |
 
 ## Setup
@@ -48,6 +96,9 @@ A card rail (Stripe) can't do any of the following:
 pnpm install && pnpm build
 cd sdk/contracts && forge test        # 23 unit + fuzz tests
 pnpm --filter @sableye/server test     # end to end on anvil: deploy → create → pay → verify
+pnpm --filter @sableye/react test      # <Checkout/> in a DOM, clicking through a real payment on anvil
+pnpm --filter @sableye/checkout test   # the built payment-link page
+pnpm --filter create-whitechain-checkout test
 pnpm --filter store dev                # demo shop on :3000
 ```
 

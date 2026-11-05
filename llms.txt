@@ -1,0 +1,139 @@
+# Sableye
+
+> Non-custodial USDT checkout on Whitechain. The merchant's server signs an EIP-712 invoice (no gas). The customer pays on-chain and funds go directly to the merchant's address. A typical integration is under 20 lines.
+
+Install: `npm install @sableye/server @sableye/react viem`
+Scaffold a store: `npx create-whitechain-checkout --name my-store --framework next`
+Agent recipes and guardrails: skills/whitechain-pay/SKILL.md
+
+Rules:
+- `MERCHANT_KEY` stays on the server. Never import `@sableye/server` in browser code.
+- Set prices on the server. Amounts are decimal strings ("5.00"), never JS numbers.
+- Fulfil orders only after a server-side `verifyPayment` returns `paid: true`. Browser callbacks are for UI only.
+- In Next.js, create `Sableye` inside the handler; at module level it breaks `next build`.
+
+## @sableye/server
+
+### new Sableye(config)
+Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, checkoutUrl?, relayUrl? }`
+- `signer`: any `{ address, signTypedData, signTransaction? }`, e.g. a KMS adapter.
+- `network`: `"whitechain-sepolia"`, or `"whitechain"` once the processor and USDT are on mainnet.
+- `checkoutUrl`: base of payment links. Default `http://localhost:3000/pay`.
+- `relayUrl`: your gasless relayer endpoint, attached to every invoice.
+
+```ts
+import { Sableye } from '@sableye/server'
+const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
+```
+
+### sableye.invoices.create({ amount, token?, orderId?, expiresIn?, payout? })
+Signs an invoice. No transaction, no gas. Returns `{ invoice, signature, chainId, processor, relayUrl?, orderRef, checkoutUrl }`. Safe to send to the browser, and works with `Response.json()`.
+Defaults: `token: 'USDT'`, `orderId`: random, `expiresIn: 1800` seconds, `payout`: the merchant address.
+
+```ts
+const inv = await sableye.invoices.create({ amount: '5.00', orderId: 'order_123' })
+return Response.json(inv)
+```
+
+### sableye.invoices.cancel(orderId)
+Revokes one unpaid invoice or payment link. On-chain; the merchant pays gas. Returns `{ txHash }`.
+
+```ts
+await sableye.invoices.cancel('order_123')
+```
+
+### sableye.verifyPayment(orderId)
+Reads the on-chain receipt. Returns `{ status, paid, payer?, token?, amount?, amountFormatted?, refunded?, paidAt?, txHash?, explorerUrl? }`.
+`status`: `none`, `paid`, `partially_refunded`, `refunded` or `cancelled`. `paid` is true for `paid`, `partially_refunded` and `refunded`.
+
+```ts
+const { paid } = await sableye.verifyPayment('order_123')
+if (paid) fulfil()
+```
+
+## @sableye/react
+
+### <Checkout invoice onSuccess? onError? className? processor? chain? rpcUrl? token? provider? fetch? />
+The full flow: connect wallet, switch or add chain, check balance, pay, show the result. Unstyled; style it through `className` and `data-sableye-*` attributes (`data-sableye-status` holds the current status).
+`invoice` can be the object, its JSON form, or an encoded link payload.
+
+```tsx
+<Checkout invoice={inv} onSuccess={({ txHash }) => confirm(txHash)} onError={(e) => console.log(e.remedy)} />
+```
+
+### useCheckout(invoice, options?)
+For your own UI. Returns `{ state, wallets, pay }`.
+
+```tsx
+const { state, pay } = useCheckout(inv)
+return <button onClick={() => pay()}>Pay {state.summary?.amountFormatted}</button>
+```
+
+## @sableye/core (browser-safe; also re-exported by @sableye/server)
+
+### createCheckout({ invoice, processor?, chain?, rpcUrl?, token?, provider?, fetch? })
+The framework-free engine behind `<Checkout/>`. Returns `{ getState, subscribe, load, pay }`.
+Status: `loading`, `ready`, `connecting`, `switching_chain`, `checking`, `signing`, `approving`, `paying`, `confirming`, `success`, `error`.
+
+```ts
+const checkout = createCheckout({ invoice })
+checkout.subscribe(() => render(checkout.getState()))
+await checkout.load()
+button.onclick = () => checkout.pay()
+```
+
+### verifySignedInvoice(input, options?)
+Checks the processor is trusted and the merchant signature is valid (EOA or ERC-1271). Returns the parsed invoice or throws.
+
+### paymentPaths(token, relayUrl?)
+The capability ladder, best first: `eip3009` (gasless; needs `relayUrl`), `permit` (one transaction), `approve` (always available).
+
+### discoverWallets(timeoutMs?)
+Installed wallets through EIP-6963, falling back to `window.ethereum`.
+
+### encodeSignedInvoice(s), decodeSignedInvoice(str), normalizeSignedInvoice(input), serializeSignedInvoice(s)
+Convert between the object, JSON and URL-fragment forms.
+
+### hashInvoice(s), toOrderId(str), invoiceDomain(chainId, processor), invoiceTypes
+EIP-712 helpers. `toOrderId` maps your order string to bytes32 with keccak256.
+
+### getNetwork(name, overrides?), getToken(net, token), requireProcessor(net), networks, whitechainSepolia, whitechain
+Network and token config.
+
+### parseAmount(amount, decimals), formatAmount(value, decimals)
+`parseAmount('5.00', 6)` is `5000000n`. `formatAmount(5000000n, 6)` is `"5"`.
+
+### paymentProcessorAbi
+The contract ABI.
+
+## Errors
+
+Every error is a `SableyeError` with a stable `code` and a `remedy` saying what to do next.
+
+- `wrong_chain`: wallet or RPC is on another chain.
+- `unknown_network`, `unknown_token`: not configured; the remedy lists valid values.
+- `invalid_amount`: pass a positive decimal string.
+- `processor_not_deployed`: pass `processor`, or upgrade once deployed.
+- `secret_in_client`: the merchant key was used in a browser.
+- `invalid_payment_link`: the link is malformed; generate a new one.
+- `rpc_unreachable`: check `rpcUrl` and the connection.
+- `no_wallet`: the customer needs a browser wallet.
+- `user_rejected`: declined in the wallet. Nothing was paid; can be retried.
+- `insufficient_balance`: not enough of the token.
+- `insufficient_gas`: no WBT for the fee and no gasless path available.
+- `invoice_expired`, `invoice_revoked`: ask the merchant for a new invoice.
+- `invalid_signature`: altered or unsigned invoice. Do not pay it.
+- `untrusted_processor`: the invoice names an unofficial contract. Treat as phishing.
+- `payment_failed`: the attempt failed; the message has the reason.
+- `signer_cannot_transact`: a custom signer needs `signTransaction` for on-chain actions.
+
+## Network
+
+- Whitechain Sepolia: chain 1874, gas token WBT, RPC https://rpc.testnet.whitechain.io, explorer https://explorer.testnet.whitechain.io
+- Test USDT: 0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7 (6 decimals, supports EIP-2612 and EIP-3009)
+- WBT faucet: https://faucet.testnet.whitechain.io
+
+## Contract
+
+`PaymentProcessor`: `pay`, `payWithPermit`, `payWithAuthorization`, `refund`, `cancelInvoice`, `bumpNonce`, `minNonce`, `getReceipt`, `hashInvoice`.
+EIP-712 domain `{ name: "Sableye", version: "1", chainId, verifyingContract }`, type `Invoice(bytes32 orderId,address merchant,address payout,address token,uint256 amount,uint64 expiry,uint256 nonce)`.

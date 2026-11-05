@@ -163,5 +163,7 @@ sdk/packages/checkout/  static checkout page (payment links, #40)
 sdk/packages/create-whitechain-checkout/  scaffolder (#43)
 demo/store/             Next.js demo shop
 demo/books/             Phase 2 (Arkiv reader); untouched in Phase 1
+skills/whitechain-pay/  Agent Skill (#42)
+llms.txt                SDK docs for AI agents (#37): update it when an API changes
 scripts/                gen-abi, check-sdk-lines
 ```

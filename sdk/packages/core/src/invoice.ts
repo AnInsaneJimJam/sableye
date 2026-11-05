@@ -19,6 +19,7 @@ export interface Invoice {
 
 /** Invoice status on-chain. Only moves forward. Mirrors `IPaymentProcessor.Status`. */
 export const InvoiceStatus = ['none', 'paid', 'partially_refunded', 'refunded', 'cancelled'] as const
+/** One of the {@link InvoiceStatus} values. */
 export type InvoiceStatus = (typeof InvoiceStatus)[number]
 
 /** EIP-712 domain for a processor deployment. */
