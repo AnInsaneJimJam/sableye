@@ -105,8 +105,13 @@ export class UserRejectedError extends SableyeError {
 
 /** The payer does not hold enough of the invoice's token. */
 export class InsufficientBalanceError extends SableyeError {
-  constructor(need: string, have: string, symbol: string) {
-    super('insufficient_balance', `This wallet holds ${have} ${symbol}, and the invoice needs ${need} ${symbol}.`, `Add ${symbol} to this wallet or connect another one.`)
+  constructor(need: string, have: string, symbol: string, wallet?: string) {
+    const who = wallet ? `Wallet ${wallet.slice(0, 6)}…${wallet.slice(-4)}` : 'This wallet'
+    super(
+      'insufficient_balance',
+      `${who} holds ${have} ${symbol}, and the invoice needs ${need} ${symbol}.`,
+      `Add ${symbol} to this wallet, or switch your wallet extension to the account that holds it and try again.`,
+    )
   }
 }
 

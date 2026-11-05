@@ -415,7 +415,7 @@ export function createCheckout(options: CheckoutOptions & { invoice: SignedInvoi
     const summary = state.summary!
     if (balance < s.invoice.amount) {
       const decimals = tokenConfig?.decimals ?? (await client!.readContract({ address: s.invoice.token, abi: erc20Abi, functionName: 'decimals' }))
-      throw new InsufficientBalanceError(summary.amountFormatted, formatAmount(balance, decimals), summary.symbol)
+      throw new InsufficientBalanceError(summary.amountFormatted, formatAmount(balance, decimals), summary.symbol, payer)
     }
 
     const wallet = createWalletClient({ chain, transport: custom(provider) })
