@@ -451,6 +451,33 @@ export class Sableye {
       return results
     },
 
+    /**
+     * Subscription analytics from on-chain state and events: active / past-due / cancelled counts, MRR (per token,
+     * normalised to 30 days), churn (cancelled ÷ all) and failed-charge rate (failed ÷ attempted renewals).
+     */
+    stats: async (fromBlock = 0n) => {
+      const address = requireSubscriptions(this.network)
+      const subs = await this.subscriptions.list(fromBlock)
+      const common = { address, abi: subscriptionManagerAbi, args: { merchant: this.merchant }, fromBlock } as const
+      const [charged, failed] = await Promise.all([
+        this.client.getContractEvents({ ...common, eventName: 'Charged' }),
+        this.client.getContractEvents({ ...common, eventName: 'ChargeFailed' }),
+      ])
+      const renewals = charged.length - subs.length // the first cycle is charged on subscribe, not a renewal
+      const mrr: Record<string, bigint> = {}
+      for (const x of subs) {
+        if (x.status !== 'active' && x.status !== 'past_due') continue
+        mrr[x.token] = (mrr[x.token] ?? 0n) + (x.amount * 2_592_000n) / BigInt(x.interval)
+      }
+      const count = (st: string) => subs.filter((x) => x.status === st).length
+      const attempts = Math.max(0, renewals) + failed.length
+      return {
+        total: subs.length, active: count('active'), pastDue: count('past_due'), cancelled: count('cancelled'),
+        mrr, churnRate: subs.length ? count('cancelled') / subs.length : 0,
+        renewals: Math.max(0, renewals), failedCharges: failed.length, failedChargeRate: attempts ? failed.length / attempts : 0,
+      }
+    },
+
     /** Cancel on-chain as the merchant. */
     cancel: async (subId: Hex): Promise<{ txHash: Hex }> => {
       const address = requireSubscriptions(this.network)

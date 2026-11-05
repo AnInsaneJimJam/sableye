@@ -164,6 +164,8 @@ test('indexer + webhooks + refunds + reconcile + CSV', async () => {
   assert.match(row, /,partially_refunded,/)
   assert.match(row, /,10,4,6,/) // amount, refunded, net in human units
   assert.equal(indexer.stats().refundRate > 0, true)
+  assert.equal(indexer.stats().created, 1)      // created via this server after the indexer was attached
+  assert.equal(indexer.stats().conversion, 1)
 })
 
 test('reorg: a reverted payment emits invoice.reorged and leaves the books', async () => {

@@ -393,8 +393,11 @@ export class Indexer {
     return [...by.values()].sort((a, b) => (b.paidBlock ?? 0) - (a.paidBlock ?? 0))
   }
 
-  /** Volume, count and refund rate for a dashboard. Amounts in token base units, per token. */
-  stats(): { count: number; volume: Record<string, bigint>; refunded: Record<string, bigint>; refundRate: number } {
+  /**
+   * Volume, count, refund rate and conversion for a dashboard. Amounts in token base units, per token.
+   * `created` counts invoices created by this server (their order refs are remembered); `conversion` = paid / created.
+   */
+  stats(): { count: number; volume: Record<string, bigint>; refunded: Record<string, bigint>; refundRate: number; created: number; conversion: number } {
     const paid = this.invoices().filter((i) => i.amount !== undefined)
     const volume: Record<string, bigint> = {}
     const refunded: Record<string, bigint> = {}
@@ -403,7 +406,12 @@ export class Indexer {
       refunded[i.token!] = (refunded[i.token!] ?? 0n) + i.refunded
     }
     const refundCount = paid.filter((i) => i.refunded > 0n).length
-    return { count: paid.length, volume, refunded, refundRate: paid.length ? refundCount / paid.length : 0 }
+    const created = Object.keys(this.state.orderRefs).length
+    const paidOfCreated = paid.filter((i) => this.state.orderRefs[i.orderId] !== undefined).length
+    return {
+      count: paid.length, volume, refunded, refundRate: paid.length ? refundCount / paid.length : 0,
+      created, conversion: created ? paidOfCreated / created : 0,
+    }
   }
 
   /**

@@ -95,6 +95,14 @@ test('renewal tick, failed charge handled gracefully, recovery, cap, cancel', as
   assert.equal((await sableye.subscriptions.get(subId)).status, 'cancelled')
   assert.equal((await sableye.subscriptions.charge(subId)).result, 'inactive')
   assert.equal((await sableye.subscriptions.list()).length, 1)
+
+  const st = await sableye.subscriptions.stats()
+  assert.equal(st.total, 1)
+  assert.equal(st.cancelled, 1)
+  assert.equal(st.churnRate, 1)
+  assert.equal(st.renewals, 2)       // subscribe + 2 renewals = 3 Charged events
+  assert.equal(st.failedCharges, 1)
+  assert.equal(st.failedChargeRate, 1 / 3)
 })
 
 test('bad interval has a remedy', async () => {
