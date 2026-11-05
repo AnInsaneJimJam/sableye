@@ -5,7 +5,7 @@ libs = ["lib"]
 solc = "0.8.30"
 evm_version = "prague"
 via_ir = true
-remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/", "forge-std/=lib/forge-std/src/"]
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/", "forge-std/=lib/forge-std/src/", "@chimera/=lib/chimera/src/"]
 
 [fuzz]
 runs = 1000
