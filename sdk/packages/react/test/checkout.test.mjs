@@ -59,7 +59,7 @@ const mount = async (props) => {
   document.body.append(host)
   const root = createRoot(host)
   await act(async () => root.render(createElement(Checkout, { processor, chain, rpcUrl: RPC, token, ...props })))
-  return { host, root, status: () => host.querySelector('[data-sableye-checkout]').dataset.sableyeStatus, button: () => host.querySelector('button') }
+  return { host, root, status: () => host.querySelector('[data-sableye-checkout]').dataset.sableyeStatus, button: () => host.querySelector('[data-sableye-pay]') }
 }
 
 before(async () => {
@@ -125,6 +125,9 @@ test('errors reach onError with a remedy, and show in the DOM', async () => {
   assert.ok(errors[0].remedy)
   assert.equal(host.querySelector('[data-sableye-error]').dataset.sableyeCode, 'insufficient_balance')
   assert.match(button().textContent, /Try again/)
+  // The account that was checked is shown, with a way to pick another one.
+  assert.ok(host.querySelector('[data-sableye-account] code'))
+  assert.ok(host.querySelector('[data-sableye-switch-account]'))
   await act(async () => root.unmount())
 })
 

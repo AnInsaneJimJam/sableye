@@ -141,6 +141,33 @@ test('permit: one transaction, no approve', async () => {
   assert.equal((await sableye.verifyPayment(inv.orderRef)).paid, true)
 })
 
+test('wrong account connected: the error names it, and chooseAccount reopens the picker (MetaMask-style)', async () => {
+  // Like MetaMask: the site was approved for an empty account earlier, so eth_requestAccounts returns it silently.
+  // Only wallet_requestPermissions (EIP-2255) shows the picker, where the customer picks the funded account.
+  const empty = privateKeyToAccount(generatePrivateKey()).address
+  let picked = false
+  const wallet = await makeWallet({
+    script: {
+      eth_requestAccounts: () => [picked ? wallet.account.address : empty],
+      wallet_requestPermissions: () => ((picked = true), [{ parentCapability: 'eth_accounts' }]),
+    },
+  })
+  const inv = await sableye.invoices.create({ amount: '1.00', orderId: nextOrder() })
+  const checkout = checkoutFor(inv, wallet)
+
+  const first = await checkout.pay()
+  assert.equal(first.status, 'error')
+  assert.equal(first.error.code, 'insufficient_balance')
+  assert.ok(first.error.message.includes(empty.slice(0, 6)), 'error names the account it checked')
+  assert.equal(first.account, empty)
+
+  const second = await checkout.pay({ chooseAccount: true })
+  assert.equal(second.status, 'success', second.error?.message)
+  assert.equal(second.account, wallet.account.address)
+  assert.ok(wallet.calls.indexOf('wallet_requestPermissions') < wallet.calls.lastIndexOf('eth_requestAccounts'))
+  assert.equal((await sableye.verifyPayment(inv.orderRef)).paid, true)
+})
+
 test('approve: a token with no capabilities gets approve + pay, for the exact amount', async () => {
   const wallet = await makeWallet({ tokenAddress: plainUsdt })
   const inv = await sableye.invoices.create({ amount: '1.00', token: 'PLAIN', orderId: nextOrder() })

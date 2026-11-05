@@ -15,8 +15,8 @@ export interface UseCheckoutResult {
   state: CheckoutState
   /** Installed wallets. Empty until discovery finishes, or if none is installed. */
   wallets: DiscoveredWallet[]
-  /** Start, or retry, the payment. */
-  pay: (provider?: WalletProvider) => void
+  /** Start, or retry, the payment. `chooseAccount` re-opens the wallet's account picker. */
+  pay: (provider?: WalletProvider, options?: { chooseAccount?: boolean }) => void
 }
 
 const invoiceKey = (invoice: CheckoutInvoice) =>
@@ -51,7 +51,7 @@ export function useCheckout(invoice: CheckoutInvoice, options: CheckoutOptions =
     }
   }, [])
 
-  return { state, wallets, pay: (provider) => void checkout.pay(provider ? { provider } : undefined) }
+  return { state, wallets, pay: (provider, o) => void checkout.pay({ ...(provider ? { provider } : {}), ...o }) }
 }
 
 /** Props of {@link Checkout}. */
@@ -88,6 +88,8 @@ const FINAL_ERRORS = new Set(['invoice_expired', 'invoice_revoked', 'invalid_sig
  */
 export function Checkout({ invoice, onSuccess, onError, className, ...options }: CheckoutProps) {
   const { state, wallets, pay } = useCheckout(invoice, options)
+  // Remember which wallet the customer picked, so "Use a different account" reopens the same one.
+  const lastProvider = useRef<WalletProvider | undefined>(undefined)
   const { status, summary, error, txHash, explorerUrl } = state
 
   const callbacks = useRef({ onSuccess, onError })
@@ -118,13 +120,23 @@ export function Checkout({ invoice, onSuccess, onError, className, ...options }:
           {explorerUrl ? <a href={explorerUrl} target="_blank" rel="noreferrer">View transaction</a> : <code>{txHash}</code>}
         </p>
       )}
+      {state.account && status !== 'success' && (
+        <p data-sableye-account>
+          Paying from <code title={state.account}>{state.account.slice(0, 6)}…{state.account.slice(-4)}</code>{' '}
+          {payable && (
+            <button type="button" data-sableye-switch-account onClick={() => pay(lastProvider.current, { chooseAccount: true })}>
+              Use a different account
+            </button>
+          )}
+        </p>
+      )}
       {error && status === 'error' && (
         <p data-sableye-error data-sableye-code={error.code} role="alert">{error.message}</p>
       )}
       {payable &&
         (choices ? (
           choices.map((w) => (
-            <button key={w.name} type="button" data-sableye-pay onClick={() => pay(w.provider)}>Pay {label} with {w.name}</button>
+            <button key={w.name} type="button" data-sableye-pay onClick={() => { lastProvider.current = w.provider; pay(w.provider) }}>Pay {label} with {w.name}</button>
           ))
         ) : (
           <button type="button" data-sableye-pay onClick={() => pay()}>{status === 'error' ? 'Try again' : `Pay ${label}`}</button>
