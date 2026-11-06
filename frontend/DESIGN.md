@@ -55,7 +55,3 @@ future Arkiv/Swarm features as shipped.
   `GlassButton`. Rules, and the verbatim source prompt: `docs/liquid-glass-button.md`.
 - `liquid-glass-navbar.tsx` adapts Nimbus UI Waterline by
   https://guglielmogiannattasio.it. Keep attribution and the CSS fallback.
-
-Homepage rounded cards and section panels are borderless. Separate them with solid fills and spacing; omit decorative rim/highlight layers around the panels.
-
-Homepage buttons retain the shared GlassButton API but render as flat navy or blue controls, with no liquid-glass gradients, refraction, rim layers, or click deformation.
