@@ -5,7 +5,7 @@
 `<a className="…">` or `<button className="…">` for actions. This applies to the
 homepage, the sandbox and any new page. Humans and AI agents both follow it.
 
-Documentation sidebar disclosure rows (Checkout, Invoices, Subscriptions) are plain native buttons styled as navigation text, with a chevron and no glass pill or shadow. Documentation search, copy buttons, and page-action menu controls are also plain native buttons with their original flat styling. Documentation uses a fixed dark theme; there is no day/night toggle.
+Documentation pages are an exception: all controls use plain native buttons and flat call-to-action links, without liquid-glass styling. Documentation uses a fixed dark theme without a day/night toggle.
 
 ```tsx
 import { GlassButton } from "@/components/ui/glass-button";

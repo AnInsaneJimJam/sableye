@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   Check,
   ChevronDown,
@@ -132,8 +138,14 @@ export function TableOfContents({
   sections: { id: string; title: string }[];
 }) {
   const [active, setActive] = useState(sections[0]?.id ?? "");
+  const clickedSection = useRef<string | null>(null);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   useEffect(() => {
+    let frame = 0;
     const update = () => {
+      if (clickedSection.current) return;
       let id = sections[0]?.id ?? "";
       for (const section of sections) {
         const element = document.getElementById(section.id);
@@ -148,17 +160,88 @@ export function TableOfContents({
         id = sections.at(-1)?.id ?? id;
       setActive(id);
     };
+    const release = () => {
+      clearTimeout(settleTimer.current);
+      clickedSection.current = null;
+    };
+    const onScroll = () => {
+      if (clickedSection.current) {
+        // Keep the clicked item selected while intermediate headings pass by.
+        clearTimeout(settleTimer.current);
+        settleTimer.current = setTimeout(release, 180);
+        return;
+      }
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    const interrupt = () => {
+      release();
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "PageUp",
+          "PageDown",
+          "Home",
+          "End",
+          " ",
+        ].includes(event.key)
+      )
+        interrupt();
+    };
     update();
-    window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scrollend", release);
+    window.addEventListener("wheel", interrupt, { passive: true });
+    window.addEventListener("touchstart", interrupt, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      release();
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", release);
+      window.removeEventListener("wheel", interrupt);
+      window.removeEventListener("touchstart", interrupt);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [sections]);
+  const navigate = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
+    if (
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    )
+      return;
+    const target = document.getElementById(id);
+    if (!target) return;
+    event.preventDefault();
+    clickedSection.current = id;
+    setActive(id);
+    clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      clickedSection.current = null;
+    }, 1000);
+    window.history.pushState(null, "", `#${id}`);
+    window.scrollTo({
+      top: window.scrollY + target.getBoundingClientRect().top - 110,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+  };
   const links = sections.map((section) => (
     <a
       href={`#${section.id}`}
       key={section.id}
       className={active === section.id ? "active" : ""}
       aria-current={active === section.id ? "location" : undefined}
-      onClick={() => setActive(section.id)}
+      onClick={(event) => navigate(event, section.id)}
     >
       {section.title}
     </a>

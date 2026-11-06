@@ -1,8 +1,7 @@
 "use client";
 
-import { GlassButton } from "@/components/ui/glass-button";
-
 import Link from "@/components/docs/docs-link";
+import HomeLink from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -19,7 +18,7 @@ import { navigation, pages, type NavItem } from "@/lib/docs/content";
 
 function Brand() {
   return (
-    <Link href="/" className="brand" aria-label="Sableye documentation home">
+    <HomeLink href="/" className="brand" aria-label="Sableye home">
       <img
         src="/docs/logo.svg"
         width={25}
@@ -28,7 +27,7 @@ function Brand() {
         aria-hidden="true"
       />
       <span>Sableye</span>
-    </Link>
+    </HomeLink>
   );
 }
 
@@ -99,6 +98,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLElement>(null);
+  const resourcesMenu = useRef<HTMLDetailsElement>(null);
   const words = query
     .toLowerCase()
     .split(/\W+/)
@@ -127,6 +127,36 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
     dialog.current?.showModal();
     searchInput.current?.focus();
   };
+
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => {
+      const menu = resourcesMenu.current;
+      if (
+        menu?.open &&
+        event.target instanceof Node &&
+        !menu.contains(event.target)
+      ) {
+        menu.open = false;
+      }
+    };
+    const escape = (event: KeyboardEvent) => {
+      const menu = resourcesMenu.current;
+      if (event.key === "Escape" && menu?.open) {
+        menu.open = false;
+        menu.querySelector("summary")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (resourcesMenu.current) resourcesMenu.current.open = false;
+  }, [pathname]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -180,8 +210,8 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
       </a>
       <header className="topbar">
         <div className="brand-area">
-          <GlassButton
-            size="sm"
+          <button
+            type="button"
             ref={menuTrigger}
             className="icon-button mobile-menu"
             aria-label="Open navigation"
@@ -190,7 +220,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMobile(!mobile)}
           >
             <Menu size={20} />
-          </GlassButton>
+          </button>
           <Brand />
         </div>
         <nav className="top-links" aria-label="Main navigation">
@@ -218,11 +248,21 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           >
             Contracts
           </Link>
-          <details className="learn-menu">
+          <details ref={resourcesMenu} className="learn-menu">
             <summary>
               Resources <ChevronDown size={13} />
             </summary>
-            <div>
+            <div
+              onClick={(event) => {
+                if (
+                  event.target instanceof Element &&
+                  event.target.closest("a") &&
+                  resourcesMenu.current
+                ) {
+                  resourcesMenu.current.open = false;
+                }
+              }}
+            >
               <Link href="/configuration">Configuration</Link>
               <Link href="/deployment">Deployment</Link>
               <Link href="/cli/doctor">CLI doctor</Link>
@@ -258,8 +298,8 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       {mobile && (
-        <GlassButton
-          size="sm"
+        <button
+          type="button"
           className="sidebar-backdrop"
           aria-label="Close navigation"
           onClick={() => setMobile(false)}
@@ -271,14 +311,14 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
         className={`sidebar ${mobile ? "is-open" : ""}`}
         aria-label="Documentation navigation"
       >
-        <GlassButton
-          size="sm"
+        <button
+          type="button"
           className="mobile-close icon-button"
           aria-label="Close navigation"
           onClick={() => setMobile(false)}
         >
           <X size={20} />
-        </GlassButton>
+        </button>
         <nav>
           {navigation.map((group) => (
             <div className="nav-group" key={group.title}>
@@ -345,13 +385,13 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
                 }
               }}
             />
-            <GlassButton
-              size="sm"
+            <button
+              type="button"
               className="key-button"
               onClick={() => dialog.current?.close()}
             >
               Esc
-            </GlassButton>
+            </button>
           </div>
           <div className="search-results">
             <p className="search-caption" aria-live="polite">
