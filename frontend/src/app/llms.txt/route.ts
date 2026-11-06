@@ -2,8 +2,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-export const dynamic = "force-static";
-
 export function GET() {
   return new Response(
     readFileSync(path.join(process.cwd(), "../llms.txt"), "utf8"),
