@@ -7,7 +7,7 @@ export function Hero() {
   return (
     <section id="home" className="hero page-width">
       <div className="hero-copy">
-        <a className="launch-note" href="#trust">
+        <a className="launch-note" href="/sandbox">
           <span className="status-light" /> Built on Whitechain{" "}
           <span className="note-separator">/</span> Explore the testnet{" "}
           <ArrowRight size={13} />
@@ -28,8 +28,8 @@ export function Hero() {
           >
             Start building <ArrowRight size={17} />
           </a>
-          <a className="action-text" href="#product">
-            Explore Sableye <ArrowDownRight size={17} />
+          <a className="action-text" href="/sandbox">
+            Try the sandbox <ArrowDownRight size={17} />
           </a>
         </div>
       </div>
