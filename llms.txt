@@ -76,6 +76,7 @@ A code that doesn't apply throws `CouponError` with `code` set to one of `coupon
 
 ### Emails and PDFs
 Once email is configured (`npx sableye init --email`, or `SMTP_USER` + `SMTP_PASS`) and an indexer runs, these go out automatically: the invoice on create, a receipt plus a "you got paid" notice on `invoice.paid` (verified on-chain first), and a refund confirmation on `invoice.refunded`. Every email goes through a keyed outbox, so a replay or reorg never sends twice and an SMTP failure never affects a payment.
+**Serverless (Vercel, Lambda):** the process is frozen once the response is sent, so finish queued emails first: `after(() => sableye.emails.flush())` in Next.js, or `await sableye.emails.flush()`. Receipts, notices and refund emails come from the indexer, so they need a long-running server, and the order store (`orderStore`) must be shared with the server that creates the invoices. That server is the one that knows the customer's email.
 
 ```ts
 await sableye.emails.test()                         // send yourself a test email

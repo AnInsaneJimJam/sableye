@@ -127,3 +127,19 @@ test('PDFs build and carry the order and payment details', async () => {
   assert.equal(rec.subarray(0, 4).toString(), '%PDF')
   assert.ok(rec.length > 1000)
 })
+
+test('emails.flush() resolves only after queued emails are sent (serverless: call it before the function freezes)', async () => {
+  const slow = nodemailer.createTransport({ jsonTransport: true })
+  const send = slow.sendMail.bind(slow)
+  let sent = 0
+  slow.sendMail = async (m) => { await new Promise((r) => setTimeout(r, 50)); sent++; return send(m) }
+  const outbox = createOutbox({ pollMs: 0 })
+  const mail = attachEmails({ user: 'shop@gmail.com', pass: 'x', transport: slow }, outbox, {
+    businessName: 'Chai Stall', merchant: '0xaa', getOrder: async () => order, verify: async () => ({ paid: true }),
+    invoicePdf: async () => new Uint8Array([1]), receiptPdf: async () => undefined, explorerTx: () => undefined, format: String,
+  })
+  mail.onInvoiceCreated(order) // starts sending in the background
+  assert.equal(sent, 0)
+  await mail.emails.flush()
+  assert.equal(sent, 1)
+})

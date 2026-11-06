@@ -105,6 +105,11 @@ export interface Emails {
   test(to?: string): Promise<void>
   /** Everything queued or sent, newest first. */
   log(): EmailLogEntry[]
+  /**
+   * Send everything that's due now and resolve when done. On serverless hosts (Vercel, Lambda) the process is frozen
+   * after the response, so call this before returning, or in `after()` / `waitUntil()`, or queued emails are lost.
+   */
+  flush(): Promise<void>
 }
 
 const RECENT_MS = 60 * 60 * 1000
@@ -215,6 +220,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
       if (!cfg) throw new Error('Email is not configured: set SMTP_USER and SMTP_PASS (or run `npx sableye init`).')
       await run({ kind: 'test', to: to ?? cfg.user })
     },
+    flush: () => outbox.drain(),
     log: () =>
       outbox.jobs('email').map((j) => {
         const p = j.payload as EmailJob
