@@ -1,5 +1,6 @@
 {
   "name": "@sableye/server",
+  "private": true,
   "version": "0.1.0",
   "description": "Sableye server SDK: sign EIP-712 invoices and verify USDT payments on Whitechain",
   "license": "MIT",

@@ -1,6 +1,6 @@
 'use client'
-import { Checkout } from '@sableye/react'
-import { invoiceFromLocation } from '@sableye/core'
+import { Checkout } from 'sableye/react'
+import { invoiceFromLocation } from 'sableye'
 import { useEffect, useState } from 'react'
 import type { Address } from 'viem'
 

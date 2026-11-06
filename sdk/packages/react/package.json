@@ -1,5 +1,6 @@
 {
   "name": "@sableye/react",
+  "private": true,
   "version": "0.1.0",
   "description": "Sableye React checkout: <Checkout/> and useCheckout",
   "license": "MIT",

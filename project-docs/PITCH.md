@@ -22,7 +22,7 @@ Whitechain Sepolia; nothing is mocked.
 | **0:35–1:10** · Live payment | "Customer buys a chai: one signature, no gas." | **Buy** → Checkout → Pay → MetaMask signature → "verified on the server", Blockscout link (on `/sandbox/gasless`: "paid by the shop, your wallet paid 0") |
 | **1:10–1:25** · Merchant view | "The shop sees the payment instantly. Payments are read straight from the chain, with pending, safe and final confirmations, and signed webhooks." | `/sandbox/events`: new row, confirmation pill, webhook feed |
 | **1:25–1:45** · Lifecycle | "Refunds are on-chain and capped at what was paid. One click, no setup." "And the accountant gets a CSV." | `/sandbox/refunds` → **Refund** → refunded pill; `/sandbox/reconcile` → **Download CSV** |
-| **1:45–2:05** · Scale | "One QR on the counter: every scan is its own pay-once invoice. Customers on tokens with EIP-3009 pay with **no gas at all**; the shop's server sponsors the fee, and it can't be drained." | QR card on `/sandbox/payment-links` (scan with phone if available); `/sandbox/subscriptions`: Chai Club renewal countdown |
+| **1:45–2:05** · Scale | "One QR on the counter: every scan is its own pay-once invoice. Customers on tokens with EIP-3009 pay with **no gas at all**; the shop's server sponsors the fee, and it can't be drained." | QR card on `/sandbox/payment-links` (scan with phone if available); `/sandbox/subscriptions`: renewal countdown |
 | **2:05–2:25** · Why on-chain + trust | "Why not Stripe? Settlement in one second to your own wallet, no chargebacks, and reach for every stablecoin holder. The contract has no admin key; it's fuzzed, invariant-tested and Slither-clean, and we document a threat model." | README "Why onchain" + Security section |
 | **2:25–2:30** · Ask | "Sableye is ready for mainnet the day USDT lands, and we'd love to build it with the Whitechain Builders Program." | — |
 
@@ -46,7 +46,7 @@ Whitechain Sepolia; nothing is mocked.
 4. **1:00** **Invoices:** sign one on `/sandbox/invoices` (0 gas, 0 tx), pay it, watch the status flip (15 s).
 5. **1:15** **Phone wallet:** the QR icon in the checkout → scan in MetaMask mobile → the desktop widget turns to Paid (40 s).
 6. **1:55** **Merchant view:** `/sandbox/events` (confirmations, webhooks), `/sandbox/refunds`, `/sandbox/reconcile` CSV, `/sandbox/dashboard` (35 s).
-7. **2:30** Payment link + QR; Chai Club subscription renewal ticking; gasless explanation (30 s).
+7. **2:30** Payment link + QR; subscription renewal ticking; gasless explanation (30 s).
 8. **3:00** Code: the Sableye vs Stripe toggle; `/sandbox/developers` → **Run doctor**, all green (15 s).
 9. **3:15** Why on-chain + security summary + mainnet / Builders Program ask (25 s).
 10. **3:40** End card: repo URL, contract addresses (5 s).

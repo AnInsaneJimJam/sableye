@@ -10,7 +10,7 @@ import { attachEmails, createOutbox, invoicePdf, receiptPdf, smtpServerFor } fro
 const ORDER_ID = '0x' + 'ab'.repeat(32)
 const order = {
   orderRef: 'order_42', orderId: ORDER_ID, amount: '5.00', token: 'USDT', checkoutUrl: 'https://shop.example/pay#abc',
-  createdAt: Date.now(), expiresAt: Date.now() + 1800_000, customer: { email: 'ada@example.com', name: 'Ada' }, description: 'Masala chai x2',
+  createdAt: Date.now(), expiresAt: Date.now() + 1800_000, customer: { email: 'ada@example.com', name: 'Ada' }, description: 'Coffee beans x2',
 }
 
 function setup({ paid = true, paidAt = new Date(), orders = { [ORDER_ID]: order }, transport } = {}) {
@@ -20,7 +20,7 @@ function setup({ paid = true, paidAt = new Date(), orders = { [ORDER_ID]: order 
   t.sendMail = async (m) => (sent.push(m), realSend(m))
   const outbox = createOutbox({ pollMs: 0, retryDelays: [0, 0] })
   const mail = attachEmails({ user: 'shop@gmail.com', pass: 'x', transport: t }, outbox, {
-    businessName: 'Chai Stall', merchant: '0x00000000000000000000000000000000000000aa',
+    businessName: 'Acme Coffee', merchant: '0x00000000000000000000000000000000000000aa',
     getOrder: async (id) => orders[id],
     verify: async () => ({ paid, amountFormatted: '5', payer: '0xpayer', paidAt, explorerUrl: 'https://explorer/tx/0x1' }),
     invoicePdf: async () => new Uint8Array([37, 80, 68, 70]),
@@ -48,10 +48,10 @@ test('invoice email: sent to the customer with the PDF, once', async () => {
   await outbox.drain()
   assert.equal(sent.length, 1)
   assert.equal(sent[0].to, 'ada@example.com')
-  assert.match(sent[0].subject, /Invoice from Chai Stall: 5.00 USDT/)
+  assert.match(sent[0].subject, /Invoice from Acme Coffee: 5.00 USDT/)
   assert.match(sent[0].text, /https:\/\/shop.example\/pay#abc/)
   assert.equal(sent[0].attachments[0].filename, 'invoice-order_42.pdf')
-  assert.match(sent[0].from, /"Chai Stall" <shop@gmail.com>/)
+  assert.match(sent[0].from, /"Acme Coffee" <shop@gmail.com>/)
 })
 
 test('payment: receipt to the customer and a notice to the merchant; a replayed event sends nothing new', async () => {
@@ -61,7 +61,7 @@ test('payment: receipt to the customer and a notice to the merchant; a replayed 
   await outbox.drain()
   assert.deepEqual(sent.map((m) => m.to).sort(), ['ada@example.com', 'shop@gmail.com'])
   const receipt = sent.find((m) => m.to === 'ada@example.com')
-  assert.match(receipt.subject, /Receipt from Chai Stall/)
+  assert.match(receipt.subject, /Receipt from Acme Coffee/)
   assert.equal(receipt.attachments[0].filename, 'receipt-order_42.pdf')
   assert.equal(mail.emails.log().filter((e) => e.status === 'sent').length, 2)
 })
@@ -86,7 +86,7 @@ test('refund confirmation goes to the customer', async () => {
   await mail.onEvent(event('invoice.refunded', { amount: '2000000', txHash: '0xrefund' }))
   await outbox.drain()
   assert.equal(sent.length, 1)
-  assert.match(sent[0].subject, /Refund from Chai Stall: 2 USDT/)
+  assert.match(sent[0].subject, /Refund from Acme Coffee: 2 USDT/)
   assert.match(sent[0].text, /https:\/\/explorer\/tx\/0xrefund/)
 })
 
@@ -119,7 +119,7 @@ test('outbox: persisted jobs survive a restart and are not re-sent', async () =>
 })
 
 test('PDFs build and carry the order and payment details', async () => {
-  const business = { name: 'Chai Stall', address: 'MG Road, Mumbai' }
+  const business = { name: 'Acme Coffee', address: 'MG Road, Mumbai' }
   const inv = Buffer.from(await invoicePdf(order, { business, merchant: '0x00000000000000000000000000000000000000aa' }))
   assert.equal(inv.subarray(0, 4).toString(), '%PDF')
   const rec = Buffer.from(await receiptPdf('order_42', { status: 'paid', amountFormatted: '5', txHash: '0x' + '12'.repeat(32), paidAt: new Date() }, {
@@ -136,7 +136,7 @@ test('emails.flush() resolves only after queued emails are sent (serverless: cal
   slow.sendMail = async (m) => { await new Promise((r) => setTimeout(r, 50)); sent++; return send(m) }
   const outbox = createOutbox({ pollMs: 0 })
   const mail = attachEmails({ user: 'shop@gmail.com', pass: 'x', transport: slow }, outbox, {
-    businessName: 'Chai Stall', merchant: '0xaa', getOrder: async () => order, verify: async () => ({ paid: true }),
+    businessName: 'Acme Coffee', merchant: '0xaa', getOrder: async () => order, verify: async () => ({ paid: true }),
     invoicePdf: async () => new Uint8Array([1]), receiptPdf: async () => undefined, explorerTx: () => undefined, format: String,
   })
   mail.onInvoiceCreated(order) // starts sending in the background

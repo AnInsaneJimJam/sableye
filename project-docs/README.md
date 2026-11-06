@@ -9,7 +9,8 @@ Internal project records and reference material live here. The developer documen
 - [SDK documentation audit](SDK_AUDIT.md)
 - [AI integration evaluation](AI_EVAL.md)
 - [Pitch](PITCH.md)
-- [Historical demo handoff](DEMO_HANDOFF.md)
+- [Tier 1 feature plan](TIER1_PLAN.md)
+- [Testing checklist](TESTING.md)
 
 Start the website from `frontend/` with `bun run dev`, or from the repository root with `pnpm --filter sableye-frontend dev`. Open http://localhost:3000/docs (use the port printed by Next.js).
 

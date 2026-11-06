@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Stdio MCP server. Configure in your agent, e.g. Claude Code:
-//   claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye-mcp
+//   claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye mcp
 // Env: MERCHANT_KEY (signs invoices only; refunds are returned unsigned), SABLEYE_NETWORK (default whitechain-sepolia),
 //      SABLEYE_RPC, SABLEYE_PROCESSOR, SABLEYE_FROM_BLOCK, SABLEYE_CHECKOUT_URL.
 import { existsSync } from 'node:fs'

@@ -235,8 +235,8 @@ None ──pay──► Paid ──refund(part)──► PartiallyRefunded ─�
   - Signed payment-link generator plus a static checkout page. #40
   - Merchant dashboard v1: volume, count and refund rate. #41
 - **AI:**
-  - `whitechain-pay` Agent Skill with recipes and guardrails: the secret key never goes in the client, always check the chain ID, use testnet first. #42
-  - `npx create-whitechain-checkout` scaffolder. #43
+  - `sableye` Agent Skill with recipes and guardrails: the secret key never goes in the client, always check the chain ID, use testnet first. #42
+  - `npx create-sableye-app` scaffolder. #43
 
 **Verify:** Foundry **invariant** tests with a handler (#31). Properties:
 - The processor's token balance never changes.

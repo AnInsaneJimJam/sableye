@@ -5,11 +5,11 @@ import { parseEnv, setEnv } from '../bin/init.mjs'
 
 test('setEnv replaces existing keys, appends new ones, keeps everything else', () => {
   const before = '# Signs invoices\nMERCHANT_KEY=0x...\n\n# Optional\nSABLEYE_RPC_URL=\n'
-  const after = setEnv(before, { MERCHANT_KEY: '0xabc', SMTP_USER: 'shop@gmail.com', SABLEYE_BUSINESS_NAME: 'Chai & Co #1' })
+  const after = setEnv(before, { MERCHANT_KEY: '0xabc', SMTP_USER: 'shop@gmail.com', SABLEYE_BUSINESS_NAME: 'Acme Coffee #1' })
   assert.match(after, /^# Signs invoices\nMERCHANT_KEY=0xabc\n\n# Optional\nSABLEYE_RPC_URL=\n/)
   assert.match(after, /SMTP_USER=shop@gmail.com\n/)
-  assert.match(after, /SABLEYE_BUSINESS_NAME="Chai & Co #1"\n/)
-  assert.deepEqual(parseEnv(after), { MERCHANT_KEY: '0xabc', SABLEYE_RPC_URL: '', SMTP_USER: 'shop@gmail.com', SABLEYE_BUSINESS_NAME: 'Chai & Co #1' })
+  assert.match(after, /SABLEYE_BUSINESS_NAME="Acme Coffee #1"\n/)
+  assert.deepEqual(parseEnv(after), { MERCHANT_KEY: '0xabc', SABLEYE_RPC_URL: '', SMTP_USER: 'shop@gmail.com', SABLEYE_BUSINESS_NAME: 'Acme Coffee #1' })
 })
 
 test('setEnv on an empty file, and a value with $ is written literally', () => {

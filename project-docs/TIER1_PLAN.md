@@ -2,7 +2,7 @@
 
 These are the Stripe features from the Tier 1 list that fit Sableye without a contract change. Each section gives the plan, then what shipped and what's still open.
 **Order:** #7 → #5 → #6 → #9, smallest first. #9 was last because it needed a Reown project id from the user.
-**Constraint:** none of these may change `PaymentProcessor` / `SubscriptionManager` (no re-verification needed), or put slow work inside the indexer's `sync` (the formally modelled path, see `docs/VERIFICATION.md` §7).
+**Constraint:** none of these may change `PaymentProcessor` / `SubscriptionManager` (no re-verification needed), or put slow work inside the indexer's `sync` (the formally modelled path, see [VERIFICATION.md](VERIFICATION.md) §7).
 
 ## #7 Revenue analytics (Stripe: Dashboard home, Billing analytics)
 

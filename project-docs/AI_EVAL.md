@@ -1,7 +1,7 @@
 # AI integration eval
 
 Can an AI coding agent integrate Sableye into a **blank** Next.js app using only our Agent Skill
-(`skills/whitechain-pay`) and `llms.txt`? Harness: `scripts/ai-eval/run.mjs` (re-run it to reproduce).
+(`skills/sableye`) and `llms.txt`? Harness: `scripts/ai-eval/run.mjs` (re-run it to reproduce).
 
 **Pass rate: 3/3 (100%)**. Run on 2026-11-05 with Claude Code (`claude -p`, edit + npm/npx tools only).
 
@@ -10,7 +10,7 @@ Task given to the agent:
 > This is a blank Next.js (App Router) app for a coffee shop.
 > Add a USDT checkout with Sableye so a customer can buy "Masala chai" for 1.00 USDT on Whitechain Sepolia:
 > a Buy button that shows the Sableye checkout, and a receipt page that confirms the payment on the server.
-> Use only the Sableye Agent Skill in .claude/skills/whitechain-pay and the docs in docs/llms.txt.
+> Use only the Sableye Agent Skill in .claude/skills/sableye and the docs in docs/llms.txt.
 > The SDK isn't on npm yet: install @sableye/core, @sableye/server and @sableye/react from the tarballs in ./.sableye-sdk/.
 > Read the merchant key from the MERCHANT_KEY environment variable. Make sure `npm run build` passes. Don't ask questions; just do it.
 

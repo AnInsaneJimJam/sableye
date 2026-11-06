@@ -33,7 +33,7 @@ export function AgentIntegration() {
             </code>
             <GlassButton
               size="sm"
-              href={`${repo}/tree/main/skills/whitechain-pay`}
+              href={`${repo}/tree/main/skills/sableye`}
             >
               View skill <ArrowUpRight size={16} />
             </GlassButton>
@@ -43,7 +43,7 @@ export function AgentIntegration() {
           <div className="relative">
             <h3>Run your payments from a chat.</h3>
             <code className="agent-command">
-              MERCHANT_KEY=0x… npx sableye-mcp
+              MERCHANT_KEY=0x… npx sableye mcp
             </code>
             <AgentConsole />
           </div>
