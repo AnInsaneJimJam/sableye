@@ -31,7 +31,12 @@ const fontMono = localFont({
   display: "swap",
 });
 
-export const metadata = createMetadata();
+export const metadata = {
+  ...createMetadata(),
+  icons: {
+    icon: { url: "/logo.svg", type: "image/svg+xml" },
+  },
+};
 
 export const viewport: Viewport = {
   themeColor: SITE_THEME.glass.void,
