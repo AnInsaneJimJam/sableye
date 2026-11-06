@@ -79,10 +79,14 @@ export function SiteHeader() {
     <>
       <header className="site-header">
         <a href="#home" className="wordmark" aria-label="Sableye home">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
-          Sableye<span className="brand-period">.</span>
+          <img
+            src="/logo.svg"
+            width={27}
+            height={29}
+            alt=""
+            aria-hidden="true"
+          />
+          Sableye
         </a>
       </header>
       <div className="site-dock">

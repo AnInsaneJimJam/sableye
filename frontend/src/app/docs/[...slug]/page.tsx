@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "@/components/docs/docs-link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Info } from "lucide-react";
@@ -27,7 +28,28 @@ export async function generateMetadata({
 }
 
 /** Render a guide with an outline, page actions, and adjacent-page navigation. */
-export default async function GuidePage({
+export default function GuidePage({
+  params,
+}: {
+  params: Promise<{ slug: string[] }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <main id="main-content" className="article-layout" aria-busy="true">
+          <div className="article" role="status">
+            Loading guide…
+          </div>
+        </main>
+      }
+    >
+      <GuideContent params={params} />
+    </Suspense>
+  );
+}
+
+/** Resolve runtime route parameters inside the guide's loading boundary. */
+async function GuideContent({
   params,
 }: {
   params: Promise<{ slug: string[] }>;
