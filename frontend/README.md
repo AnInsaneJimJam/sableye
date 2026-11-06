@@ -15,17 +15,57 @@ The Sableye marketing site. Sableye is a USDT checkout for real businesses on Wh
 | Animation | motion |
 | Theming | next-themes, class strategy, light and dark tokens in OKLCH |
 | Lint and format | Biome 2 |
-| Package manager | pnpm workspace |
+| Package manager | pnpm 10.24.0 (repository workspace) |
 
 ## Commands
 
 ```bash
-pnpm install       # from the repository root
-pnpm --filter sableye-frontend dev
-pnpm --filter sableye-frontend build
-pnpm --filter sableye-frontend start
-pnpm --filter sableye-frontend lint
+corepack enable    # once, to use the pinned pnpm version
+pnpm install --frozen-lockfile # install the repository workspace dependencies
+pnpm dev           # build SDK dependencies, then start http://localhost:3000
+pnpm build         # build SDK dependencies, then the production frontend
+pnpm start         # serve the production build
+pnpm lint          # Biome check (lint plus format diagnostics)
+pnpm format        # Biome format, writes files
 ```
+
+Run these commands from `frontend/` in a full checkout of this repository.
+The `@sableye/*` dependencies are sibling workspace packages in `sdk/packages/`;
+copying only `frontend/` or running `bun install` cannot resolve them. Use the
+root `pnpm-lock.yaml` as the single lockfile. The `predev` and `prebuild` scripts
+compile the SDK dependencies in dependency order because their exports use `dist/`.
+
+## Deploy to Vercel
+
+1. Import the **whole Git repository** into Vercel.
+2. Set **Root Directory** to `frontend` and enable **Include source files outside
+   of the Root Directory in the Build Step** so the sibling SDK packages are available.
+3. Select **Next.js** and **Node.js 22.x**. Leave the output directory at its default.
+   `vercel.json` supplies the install and build commands: install from the workspace
+   root with the pinned pnpm version and frozen lockfile, then build from `frontend/`.
+   Remove any old `bun install` override in the project settings.
+4. Set `NEXT_PUBLIC_SITE_URL` to the public HTTPS origin (no trailing slash).
+   The marketing pages and hosted `/pay` checkout do not need a merchant key to build.
+   To create invoices in the sandbox, also set the server-only `MERCHANT_KEY` to a
+   testnet merchant wallet's private key for the deployment's environment.
+5. Deploy. If retrying a previous Bun deployment, redeploy without the existing build cache.
+
+Vercel's [monorepo settings](https://vercel.com/docs/monorepos/monorepo-faq)
+describe the outside-root setting. Package versions are pinned through Corepack
+and `packageManager`; no global pnpm version override is needed.
+
+**Sandbox runtime:** invoice creation and on-chain payment verification work on
+Vercel with `MERCHANT_KEY` configured. When `VERCEL=1`, merchant startup does not
+write `.sableye/`, attach a file-backed indexer, or start background workers.
+This avoids `ENOENT` / read-only filesystem errors when signing invoices.
+Subscription renewals can be triggered explicitly through the sandbox's Renewals action.
+
+The full sandbox still requires a persistent Node.js server: saved payment links,
+link deactivation, webhook logs, and the indexer use JSON files in `.sableye/`.
+Indexer-dependent endpoints return `503 persistent_storage_required` on Vercel.
+Migrate storage and workers before enabling these features there. Temporary `/tmp`
+files are not a durable substitute for link revocations or webhook delivery state.
+Never use a `NEXT_PUBLIC_` variable for the key.
 
 ## Layout
 
@@ -64,7 +104,7 @@ Geist and Geist Mono are bundled in `src/app/fonts` with their SIL Open Font
 Licenses and loaded through `next/font/local`. Development and production builds
 do not need to contact Google Fonts. Keep these files in source control.
 
-Run `pnpm --filter sableye-frontend dev` from the repository root and open the Local URL printed by Next.js.
+Run `pnpm dev` from this directory and open the Local URL printed by Next.js.
 If port 3000 is occupied, Next.js may choose another port. Stop the previous dev
 server before launching another instance for this directory.
 
@@ -89,5 +129,5 @@ liquid-glass language documented in [DESIGN.md](DESIGN.md). Supplied glass cards
 and the Waterline navbar live in `src/components/ui`; no new dependencies are
 needed. The checkout walkthrough is an illustration and never requests funds.
 
-To check the rendered product content, run the app, then `pnpm --filter sableye-frontend check:render`
-(or `PORT=3111 pnpm --filter sableye-frontend check:render` if using that port).
+To check the rendered product content, run the app, then `pnpm check:render`
+(or `PORT=3111 pnpm check:render` if using that port).

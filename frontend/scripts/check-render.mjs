@@ -6,8 +6,8 @@
  * A 200 is not a render: Next can serve a shell while the page is blank. So
  * this polls until the HTML carries real content, and fails loudly otherwise.
  *
- *   bun run check:render            # expects a server on :3000
- *   PORT=3111 bun run check:render
+ *   pnpm check:render            # expects a server on :3000
+ *   PORT=3111 pnpm check:render
  */
 
 const PORT = process.env.PORT ?? "3000";
