@@ -148,10 +148,11 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
     renameSync(`${cfg.statePath}.tmp`, cfg.statePath)
   }
 
-  const chain = rabdi({ accessKey: cfg?.accessKey ?? '' })
+  let chainCache: ReturnType<typeof rabdi> | undefined
+  const chain = () => (chainCache ??= rabdi({ accessKey: cfg?.accessKey ?? '' })) // built only when used: no warning when Arkiv is off
   let writer = cfg?.writer
-  const getWriter = () => (writer ??= createWalletClient({ chain, transport: http(), account: deps.account! }) as unknown as ArkivWriter)
-  const reader = () => createPublicClient({ chain, transport: http() })
+  const getWriter = () => (writer ??= createWalletClient({ chain: chain(), transport: http(), account: deps.account! }) as unknown as ArkivWriter)
+  const reader = () => createPublicClient({ chain: chain(), transport: http() })
 
   let viewKey: Promise<Hex> | undefined
   const getViewKey = () => {

@@ -253,7 +253,7 @@ await stripe.subscriptions.create({
     summary:
       "An indexer follows your payments on-chain with a block cursor, backfill and reorg rollback. Each payment moves from pending to safe to final, and every step is delivered to your server as an HMAC-signed webhook with a stable id.",
     stripe: { name: "Webhooks + Events", how: "Stripe signs events with a Stripe-Signature header; you verify them with constructEvent." },
-    differences: ["Confirmation depth is explicit: fulfil at pending, safe or final", "A reorg emits invoice.reorged instead of silently changing history", "Same signing scheme as Stripe: t=…,v1=HMAC"],
+    differences: ["Replay any past event with indexer.resend(id); develop locally with npx sableye listen", "Confirmation depth is explicit: fulfil at pending, safe or final", "A reorg emits invoice.reorged instead of silently changing history", "Same signing scheme as Stripe: t=…,v1=HMAC"],
     steps: ["Payment included in a block: invoice.paid", "Chain's safe head passes it: invoice.safe", "Finalized on Ethereum: invoice.final", "Your endpoint verifies and dedupes by id"],
     code: {
       sableye: {
@@ -267,7 +267,12 @@ await indexer.start()
 // app/api/webhook/route.ts
 const event = verifyWebhook(await req.text(),
   req.headers.get('sableye-signature'), secret)
-if (event.type === 'invoice.safe') fulfil(event.data.orderRef)`,
+if (event.type === 'invoice.safe') fulfil(event.data.orderRef)
+
+// Replay: list past events, or deliver one again (same id)
+indexer.events({ type: 'invoice.paid', limit: 20 })
+await indexer.resend('evt_…')
+// Local dev: npx sableye listen --forward-to localhost:3000/api/webhook`,
       },
       stripe: {
         file: "app/api/webhook/route.ts",

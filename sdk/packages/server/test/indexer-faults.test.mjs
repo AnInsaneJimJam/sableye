@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { Indexer } from '../dist/indexer.js'
+import { verifyWebhook } from '../dist/webhooks.js'
 
 const MERCHANT = '0x00000000000000000000000000000000000000aa'
 const network = { processor: '0x00000000000000000000000000000000000000bb', maxLogRange: 10_000n, chain: { rpcUrls: { default: { http: [] } } }, tokens: {} }
@@ -99,4 +100,26 @@ test('revenue(): payments by payment day, refunds by refund day, empty days incl
   assert.equal(s.net, 8n)
   assert.equal(s.averageOrder, 5n)
   assert.deepEqual(s.points.map((p) => [p.count, p.gross, p.refunded]), [[2, 10n, 0n], [0, 0n, 0n], [0, 0n, 2n]])
+})
+
+test('events() lists what was delivered; resend() re-delivers the same event id and body', async () => {
+  const c = fakeChain()
+  c.head = c.safe = c.final = 50
+  const order = h(0x0f, 1)
+  c.logs.push(paid(5, order))
+  const posts = []
+  const fetch = async (url, init) => (posts.push({ url, body: init.body, sig: init.headers['Sableye-Signature'] ?? init.headers['sableye-signature'] }), new Response('ok'))
+  const ix = new Indexer(c.client, network, MERCHANT, { fromBlock: 0n, webhooks: [{ url: 'https://shop.test/hook', secret: 'whsec_test' }], fetch })
+  await ix.poll()
+  const events = ix.events()
+  assert.deepEqual(events.map((e) => e.type).sort(), ['invoice.final', 'invoice.paid', 'invoice.safe'])
+  const paidEvent = events.find((e) => e.type === 'invoice.paid')
+  const delivered = posts.find((p) => JSON.parse(p.body).id === paidEvent.id)
+  assert.deepEqual({ ...JSON.parse(delivered.body), created: 0 }, { ...JSON.parse(JSON.stringify(paidEvent)), created: 0 }) // same body (created = block time here)
+  const before = posts.length
+  assert.equal(await ix.resend(paidEvent.id), 1)
+  assert.equal(posts.length, before + 1)
+  assert.equal(JSON.parse(posts.at(-1).body).id, paidEvent.id)
+  assert.ok(verifyWebhook(posts.at(-1).body, posts.at(-1).sig, 'whsec_test'))
+  await assert.rejects(ix.resend('evt_nope'), /No event/)
 })

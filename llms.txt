@@ -96,7 +96,11 @@ sableye.arkiv.status()          // { published, pending, failed, lastError? }
 ### Revenue analytics
 `indexer.stats()` returns `{ count, volume, refunded, refundRate, created, conversion }`. `indexer.revenue({ bucket: 'day'|'week'|'month', from?, to? })` returns one series per token: `{ token, bucket, points: [{ start, gross, refunded, net, count }], gross, refunded, net, count, averageOrder }`. Refunds count in the period they happened (cash basis); empty periods are included. `sableye.subscriptions.stats()` returns `{ mrr, churnRate, failedChargeRate, active, pastDue, … }`.
 
+### Event replay
+`indexer.events({ type?, limit? })` lists past events, rebuilt from the indexed logs with the same ids and bodies that were delivered. `await indexer.resend(eventId, { url? })` delivers one again with the same id; receivers that deduplicate by id ignore it if they already processed it.
+
 ### CLI
+`npx sableye listen --forward-to http://localhost:3000/api/webhook [--secret whsec_…] [--since BLOCKS]` watches your payments and forwards signed webhooks to a dev server, like `stripe listen`. It prints the signing secret to set as `SABLEYE_WEBHOOK_SECRET`; `--since` replays past blocks first.
 `npx sableye init` runs first-time setup: merchant key, business name, email (logs in and sends a test email before saving), Arkiv access key. It writes `.env`. `npx sableye init --email` reruns only the email step. `npx sableye doctor` checks the chain setup and the SMTP login. `npx sableye view-key` prints the Arkiv view key.
 
 ### sableye.subscriptions.keeper(options?)
