@@ -49,6 +49,12 @@ Product styles live in `src/app/sandbox/product-pages.css`, scoped to
 `.sbx-product-page` and its containing shell so the overview and hosted checkout
 keep their own layouts.
 
+The docs entry point uses the same warm headings, connected bento surfaces and
+Hairline figures. Keep descriptions short and navigation useful. Omit decorative
+hero artwork and repeated promotional copy. Use plain native controls throughout
+the docs; preserve search, the sidebar, code copying and article outlines. Entry
+layout lives in `src/app/docs/overview.css`, scoped to `.docs-overview`.
+
 Keep the hero limited to its original headline, supporting sentence, and two
 actions. Do not add cards, diagrams, labels, or other content. Change positioning,
 typography, and background framing for Gradient Waves; see

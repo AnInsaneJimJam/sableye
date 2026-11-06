@@ -281,15 +281,9 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
               <Command size={10} /> K
             </kbd>
           </button>
-          <Link
-            className="outline-button header-reference"
-            href="/configuration"
-          >
-            SDK configuration
-          </Link>
-          <Link className="primary-button" href="/quickstart">
-            Get started
-          </Link>
+          <HomeLink className="outline-button" href="/sandbox">
+            Sandbox <ArrowRight size={14} />
+          </HomeLink>
         </div>
       </header>
       {mobile && (
@@ -329,10 +323,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
-        <div className="sidebar-bottom">
-          <span className="status-dot" />
-          Built on Whitechain
-        </div>
       </aside>
       <div className="page-area">{children}</div>
       <dialog

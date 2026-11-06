@@ -12,3 +12,4 @@ sdk/packages/*/src/**/*.js
 sdk/packages/*/src/**/*.d.ts
 medusa-corpus/
 crytic-export/
+prompt.md

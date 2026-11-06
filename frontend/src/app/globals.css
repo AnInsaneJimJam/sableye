@@ -435,13 +435,6 @@ html {
   );
   transform: rotate(-12deg);
 }
-.brand-period {
-  margin-left: -7px;
-  color: oklch(
-    0.7856 calc(0.1094 * var(--t-accent-sat))
-      calc(var(--t-accent-hue) + -4.88deg)
-  );
-}
 .nav-start {
   display: inline-flex;
   align-items: center;
