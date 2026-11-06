@@ -131,7 +131,7 @@ The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye.xyz/
 
 ## Hosting the sandbox
 
-- **Full sandbox** (indexer, receipts, Dashboard, Events, Reconcile, subscription keeper, Arkiv publishing): Railway, one always-on Node server with a volume at `frontend/.sableye/`. Config: `railway.json` and `.railwayignore`. Deploy with `railway up`; set `MERCHANT_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_REOWN_PROJECT_ID`, and optionally `SMTP_*` / `ARKIV_ACCESS_KEY` as service variables.
+- **Full sandbox** (indexer, receipts, Dashboard, Events, Reconcile, subscription keeper, Arkiv publishing): Railway, one always-on Node server with a volume at `frontend/.sableye/`. Config: `railway.json` and `.railwayignore`. Deploys automatically on every push to `main` (the service is connected to this repo); `railway up` deploys the local tree by hand. Set `MERCHANT_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_REOWN_PROJECT_ID`, and optionally `SMTP_*` / `ARKIV_ACCESS_KEY` as service variables.
 - **Live:** https://sableye.xyz: the frontend, API routes and background workers in one process.
 - Vercel can host the static parts (landing page, Books, invoices, checkout), but features that need the indexer return `503 persistent_storage_required` there.
 
