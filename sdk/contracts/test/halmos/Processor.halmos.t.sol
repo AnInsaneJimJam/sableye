@@ -105,8 +105,11 @@ contract ProcessorHalmos is Test {
     /// and the payout received exactly `amount`. (Asserting success keeps the proof from passing vacuously.)
     /// The payout may already hold `extra` (so the exact-delta check is exercised), and the receipt records exactly
     /// what happened.
-    function check_pay_noCustody_exactAmount(bytes32 orderId, uint256 amount, uint256 extra) public {
+    /// Any time and block (Halmos would otherwise fix both at 1, hiding a hard-coded paidAt / paidBlock).
+    function check_pay_noCustody_exactAmount(bytes32 orderId, uint256 amount, uint256 extra, uint64 t, uint64 n) public {
         vm.assume(amount <= type(uint128).max && extra <= type(uint128).max);
+        vm.warp(t);
+        vm.roll(n);
         _fund(amount);
         token.mint(payout, extra);
         uint256 before = token.balanceOf(payout);
