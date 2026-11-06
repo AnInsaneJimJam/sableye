@@ -1351,7 +1351,7 @@ h2 span {
   display: flex;
   gap: 5px;
 }
-.code-toolbar button {
+.code-toolbar button:not(.glass-button):not(.sbx-button) {
   cursor: pointer;
   border: 0;
   background: transparent;
@@ -1362,7 +1362,7 @@ h2 span {
   padding: 7px 11px;
   border-radius: 7px;
 }
-.code-toolbar button[aria-selected="true"] {
+.code-toolbar button:not(.glass-button):not(.sbx-button)[aria-selected="true"] {
   background: oklch(0.8451 calc(0.0778 * var(--t-ink-sat)) calc(var(--t-ink-hue) + -2.26deg) / 0.110);
   color: oklch(
     0.9555 calc(0.0212 * var(--t-ink-sat)) calc(var(--t-ink-hue) + 1.19deg)
@@ -2005,7 +2005,7 @@ h2 span {
   .code-toolbar {
     padding-inline: 12px;
   }
-  .code-toolbar button {
+  .code-toolbar button:not(.glass-button):not(.sbx-button) {
     font-size: 14px;
   }
   .business-section {
@@ -2529,7 +2529,7 @@ h2 span {
 .landing-page :is(.agent-command, .code-filename) {
   color: var(--palette-motion);
 }
-.landing-page .code-toolbar button[aria-selected="true"] {
+.landing-page .code-toolbar button:not(.glass-button):not(.sbx-button)[aria-selected="true"] {
   color: var(--palette-active);
   background-color: color-mix(in oklab, var(--palette-active) 12%, transparent);
 }

@@ -35,6 +35,20 @@ generous, separate layout space for each complete illustration and its text. Omi
 the small category labels; keep only the main headings and descriptions. Keep cards
 stationary, selectable, responsive, and readable with reduced motion.
 
+The `/sandbox` overview reuses this connected bento surface and the warm heading
+color. Keep one short description per product, with line illustrations for featured
+demos. Remove redundant navigation and comparison labels from the overview; the
+deeper product pages keep their sidebar, full explanations and live controls.
+Scope overview styling to `.sandbox-overview` and its containing shell.
+
+Sandbox product pages carry this treatment into the live workspace: warm titles,
+one short introduction, connected demo and code areas, and internal dividers.
+Keep the walkthrough expandable and remove the repeated comparison essay.
+Preserve useful wallet guidance, status feedback and every transaction control.
+Product styles live in `src/app/sandbox/product-pages.css`, scoped to
+`.sbx-product-page` and its containing shell so the overview and hosted checkout
+keep their own layouts.
+
 Keep the hero limited to its original headline, supporting sentence, and two
 actions. Do not add cards, diagrams, labels, or other content. Change positioning,
 typography, and background framing for Gradient Waves; see
@@ -66,8 +80,10 @@ future Arkiv/Swarm features as shipped.
   `bunx shadcn@latest add <component>` from `frontend`.
 - `liquid-weather-glass.tsx` adapts the supplied card with strict types, per-instance
   filter IDs, reduced motion and an explicit keyboard-accessible expansion button.
-- `glass-button.tsx` is the only button. Every button and call-to-action link uses
-  `GlassButton`. Rules, and the verbatim source prompt: `docs/liquid-glass-button.md`.
+- Landing actions use `GlassButton`. Sandbox uses plain native controls through
+  `sandbox/sandbox-button.tsx`, with 44px minimum hit areas, subtle borders and
+  clear focus, disabled and selected states. Docs also use plain native controls.
+  Glass source prompt: `docs/liquid-glass-button.md`.
 - `homepage-gooey-nav.tsx` adapts React Bits Gooey Nav, with source and license in
   `src/components/ui/react-bits/gooey-nav/`. The bottom dock keeps the existing
   homepage links and stays clear of the viewport edges on smaller screens.

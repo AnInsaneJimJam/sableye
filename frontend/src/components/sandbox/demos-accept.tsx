@@ -10,7 +10,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { GlassButton } from "@/components/ui/glass-button";
+import { SandboxButton } from "@/components/sandbox/sandbox-button";
 import {
   Btn,
   ErrorNote,
@@ -21,6 +21,7 @@ import {
   statusTone,
   TxLink,
 } from "./bits";
+import { useDemoField } from "./live-example";
 import { type ApiError, post, short, useApi } from "./use-api";
 
 type Hex = `0x${string}`;
@@ -56,8 +57,7 @@ type Verification = {
 export function WalletHint() {
   return (
     <p className="sbx-hint">
-      You need a browser wallet on Whitechain Sepolia with a little test USDT.
-      Get WBT at the{" "}
+      Use a wallet on Whitechain Sepolia. Get test WBT at the{" "}
       <a
         href="https://faucet.testnet.whitechain.io"
         target="_blank"
@@ -65,7 +65,7 @@ export function WalletHint() {
       >
         faucet
       </a>
-      , then swap a bit for USDT on{" "}
+      , then swap for USDT on{" "}
       <a href="https://testnet.yetitrade.fi" target="_blank" rel="noreferrer">
         Yetitrade
       </a>
@@ -83,12 +83,12 @@ function useOrderStatus(orderRef?: string) {
 
 /* ---------- Invoices ---------- */
 export function InvoicesDemo() {
-  const [amount, setAmount] = useState("1.00");
-  const [expiresIn, setExpiresIn] = useState(1800);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [coupon, setCoupon] = useState("");
+  const [amount, setAmount] = useDemoField<string>("amount", "1.00");
+  const [expiresIn, setExpiresIn] = useDemoField<number>("expiresIn", 1800);
+  const [email, setEmail] = useDemoField<string>("email", "");
+  const [name, setName] = useDemoField<string>("name", "");
+  const [description, setDescription] = useDemoField<string>("description", "");
+  const [coupon, setCoupon] = useDemoField<string>("coupon", "");
   const { data: mail } = useApi<{ enabled: boolean }>("/api/sandbox/emails");
   const [inv, setInv] = useState<Invoice>();
   const [busy, setBusy] = useState(false);
@@ -117,7 +117,7 @@ export function InvoicesDemo() {
     <div className="sbx-stack">
       <Panel
         title="Create an invoice"
-        hint="Signed on the server in milliseconds. No gas, no transaction."
+        hint="Sign a payment request without spending gas."
       >
         <div className="sbx-form">
           <label>
@@ -186,8 +186,7 @@ export function InvoicesDemo() {
         </div>
         {mail && !mail.enabled && (
           <p className="sbx-hint">
-            Email isn't configured on this server (SMTP_USER / SMTP_PASS), so no
-            email will be sent; the PDFs still work.
+            Email is unavailable. You can still download the invoice PDF.
           </p>
         )}
         <ErrorNote error={error} />
@@ -195,18 +194,12 @@ export function InvoicesDemo() {
       {inv && (
         <Panel
           title="Signed invoice"
-          hint="These exact fields are what the contract will check."
           action={
             <Pill tone={statusTone(status?.status)}>
               {status?.status === "none" ? "unpaid" : (status?.status ?? "…")}
             </Pill>
           }
         >
-          <div className="sbx-chips">
-            <span>0 transactions</span>
-            <span>0 gas</span>
-            <span>Stored: nowhere</span>
-          </div>
           <KV
             rows={[
               ["Order", <code key="o">{inv.orderRef}</code>],
@@ -238,37 +231,34 @@ export function InvoicesDemo() {
             ]}
           />
           <div className="sbx-row">
-            <GlassButton
-              size="sm"
+            <SandboxButton
+              size="default"
               tone="accent"
               href={inv.checkoutUrl}
               target="_blank"
               rel="noreferrer"
             >
               <Receipt size={15} /> Open the checkout link
-            </GlassButton>
-            <span className="sbx-muted">
-              Status refreshes from the chain every few seconds.
-            </span>
+            </SandboxButton>
           </div>
           <div className="sbx-row">
-            <GlassButton
-              size="sm"
+            <SandboxButton
+              size="default"
               href={`/api/sandbox/pdf?kind=invoice&ref=${inv.orderRef}`}
               target="_blank"
               rel="noreferrer"
             >
               <FileText size={15} /> Invoice PDF
-            </GlassButton>
+            </SandboxButton>
             {status?.paid && (
-              <GlassButton
-                size="sm"
+              <SandboxButton
+                size="default"
                 href={`/api/sandbox/pdf?kind=receipt&ref=${inv.orderRef}`}
                 target="_blank"
                 rel="noreferrer"
               >
                 <FileText size={15} /> Receipt PDF
-              </GlassButton>
+              </SandboxButton>
             )}
             {inv.emailed && (
               <span className="sbx-muted">
@@ -286,10 +276,6 @@ export function InvoicesDemo() {
               <TxLink hash={status.txHash} />
             </OkNote>
           )}
-          <p className="sbx-hint">
-            Try it twice: once paid, the same link is refused. Change one
-            character after <code>#</code> and the signature check fails.
-          </p>
         </Panel>
       )}
     </div>
@@ -325,8 +311,8 @@ export function CheckoutDemo({ gasless = false }: { gasless?: boolean }) {
         title={gasless ? "Pay without gas" : "A checkout page"}
         hint={
           gasless
-            ? "The checkout picks the gasless path first: you only sign."
-            : "The widget below is the real <Checkout/> component, embedded in this page."
+            ? "Gas is sponsored when the token and relayer support it."
+            : "Pay 1 USDT using your test wallet."
         }
       >
         <div className="sbx-product">
@@ -421,8 +407,8 @@ type Link = {
 };
 export function LinksDemo() {
   const { data: list, reload } = useApi<Link[]>("/api/sandbox/links");
-  const [name, setName] = useState("Consulting hour");
-  const [amount, setAmount] = useState("1.00");
+  const [name, setName] = useDemoField<string>("name", "Consulting hour");
+  const [amount, setAmount] = useDemoField<string>("amount", "1.00");
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
   const [visits, setVisits] = useState<Record<string, string[]>>({});
@@ -451,7 +437,7 @@ export function LinksDemo() {
     <div className="sbx-stack">
       <Panel
         title="Create a payment link"
-        hint="Signed by the merchant key. Nothing on-chain until someone pays."
+        hint="Create a reusable link for your customers."
       >
         <div className="sbx-form">
           <label>
@@ -495,15 +481,15 @@ export function LinksDemo() {
             <img src={l.qr} alt={`QR code for ${l.name}`} className="sbx-qr" />
             <div className="sbx-stack">
               <div className="sbx-row">
-                <GlassButton
-                  size="sm"
+                <SandboxButton
+                  size="default"
                   tone="accent"
                   href={l.url}
                   target="_blank"
                   rel="noreferrer"
                 >
                   <QrCode size={15} /> Open as a customer
-                </GlassButton>
+                </SandboxButton>
                 <Btn
                   variant="ghost"
                   busy={busy === `v${l.id}`}

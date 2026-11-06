@@ -16,6 +16,7 @@
     "check:serverless-invoice": "node --conditions=react-server --test scripts/check-serverless-invoice.mjs",
     "dev:clean": "pkill -f \"next dev\" || true; rm -rf .next; next dev",
     "check:navbar": "node scripts/check-navbar.mjs",
+    "check:sandbox-code": "node --test scripts/check-sandbox-live-code.mjs",
     "check:books": "node --test scripts/check-books-independent.mjs"
   },
   "dependencies": {

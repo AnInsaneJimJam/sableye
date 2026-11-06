@@ -35,6 +35,7 @@ import {
   parseAbi,
   parseEventLogs,
 } from "viem";
+import { useDemoField, useDemoCodeValues } from "./live-example";
 import { Btn, KV, Panel, Pill } from "./bits";
 
 // ---- the open schema (arkiv/schema.md) ----
@@ -134,8 +135,9 @@ export function BooksDemo({
 }: {
   defaultMerchant?: string;
 }) {
-  const [merchant, setMerchant] = useState(defaultMerchant);
+  const [merchant, setMerchant] = useDemoField<string>("merchant", defaultMerchant);
   const [viewKey, setViewKey] = useState("");
+  useDemoCodeValues({ hasViewKey: viewKey ? 1 : 0 });
   const [rows, setRows] = useState<Row[]>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -252,7 +254,7 @@ export function BooksDemo({
     <div className="sbx-stack">
       <Panel
         title="Open a merchant's books"
-        hint="Reads Arkiv directly from your browser. No Sableye server, no API key, no permission needed."
+        hint="Read wallet-owned records directly from Arkiv."
       >
         <div className="sbx-form">
           <label>
@@ -299,7 +301,7 @@ export function BooksDemo({
       {rows && (
         <Panel
           title={`${rows.length} record${rows.length === 1 ? "" : "s"} on Arkiv`}
-          hint="Each one is checked against its Whitechain transaction before it counts."
+          hint="Only records verified on Whitechain count toward totals."
           action={
             rows.length > 0 && (
               <Btn variant="ghost" onClick={csv}>

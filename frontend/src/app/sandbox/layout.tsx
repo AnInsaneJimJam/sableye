@@ -16,7 +16,7 @@ export default function SandboxLayout({
       <header className="site-header sbx-header">
         <Link href="/" className="wordmark" aria-label="Sableye home">
           <BrandMark />
-          Sableye<span className="brand-period">.</span>
+          Sableye
           <span className="sbx-badge">Sandbox</span>
         </Link>
         <MerchantBar />

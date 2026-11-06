@@ -298,7 +298,7 @@ export type AiOrbProps = Omit<
   decorative?: boolean;
   /** A theme variable that replaces the state's tint, e.g. `--color-chart-2`. */
   colorToken?: string;
-  /** How long a resting state keeps moving before it holds still, ms. Default 5000. */
+  /** How long a resting state keeps moving, ms. Default 5000; 0 keeps it animated. */
   settleMs?: number;
 };
 
@@ -307,7 +307,7 @@ function useSettled(state: AiOrbState, settles: boolean, settleMs: number) {
   const [settledState, setSettledState] = useState<AiOrbState | null>(null);
   useEffect(() => {
     setSettledState(null);
-    if (!settles) {
+    if (!settles || settleMs === 0) {
       return;
     }
     const timer = setTimeout(() => setSettledState(state), settleMs);
