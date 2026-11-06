@@ -6,7 +6,8 @@
     "build": "pnpm -r build",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm -r build && changeset publish"
+    "release": "pnpm -r build && changeset publish",
+    "start": "pnpm --filter sableye-frontend start"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1"
