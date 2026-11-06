@@ -38,12 +38,16 @@ export function smtpServerFor(address: string): { host: string; port: number } |
   return PROVIDERS.find(([re]) => re.test(domain))?.[1]
 }
 
-/** Email settings from SMTP_USER / SMTP_PASS / SMTP_HOST / SMTP_PORT / SMTP_FROM / MERCHANT_EMAIL, if set. */
+/** Email settings from SABLEYE_SMTP_USER / _PASS / _HOST / _PORT / _FROM and MERCHANT_EMAIL, if set. */
 export function emailConfigFromEnv(env: NodeJS.ProcessEnv = process.env): EmailConfig | undefined {
-  if (!env.SMTP_USER || !env.SMTP_PASS) return undefined
+  // Only SABLEYE_SMTP_*: an app's own SMTP_* settings belong to the app and are never used or touched.
+  const v = (k: string) => env[`SABLEYE_SMTP_${k}`] || undefined
+  const user = v('USER')
+  const pass = v('PASS')
+  if (!user || !pass) return undefined
+  const port = v('PORT')
   return {
-    user: env.SMTP_USER, pass: env.SMTP_PASS, host: env.SMTP_HOST || undefined,
-    port: env.SMTP_PORT ? Number(env.SMTP_PORT) : undefined, from: env.SMTP_FROM || undefined,
+    user, pass, host: v('HOST'), port: port ? Number(port) : undefined, from: v('FROM'),
     notify: env.MERCHANT_EMAIL === 'off' ? false : env.MERCHANT_EMAIL || undefined,
   }
 }
@@ -53,7 +57,7 @@ export function smtpTransport(cfg: EmailConfig): Transporter {
   if (cfg.transport) return cfg.transport
   const known = smtpServerFor(cfg.user)
   const host = cfg.host ?? known?.host
-  if (!host) throw new Error(`No SMTP server known for ${cfg.user}. Set SMTP_HOST (and SMTP_PORT).`)
+  if (!host) throw new Error(`No SMTP server known for ${cfg.user}. Set SABLEYE_SMTP_HOST (and SABLEYE_SMTP_PORT).`)
   const port = cfg.port ?? known?.port ?? 465
   return nodemailer.createTransport({
     host, port, secure: port === 465, auth: { user: cfg.user, pass: cfg.pass },
@@ -217,7 +221,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
       return !!cfg
     },
     async test(to) {
-      if (!cfg) throw new Error('Email is not configured: set SMTP_USER and SMTP_PASS (or run `npx sableye init`).')
+      if (!cfg) throw new Error('Email is not configured: set SABLEYE_SMTP_USER and SABLEYE_SMTP_PASS (or run `npx sableye init`).')
       await run({ kind: 'test', to: to ?? cfg.user })
     },
     flush: () => outbox.drain(),

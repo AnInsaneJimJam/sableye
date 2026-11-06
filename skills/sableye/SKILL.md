@@ -19,9 +19,7 @@ The merchant's server signs an invoice (no gas). The customer pays it in one on-
 
 ## Fastest start
 
-```sh
-npx sableye create --name my-store --framework next
-```
+New store: `npx sableye create --name my-store --framework next`. Existing app: `npx sableye init` (installs the package, writes `.env`, sets up this skill and `AGENTS.md`).
 
 ## Recipe: Next.js (App Router)
 
@@ -114,4 +112,4 @@ Every error is a `SableyeError` with a stable `code` and a `remedy`. Read `remed
 | `secret_in_client` | Move the code that uses the key to the server |
 | `insufficient_balance`, `insufficient_gas` | The customer needs USDT, or WBT for gas: faucet at https://faucet.testnet.whitechain.io |
 
-For the full API, see `llms.txt` in the Sableye repository.
+For exact APIs, read the guides bundled with the installed package: `node_modules/sableye/docs/` (`README.md` lists them, `api.md` is the full reference). They match the installed version; prefer them over memory.

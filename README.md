@@ -18,7 +18,15 @@ const { paid } = await sableye.verifyPayment('order_123') // fulfil only after t
 
 ## Quickstart
 
-One package: `npm install sableye`. Needs Node 22 or newer. This scaffolds a working store:
+One package, `sableye`. Needs Node 22 or newer.
+
+**Existing app:** run this in its folder. It installs the package, sets up `.env` and your coding agent, then prints a prompt to paste into Claude Code, Cursor, Codex or Copilot:
+
+```sh
+npx sableye init
+```
+
+**New store:** this scaffolds a working one:
 
 ```sh
 npx sableye create --name my-store
@@ -133,7 +141,7 @@ The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye.xyz/
 
 ## Hosting the sandbox
 
-- **Full sandbox** (indexer, receipts, Dashboard, Events, Reconcile, subscription keeper, Arkiv publishing): Railway, one always-on Node server with a volume at `frontend/.sableye/`. Config: `railway.json` and `.railwayignore`. Deploys automatically on every push to `main` (the service is connected to this repo); `railway up` deploys the local tree by hand. Set `MERCHANT_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_REOWN_PROJECT_ID`, and optionally `SMTP_*` / `ARKIV_ACCESS_KEY` as service variables.
+- **Full sandbox** (indexer, receipts, Dashboard, Events, Reconcile, subscription keeper, Arkiv publishing): Railway, one always-on Node server with a volume at `frontend/.sableye/`. Config: `railway.json` and `.railwayignore`. Deploys automatically on every push to `main` (the service is connected to this repo); `railway up` deploys the local tree by hand. Set `MERCHANT_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_REOWN_PROJECT_ID`, and optionally `SABLEYE_SMTP_*` / `ARKIV_ACCESS_KEY` as service variables.
 - **Live:** https://sableye.xyz: the frontend, API routes and background workers in one process.
 - Vercel can host the static parts (landing page, Books, invoices, checkout), but features that need the indexer return `503 persistent_storage_required` there.
 
@@ -148,11 +156,13 @@ The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye.xyz/
 
 ## AI integration
 
-An AI agent given only our Agent Skill and `llms.txt` integrated Sableye into a blank Next.js app in **3/3 trials** (about 2 min and ~$0.50 each). Every trial passed seven automatic checks, including server-side signing and verification, key safety, a successful build and `sableye doctor`. Details and reproduction: [project-docs/AI_EVAL.md](project-docs/AI_EVAL.md).
+`npx sableye init` sets up the merchant's coding agent as well as `.env`. It writes a managed Sableye block into `AGENTS.md` with the rules and an index of the docs bundled in `node_modules/sableye/docs/`, so they always match the installed version. It adds `@AGENTS.md` to `CLAUDE.md` and installs the skill in `.claude/skills/sableye/`. Then it prints a prompt that names the skill. That's the layout [Vercel's agent evals](https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals) found most reliable: an `AGENTS.md` docs index scored 100%, against 53–79% for skills alone. `npx sableye agents` redoes just this step.
+
+**Measured:** we set up a blank Next.js app exactly as `npx sableye init` would, and gave Claude Code the prompt `init` prints. It integrated Sableye correctly in **3/3 trials**, taking 1.3–1.7 min and about $0.40 each. Each trial passed seven automatic checks: server-side signing and verification, key safety, the right network, a successful build, and `sableye doctor`. Details and reproduction: [project-docs/AI_EVAL.md](project-docs/AI_EVAL.md).
 
 ## Emails, PDFs and merchant-owned records (Arkiv)
 
-**Email.** `npx sableye init` asks for your email address and an app password. It detects the SMTP server, sends you a test email, and saves the details to `.env` (or add `SMTP_USER` / `SMTP_PASS` later). From then on:
+**Email.** `npx sableye init` asks for your email address and an app password. It detects the SMTP server, sends you a test email, and saves the details to `.env` (or add `SABLEYE_SMTP_USER` / `SABLEYE_SMTP_PASS` later). From then on:
 - customers get the **invoice** (PDF attached) and the **receipt** (PDF, after the payment is confirmed on-chain);
 - you get a **"you got paid"** notice;
 - refunds send a **refund confirmation**.

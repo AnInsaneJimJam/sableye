@@ -262,7 +262,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "build",
       title: "Build and serve",
-      body: "Build the SDK dependencies first, then the Vite checkout. Serve its dist directory as static files and configure the merchant checkoutUrl to the public page.",
+      body: "The ready-made static checkout lives in the Sableye GitHub repository (sdk/packages/checkout), not in the npm package. From a clone, build the SDK dependencies, then the Vite checkout, serve its dist directory as static files and set checkoutUrl to its public URL. In a Next.js app you don't need it: a /pay page that renders <Checkout> does the same job.",
       code: "pnpm --filter @sableye/core build\npnpm --filter @sableye/react build\npnpm --filter @sableye/checkout build",
     },
     {
@@ -329,7 +329,7 @@ export const additions: Record<string, DocSection[]> = {
       id: "flags",
       title: "CLI flags and environment",
       body: "Implemented commands are init [--email], doctor, listen and view-key. Doctor flags: --network (default whitechain-sepolia), --rpc, --processor. Loads ./.env. CLI --rpc/--processor override SABLEYE_RPC/SABLEYE_PROCESSOR; MERCHANT_KEY provides the account. Programmatic doctor(options) returns DoctorCheck[] with name/status/detail/remedy? (status is ok, warn, or fail); printDoctor(checks) logs and returns an exit status.",
-      code: "node sdk/packages/server/bin/sableye.mjs doctor --network whitechain-sepolia\nnode sdk/packages/server/bin/sableye.mjs doctor --rpc https://rpc.testnet.whitechain.io",
+      code: "npx sableye doctor --network whitechain-sepolia\nnpx sableye doctor --rpc https://rpc.testnet.whitechain.io",
     },
   ],
   ai: [

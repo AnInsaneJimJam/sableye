@@ -1,5 +1,7 @@
-// AI integration eval (#56): can an AI agent integrate Sableye into a blank app using ONLY our Agent Skill and
-// llms.txt? Each trial: fresh blank Next.js app → `claude -p <task>` (restricted tools) → automatic grading.
+// AI integration eval (#56): can an AI agent integrate Sableye into a blank app, set up exactly the way
+// `npx sableye init` sets up a merchant's repo (package installed, .env, the AGENTS.md block indexing the docs bundled in
+// node_modules/sableye/docs, the skill) and given the prompt init prints? Each trial: fresh blank Next.js app →
+// `claude -p <prompt>` (restricted tools) → automatic grading.
 //   node scripts/ai-eval/run.mjs --trials 3 [--model sonnet]
 // Writes scripts/ai-eval/results.json and project-docs/AI_EVAL.md (the published pass rate).
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -11,38 +13,40 @@ import { randomBytes } from 'node:crypto'
 
 const { values } = parseArgs({ options: { trials: { type: 'string', default: '3' }, model: { type: 'string' }, 'timeout-min': { type: 'string', default: '20' } } })
 const REPO = new URL('../../', import.meta.url).pathname
-const TASK = `This is a blank Next.js (App Router) app for a coffee shop.
-Add a USDT checkout with Sableye so a customer can buy "Masala chai" for 1.00 USDT on Whitechain Sepolia:
-a Buy button that shows the Sableye checkout, and a receipt page that confirms the payment on the server.
-Use only the Sableye Agent Skill in .claude/skills/sableye and the docs in docs/llms.txt.
-The SDK isn't on npm yet: install @sableye/core, @sableye/server and @sableye/react from the tarballs in ./.sableye-sdk/.
-Read the merchant key from the MERCHANT_KEY environment variable. Make sure \`npm run build\` passes. Don't ask questions; just do it.`
+const { agentPrompt, installAgentFiles } = await import(join(REPO, 'sdk/packages/server/bin/agents.mjs'))
+// The `sableye` package as it would be published (build it first: pnpm -r build).
+const SDK = mkdtempSync(join(tmpdir(), 'ai-eval-sdk-'))
+execFileSync('pnpm', ['pack', '--pack-destination', SDK], { cwd: join(REPO, 'sdk/packages/sableye'), stdio: 'ignore' })
+const TARBALL = join(SDK, readdirSync(SDK).find((f) => f.endsWith('.tgz')))
+// Exactly what `npx sableye init` prints, with the merchant's answer to "What will customers pay for?".
+const TASK = `${agentPrompt({
+  framework: 'next-app', ts: true,
+  sells: '"Masala chai" for 1.00 USDT on Whitechain Sepolia. A Buy button on the home page that shows the Sableye checkout, and a receipt page that confirms the payment on the server.',
+})}\n\nDon't ask questions; just do it.`
 
 /** A minimal blank Next.js app (no Sableye anywhere). */
 function blankApp(dir) {
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     name: 'coffee-shop', private: true, scripts: { dev: 'next dev', build: 'next build' },
-    dependencies: { next: '^16.0.0', react: '^19.0.0', 'react-dom': '^19.0.0' },
+    dependencies: { next: '^16.0.0', react: '^19.0.0', 'react-dom': '^19.0.0', sableye: `file:${TARBALL}`, viem: '^2.57.16' },
     devDependencies: { typescript: '^5.9.0', '@types/react': '^19.0.0', '@types/node': '^22.0.0' },
   }, null, 2))
   mkdirSync(join(dir, 'app'))
   writeFileSync(join(dir, 'app/layout.tsx'), `export default function RootLayout({ children }: { children: React.ReactNode }) {\n  return <html lang="en"><body>{children}</body></html>\n}\n`)
   writeFileSync(join(dir, 'app/page.tsx'), `export default function Home() {\n  return <main><h1>Coffee shop</h1></main>\n}\n`)
   writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2022', lib: ['dom', 'esnext'], strict: true, module: 'esnext', moduleResolution: 'bundler', jsx: 'preserve', noEmit: true, skipLibCheck: true, isolatedModules: true, esModuleInterop: true, resolveJsonModule: true, plugins: [{ name: 'next' }], allowJs: false, incremental: true }, include: ['**/*.ts', '**/*.tsx', 'next-env.d.ts', '.next/types/**/*.ts'], exclude: ['node_modules'] }, null, 2))
-  // The only Sableye knowledge the agent gets:
-  mkdirSync(join(dir, '.claude/skills/sableye'), { recursive: true })
-  cpSync(join(REPO, 'skills/sableye/SKILL.md'), join(dir, '.claude/skills/sableye/SKILL.md'))
-  mkdirSync(join(dir, 'docs'))
-  cpSync(join(REPO, 'llms.txt'), join(dir, 'docs/llms.txt'))
-  mkdirSync(join(dir, '.sableye-sdk'))
-  for (const pkg of ['core', 'server', 'react']) execFileSync('pnpm', ['pack', '--pack-destination', join(dir, '.sableye-sdk')], { cwd: join(REPO, 'sdk/packages', pkg), stdio: 'ignore' })
+  // What `npx sableye init` leaves behind: the package installed, .env, and the agent files. Nothing else.
+  execFileSync('npm', ['install', '--silent'], { cwd: dir, stdio: 'ignore' })
+  writeFileSync(join(dir, '.env'), `MERCHANT_KEY=0x${randomBytes(32).toString('hex')}\nSABLEYE_BUSINESS_NAME="Coffee shop"\n`, { mode: 0o600 })
+  writeFileSync(join(dir, '.gitignore'), 'node_modules\n.next\n.env\n.env.bak\n')
+  installAgentFiles({ dir, pkgDir: join(dir, 'node_modules/sableye') })
 }
 
 const sources = (dir) => {
   const out = []
   const walk = (d) => {
     for (const f of readdirSync(d)) {
-      if (['node_modules', '.next', '.git', '.sableye-sdk', '.claude', 'docs'].includes(f)) continue
+      if (['node_modules', '.next', '.git', '.claude'].includes(f)) continue
       const p = join(d, f)
       if (statSync(p).isDirectory()) walk(p)
       else if (/\.(ts|tsx|js|jsx|mjs)$/.test(f)) out.push({ path: relative(dir, p), src: readFileSync(p, 'utf8') })
@@ -91,8 +95,10 @@ writeFileSync(new URL('./results.json', import.meta.url), JSON.stringify(results
 const names = Object.keys(results[0]?.checks ?? {})
 const md = `# AI integration eval
 
-Can an AI coding agent integrate Sableye into a **blank** Next.js app using only our Agent Skill
-(\`skills/sableye\`) and \`llms.txt\`? Harness: \`scripts/ai-eval/run.mjs\` (re-run it to reproduce).
+Can an AI coding agent integrate Sableye into a **blank** Next.js app, set up exactly as \`npx sableye init\` sets up a
+merchant's repo (the \`sableye\` package installed, \`.env\`, a Sableye block in \`AGENTS.md\` indexing the docs bundled in
+\`node_modules/sableye/docs/\`, the skill in \`.claude/skills/sableye\`) and given the prompt \`init\` prints?
+Harness: \`scripts/ai-eval/run.mjs\` (re-run it to reproduce).
 
 **Pass rate: ${passed}/${results.length} (${results.length ? Math.round((100 * passed) / results.length) : 0}%)**. Run on ${new Date().toISOString().slice(0, 10)} with Claude Code (\`claude -p\`, edit + npm/npx tools only).
 

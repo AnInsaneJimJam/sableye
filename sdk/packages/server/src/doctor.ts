@@ -58,7 +58,7 @@ async function smtpCheck(cfg: EmailConfig): Promise<DoctorCheck> {
       name: 'email', status: 'fail', detail: `SMTP login failed for ${cfg.user}${server ? ` (${server})` : ''}: ${(e as Error).message}`,
       remedy: /gmail/i.test(cfg.user)
         ? 'Use a Gmail app password (myaccount.google.com/apppasswords, needs 2-step verification), not your normal password. Re-run `npx sableye init --email`.'
-        : 'Check SMTP_USER / SMTP_PASS (and SMTP_HOST / SMTP_PORT), or re-run `npx sableye init --email`.',
+        : 'Check SABLEYE_SMTP_USER / SABLEYE_SMTP_PASS (and SABLEYE_SMTP_HOST / SABLEYE_SMTP_PORT), or re-run `npx sableye init --email`.',
     }
   }
 }

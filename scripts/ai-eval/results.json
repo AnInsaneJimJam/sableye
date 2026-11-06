@@ -1,10 +1,10 @@
 [
   {
     "trial": 1,
-    "dir": "/tmp/ai-eval-1-VCloPE",
-    "minutes": 2.1,
-    "turns": 23,
-    "costUsd": 0.5151202,
+    "dir": "/tmp/ai-eval-1-pHj9WF",
+    "minutes": 1.3,
+    "turns": 15,
+    "costUsd": 0.3935872,
     "checks": {
       "builds": true,
       "signsOnServer": true,
@@ -16,21 +16,21 @@
     },
     "pass": true,
     "files": [
-      "app/BuyButton.tsx",
       "app/api/invoice/route.ts",
+      "app/api/verify/route.ts",
       "app/layout.tsx",
       "app/page.tsx",
-      "app/receipt/page.tsx",
+      "app/thank-you/page.tsx",
       "lib/sableye.ts",
       "next-env.d.ts"
     ]
   },
   {
     "trial": 2,
-    "dir": "/tmp/ai-eval-2-m6FzzF",
-    "minutes": 1.7,
-    "turns": 18,
-    "costUsd": 0.43743840000000006,
+    "dir": "/tmp/ai-eval-2-IvH7xY",
+    "minutes": 1.6,
+    "turns": 17,
+    "costUsd": 0.45822859999999993,
     "checks": {
       "builds": true,
       "signsOnServer": true,
@@ -42,20 +42,22 @@
     },
     "pass": true,
     "files": [
-      "app/BuyButton.tsx",
       "app/api/invoice/route.ts",
+      "app/api/verify/route.ts",
       "app/layout.tsx",
+      "app/lib/sableye.ts",
       "app/page.tsx",
-      "app/receipt/page.tsx",
+      "app/pay/page.tsx",
+      "app/thanks/page.tsx",
       "next-env.d.ts"
     ]
   },
   {
     "trial": 3,
-    "dir": "/tmp/ai-eval-3-cFnZZr",
-    "minutes": 2,
-    "turns": 21,
-    "costUsd": 0.49670200000000003,
+    "dir": "/tmp/ai-eval-3-wr7HU6",
+    "minutes": 1.7,
+    "turns": 13,
+    "costUsd": 0.4106248,
     "checks": {
       "builds": true,
       "signsOnServer": true,
@@ -67,11 +69,11 @@
     },
     "pass": true,
     "files": [
-      "app/BuyChai.tsx",
       "app/api/invoice/route.ts",
+      "app/api/verify/route.ts",
       "app/layout.tsx",
       "app/page.tsx",
-      "app/receipt/page.tsx",
+      "app/thanks/page.tsx",
       "lib/sableye.ts",
       "next-env.d.ts"
     ]

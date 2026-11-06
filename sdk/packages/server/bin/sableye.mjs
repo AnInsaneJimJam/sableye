@@ -1,13 +1,31 @@
 #!/usr/bin/env node
-// npx sableye init [--email]            first-time setup: key, business name, email (SMTP), Arkiv; writes .env
+// npx sableye init [--email]            first-time setup in your app: installs the package, key, business name,
+//                                       email (SMTP), Arkiv → .env; sets up your coding agent and prints its prompt
+// npx sableye agents                    (re)install the AI-agent files (AGENTS.md block, skill) and print the prompt
 // npx sableye doctor [--network …] [--rpc URL] [--processor 0x…]
 // npx sableye view-key                 the key that decrypts your Arkiv records (share it with your accountant)
 // npx sableye listen --forward-to URL [--secret whsec_…] [--since BLOCKS]   forward live webhooks to localhost
 // Reads MERCHANT_KEY (and optional SABLEYE_RPC / SABLEYE_PROCESSOR / SMTP_*) from the environment or ./.env.
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import * as sdk from '../dist/index.js'
-import { runInit } from './init.mjs'
+import { boxed, copyToClipboard, detectProject } from './agents.mjs'
+import { banner } from './banner.mjs'
+import { agentStep, runInit } from './init.mjs'
+
+const pkgDir = new URL('..', import.meta.url).pathname
+const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
+/** Load .env.local, then .env (an earlier file wins: process.loadEnvFile doesn't override). */
+const loadEnv = () => {
+  for (const f of ['.env.local', '.env']) if (existsSync(f)) process.loadEnvFile(f)
+}
+/** Print the agent prompt last, boxed, and copy it. */
+const printPrompt = (prompt) => {
+  const copied = copyToClipboard(prompt)
+  console.log(`\n\x1b[1mNext: paste this into your coding agent${copied ? ' (copied to your clipboard)' : ''}:\x1b[0m\n`)
+  console.log(boxed(prompt))
+  console.log('\nThen run your app and pay a test invoice. Reprint this any time: npx sableye agents\n')
+}
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
@@ -18,7 +36,8 @@ const { positionals, values } = parseArgs({
   },
 })
 const usage = `Usage:
-  sableye init [--email]     set up .env: merchant key, business name, email (SMTP), Arkiv
+  sableye init [--email]     set up Sableye in your app: install, .env (key, business, email, Arkiv), AI agent
+  sableye agents             set up your coding agent (AGENTS.md, skill) and print the prompt to give it
   sableye doctor             check the network, contract, token, your key and your email login
   sableye view-key           print the view key that decrypts your Arkiv records (for your accountant)
   sableye listen --forward-to http://localhost:3000/api/webhook [--secret whsec_…] [--since 5000]
@@ -27,7 +46,7 @@ const usage = `Usage:
   sableye mcp                MCP server for AI agents (in the published sableye package)`
 
 const runDoctor = async () => {
-  if (existsSync('.env')) process.loadEnvFile('.env')
+  loadEnv()
   const checks = await sdk.doctor({
     network: values.network,
     privateKey: process.env.MERCHANT_KEY,
@@ -38,19 +57,36 @@ const runDoctor = async () => {
   return sdk.printDoctor(checks)
 }
 
-switch (positionals[0]) {
+const cmd = positionals[0]
+if (cmd !== 'view-key') await banner({ version, animate: cmd === 'init' || cmd === 'agents' || !cmd })
+
+switch (cmd) {
   case 'init': {
-    const code = await runInit({ emailOnly: values.email, sdk })
-    if (code === 0 && !values.email) {
-      console.log('\nChecking your setup:\n')
-      process.exit(await runDoctor())
+    const { code, prompt } = await runInit({ emailOnly: values.email, sdk, pkgDir })
+    if (code !== 0 || values.email) process.exit(code)
+    console.log('\n\x1b[1m◆ Checking your setup\x1b[0m\n')
+    const doctorCode = await runDoctor()
+    if (prompt) printPrompt(prompt)
+    process.exit(doctorCode)
+  }
+  case 'agents': {
+    if (!process.stdin.isTTY) {
+      console.error('`sableye agents` is interactive.')
+      process.exit(1)
     }
-    process.exit(code)
+    const { createInterface } = await import('node:readline')
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    const ask = (q, def) => new Promise((res) => rl.question(def ? `${q} [${def}] ` : `${q} `, (a) => res(a.trim() || def || '')))
+    const p = { ask, yes: async (q, def = true) => /^y/i.test(await ask(`${q} (${def ? 'Y/n' : 'y/N'})`, def ? 'y' : 'n')) }
+    const prompt = await agentStep(p, { project: detectProject('.'), pkgDir, envFile: existsSync('.env.local') && !existsSync('.env') ? '.env.local' : '.env' })
+    rl.close()
+    printPrompt(prompt)
+    process.exit(0)
   }
   case 'doctor':
     process.exit(await runDoctor())
   case 'view-key': {
-    if (existsSync('.env')) process.loadEnvFile('.env')
+    loadEnv()
     if (!process.env.MERCHANT_KEY) {
       console.error('MERCHANT_KEY is not set.\nRemedy: run `npx sableye init`.')
       process.exit(1)
@@ -63,7 +99,7 @@ switch (positionals[0]) {
     process.exit(0)
   }
   case 'listen': {
-    if (existsSync('.env')) process.loadEnvFile('.env')
+    loadEnv()
     const url = values['forward-to']
     if (!url) {
       console.error('Missing --forward-to.\nRemedy: npx sableye listen --forward-to http://localhost:3000/api/webhook')

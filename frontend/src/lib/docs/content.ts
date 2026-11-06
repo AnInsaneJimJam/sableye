@@ -214,7 +214,7 @@ const introductoryPages: DocPage[] = [
         id: "before-you-start",
         title: "Before you start",
         body: "Use Node.js 24, pnpm, and a wallet on Whitechain Sepolia. The merchant needs WBT to submit on-chain actions. Customers need test USDT to pay.",
-        note: "The SDK packages are not published to npm yet. Build from this repository and use the local scaffolder.",
+        note: "Already have an app? Run npx sableye init in its folder instead: it installs the package, sets up .env and your AI coding agent.",
       },
       {
         id: "create-your-store",
@@ -290,7 +290,7 @@ const introductoryPages: DocPage[] = [
     slug: "cli/installation",
     title: "CLI installation",
     group: "CLI",
-    description: "Set up the local SDK and diagnose your merchant environment.",
+    description: "Install the package, set it up in your app, and check your environment.",
     sections: [
       {
         id: "install",
@@ -309,9 +309,9 @@ const introductoryPages: DocPage[] = [
       {
         id: "check",
         title: "Check your environment",
-        body: "Run interactive setup for the merchant key, business name and optional email/Arkiv settings. Doctor checks the configured environment before you accept payments.",
+        body: "In an existing app, init does everything: installs the package, writes your settings, sets up your coding agent and prints the prompt to give it. Doctor checks the configured environment before you accept payments.",
         language: "Terminal",
-        code: "npx --no-install sableye init\nnpx --no-install sableye doctor\nnpm run dev",
+        code: "npx sableye init\nnpx sableye doctor\nnpm run dev",
       },
     ],
   },
@@ -927,7 +927,7 @@ const introductoryPages: DocPage[] = [
       {
         id: "integration",
         title: "Integrate with an agent",
-        body: "Give your coding agent llms.txt and the skills/sableye instructions from this repository. They describe the API, key boundaries, and server verification requirements.",
+        body: "Run npx sableye init (or npx sableye agents) in your app. It adds a Sableye section to AGENTS.md, which Claude Code (via CLAUDE.md), Cursor, Codex and Copilot load on every turn, with the rules and an index of the guides bundled in node_modules/sableye/docs, so the agent reads docs that match your installed version instead of its training data. It also installs the sableye skill in .claude/skills and prints a prompt that names it. Re-run npx sableye agents after upgrading to refresh the block. The same API reference is published at https://sableye.xyz/llms.txt for tools that read the web.",
       },
       {
         id: "read",
@@ -1036,7 +1036,7 @@ const introductoryPages: DocPage[] = [
       {
         id: "developer-tools",
         title: "Developer tools",
-        body: "The repository includes a local store scaffolder, doctor CLI, MCP server, agent integration skill, and a working merchant demo. The SDK is currently installed from the repository.",
+        body: "The repository includes a local store scaffolder, doctor CLI, MCP server, agent integration skill, and a working merchant demo. The SDK is published on npm as sableye.",
       },
       {
         id: "roadmap",

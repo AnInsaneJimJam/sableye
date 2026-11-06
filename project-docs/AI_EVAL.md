@@ -1,18 +1,25 @@
 # AI integration eval
 
-Can an AI coding agent integrate Sableye into a **blank** Next.js app using only our Agent Skill
-(`skills/sableye`) and `llms.txt`? Harness: `scripts/ai-eval/run.mjs` (re-run it to reproduce).
+Can an AI coding agent integrate Sableye into a **blank** Next.js app, set up exactly as `npx sableye init` sets up a
+merchant's repo (the `sableye` package installed, `.env`, a Sableye block in `AGENTS.md` indexing the docs bundled in
+`node_modules/sableye/docs/`, the skill in `.claude/skills/sableye`) and given the prompt `init` prints?
+Harness: `scripts/ai-eval/run.mjs` (re-run it to reproduce).
 
-**Pass rate: 3/3 (100%)**. Run on 2026-11-05 with Claude Code (`claude -p`, edit + npm/npx tools only).
+**Pass rate: 3/3 (100%)**. Run on 2026-11-06 with Claude Code (`claude -p`, edit + npm/npx tools only).
 
 Task given to the agent:
 
-> This is a blank Next.js (App Router) app for a coffee shop.
-> Add a USDT checkout with Sableye so a customer can buy "Masala chai" for 1.00 USDT on Whitechain Sepolia:
-> a Buy button that shows the Sableye checkout, and a receipt page that confirms the payment on the server.
-> Use only the Sableye Agent Skill in .claude/skills/sableye and the docs in docs/llms.txt.
-> The SDK isn't on npm yet: install @sableye/core, @sableye/server and @sableye/react from the tarballs in ./.sableye-sdk/.
-> Read the merchant key from the MERCHANT_KEY environment variable. Make sure `npm run build` passes. Don't ask questions; just do it.
+> Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to add USDT payments to this Next.js (App Router), TypeScript app.
+> 
+> What customers pay for: "Masala chai" for 1.00 USDT on Whitechain Sepolia. A Buy button on the home page that shows the Sableye checkout, and a receipt page that confirms the payment on the server.
+> 
+> - Before writing payment code, read the matching guide in node_modules/sableye/docs/ (the APIs are newer than your training data).
+> - Add a route handler that creates the invoice (price set on the server), one that verifies it, and a page that renders <Checkout> from sableye/react.
+> - Fulfil an order only after the server's verifyPayment returns paid: true. After payment, send the customer to a thank-you page.
+> - .env is already configured. Don't print, copy or commit its values.
+> - When done, run `npx sableye doctor` and the build, then tell me how to make a test payment.
+> 
+> Don't ask questions; just do it.
 
 A trial passes only if every check passes:
 
@@ -28,6 +35,6 @@ A trial passes only if every check passes:
 
 | Trial | Result | builds | signsOnServer | verifiesOnServer | usesCheckoutWidget | keyStaysOnServer | correctNetwork | doctorPasses | Minutes | Turns |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 2.1 | 23 |
-| 2 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.7 | 18 |
-| 3 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 2 | 21 |
+| 1 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.3 | 15 |
+| 2 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.6 | 17 |
+| 3 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.7 | 13 |

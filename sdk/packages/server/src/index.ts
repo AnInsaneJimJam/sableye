@@ -110,7 +110,7 @@ export interface SableyeConfig {
   business?: BusinessInfo
   /**
    * Send invoices, receipts, "you got paid" notices and refund confirmations from your own email account.
-   * Default: from `SMTP_USER` / `SMTP_PASS` (run `npx sableye init`). `false` turns email off.
+   * Default: from `SABLEYE_SMTP_USER` / `SABLEYE_SMTP_PASS` (run `npx sableye init`). `false` turns email off.
    */
   email?: EmailConfig | false
   /** Where order details (customer, description, items) are kept. Default: in memory. Use `fileOrderStore()` or your DB. */

@@ -10,7 +10,9 @@ npx sableye doctor                   # every check should pass before you sell
 npm run dev
 ```
 
-Or add it to an existing app: `npm install sableye viem` (plus `react` for the checkout component).
+**Existing app?** Run `npx sableye init` in its folder. It installs the package, sets up `.env` (merged, backed up, git-ignored) and your AI coding agent (`AGENTS.md` + skill, pointing at the docs bundled in `node_modules/sableye/docs/`), then prints a prompt to paste into Claude Code, Cursor, Codex or Copilot.
+
+By hand: `npm install sableye viem` (plus `react` for the checkout component).
 
 ```ts
 // server: holds MERCHANT_KEY, sets the price
@@ -33,6 +35,6 @@ import { Checkout } from 'sableye/react'
 | `sableye/react` | `<Checkout>`: wallet connect, chain switch, gasless / permit / approve, WalletConnect |
 | `sableye/mcp` | MCP server so AI agents can read payments and create invoices (`npx sableye mcp`) |
 
-CLI: `npx sableye create | init | doctor | view-key | listen | mcp`.
+CLI: `npx sableye create | init | agents | doctor | view-key | listen | mcp`.
 
-Testnet software (Whitechain Sepolia). Docs: https://sableye.xyz/docs · Live sandbox: https://sableye.xyz/sandbox · API reference for AI agents: [llms.txt](https://github.com/AnInsaneJimJam/sableye/blob/main/llms.txt)
+Testnet software (Whitechain Sepolia). Docs: https://sableye.xyz/docs · Live sandbox: https://sableye.xyz/sandbox · Docs for AI agents: bundled in `docs/`, and https://sableye.xyz/llms.txt

@@ -270,6 +270,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.3.0(react@19.3.0)
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
       viem:
         specifier: ^2.57.16
         version: 2.57.16(typescript@5.9.3)(zod@3.25.76)

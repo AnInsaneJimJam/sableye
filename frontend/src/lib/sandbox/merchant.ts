@@ -41,7 +41,7 @@ function boot(): Merchant {
     paymentLinkUrl: `${BASE_URL}/api/pay`,
     linkStore: fileLinkStore(),
     business: { name: process.env.SABLEYE_BUSINESS_NAME || "Sableye Sandbox" },
-    // Email (SMTP_*) and Arkiv (ARKIV_ACCESS_KEY) switch on from .env. Their queues and order details persist
+    // Email (SABLEYE_SMTP_*) and Arkiv (ARKIV_ACCESS_KEY) switch on from .env. Their queues and order details persist
     // to .sableye/ on a normal server; on Vercel they stay in memory (no writable disk).
     ...(process.env.VERCEL !== "1" && {
       orderStore: fileOrderStore(".sableye/orders.json"),

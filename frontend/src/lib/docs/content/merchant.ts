@@ -60,24 +60,24 @@ export const merchantPages: DocPage[] = [
     title: "Merchant setup",
     group: "Resources",
     description:
-      "Configure your key, business name, SMTP account and optional Arkiv publishing.",
+      "Set Sableye up in your app with one command: install, key, business name, email, Arkiv and your AI coding agent.",
     sections: [
       {
         id: "init",
         title: "Run interactive setup",
-        body: "In the generated store after npm install, run the local sableye binary. Setup keeps an existing key or accepts/generates a key, asks for a business name, optionally verifies SMTP and sends a test email, and optionally saves an Arkiv access key. It writes .env and then runs doctor. A new merchant wallet needs test WBT for refunds, cancels and relaying. Signing invoices itself costs no gas.",
-        code: "npx --no-install sableye init\nnpx --no-install sableye doctor\nnpm run dev",
+        body: "Run it in your app's folder. It detects your framework and package manager and offers to install sableye and viem. Then it keeps an existing key or accepts/generates one, asks for a business name, optionally logs in to your email and sends a test message, and optionally saves an Arkiv access key. Settings are merged into your existing .env (or .env.local): nothing of yours is replaced without a yes (default no), the previous file is kept as .env.bak, and both are added to .gitignore. Last, it sets up your coding agent (see AI & MCP), runs doctor, and prints a prompt to paste into the agent. A new merchant wallet needs test WBT for refunds, cancels and relaying; signing invoices costs no gas.",
+        code: "npx sableye init\n# paste the printed prompt into Claude Code, Cursor, Codex or Copilot\nnpm run dev",
       },
       {
         id: "email-only",
         title: "Configure email later",
-        body: "The --email option reruns only SMTP setup. Skipping email or Arkiv leaves payment acceptance available. Use an SMTP app password when your provider requires one. Setup is interactive; without a terminal, fill in the generated .env.example manually. Keep .env out of version control.",
-        code: "npx --no-install sableye init --email",
+        body: "The --email option reruns only SMTP setup. Skipping email or Arkiv leaves payment acceptance available. Use an SMTP app password when your provider requires one. Setup is interactive; without a terminal, fill in .env yourself. Email settings use SABLEYE_SMTP_* names so your app's own SMTP_* settings are never touched.",
+        code: "npx sableye init --email",
       },
       {
         id: "environment",
         title: "Environment variables and configuration",
-        body: "The CLI loads ./.env. The Sableye constructor reads business/email/Arkiv defaults, but custom RPC, checkout and relay URLs must be passed in your server configuration. The generated starter maps SABLEYE_RPC_URL and SABLEYE_CHECKOUT_URL; the CLI and MCP use SABLEYE_RPC. Set both RPC names when sharing one environment, or explicitly map them in your application.",
+        body: "The CLI loads ./.env.local, then ./.env. The Sableye constructor reads business/email/Arkiv defaults, but custom RPC, checkout and relay URLs must be passed in your server configuration. The generated starter maps SABLEYE_RPC_URL and SABLEYE_CHECKOUT_URL; the CLI and MCP use SABLEYE_RPC. Set both RPC names when sharing one environment, or explicitly map them in your application.",
         table: {
           headers: ["Variable", "Used for"],
           rows: [
@@ -87,11 +87,11 @@ export const merchantPages: DocPage[] = [
               "Default business name on documents and emails.",
             ],
             [
-              "SMTP_USER / SMTP_PASS",
+              "SABLEYE_SMTP_USER / SABLEYE_SMTP_PASS",
               "Enable SMTP emails when both are present.",
             ],
             [
-              "SMTP_HOST / SMTP_PORT / SMTP_FROM",
+              "SABLEYE_SMTP_HOST / SABLEYE_SMTP_PORT / SABLEYE_SMTP_FROM",
               "Override SMTP server, port and sender.",
             ],
             [
@@ -182,7 +182,7 @@ export const merchantPages: DocPage[] = [
       {
         id: "configure",
         title: "Configure SMTP",
-        body: "Run sableye init --email or set SMTP_USER and SMTP_PASS. Known provider domains have SMTP host/port detection; custom providers need SMTP_HOST and optionally SMTP_PORT. SMTP_FROM overrides the sender. MERCHANT_EMAIL changes the merchant notice recipient; off disables those notices. Alternatively pass email: {user,pass,host?,port?,from?,notify?}; email:false disables mail.",
+        body: "Run sableye init --email or set SABLEYE_SMTP_USER and SABLEYE_SMTP_PASS. Known provider domains have SMTP host/port detection; custom providers need SABLEYE_SMTP_HOST and optionally SABLEYE_SMTP_PORT. SABLEYE_SMTP_FROM overrides the sender. MERCHANT_EMAIL changes the merchant notice recipient; off disables those notices. Alternatively pass email: {user,pass,host?,port?,from?,notify?}; email:false disables mail.",
         code: "const sableye = getSableye()\nconsole.log(sableye.emails.enabled)\nawait sableye.emails.test() // sends to SMTP user by default\nconsole.log(sableye.emails.log()) // pending / sent / skipped / failed",
       },
       {
@@ -295,7 +295,7 @@ export const merchantPages: DocPage[] = [
         id: "listen",
         title: "Start forwarding",
         body: "From the generated merchant app, run the installed CLI. It loads .env, watches the merchant's payments, prints the signing secret and forwards to --forward-to. Set your receiving route's SABLEYE_WEBHOOK_SECRET to the same value and use verifyWebhook on the raw body. Without --secret, the CLI uses SABLEYE_WEBHOOK_SECRET or generates a new secret.",
-        code: "npx --no-install sableye listen --forward-to http://localhost:3000/api/webhook --secret whsec_local_development\n# Replay the previous 5000 blocks before watching new events:\nnpx --no-install sableye listen --forward-to http://localhost:3000/api/webhook --secret whsec_local_development --since 5000",
+        code: "npx sableye listen --forward-to http://localhost:3000/api/webhook --secret whsec_local_development\n# Replay the previous 5000 blocks before watching new events:\nnpx sableye listen --forward-to http://localhost:3000/api/webhook --secret whsec_local_development --since 5000",
       },
       {
         id: "limits",
@@ -375,8 +375,8 @@ export const merchantAdditions: Record<string, DocSection[]> = {
     {
       id: "smtp",
       title: "SMTP checks and view keys",
-      body: "Doctor also verifies SMTP login when SMTP_USER and SMTP_PASS are present; it does not send a message. init --email sends a test email during setup. The separate view-key command derives and prints the key for decrypting Arkiv details; it does not print the merchant private key, but its output is still sensitive.",
-      code: "npx --no-install sableye view-key\n# In a repository checkout after building the SDK:\nnode sdk/packages/server/bin/sableye.mjs view-key",
+      body: "Doctor also verifies SMTP login when SABLEYE_SMTP_USER and SABLEYE_SMTP_PASS are present; it does not send a message. init --email sends a test email during setup. The separate view-key command derives and prints the key for decrypting Arkiv details; it does not print the merchant private key, but its output is still sensitive.",
+      code: "npx sableye view-key",
     },
   ],
   "api-reference": [
