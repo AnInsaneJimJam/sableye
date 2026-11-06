@@ -28,6 +28,13 @@ merchant capabilities, payment flow, integration, business context, trust and
 limits, FAQs, then a final action. Vary section composition and leave room between
 ideas. No invented adoption numbers, endorsements or customer quotes.
 
+The first product grid uses React Bits Magic Bento through `product-bento.tsx`.
+Keep it as one uninterrupted surface with zero gaps, no individual card borders,
+and thin internal dividers that catch the active palette's cursor light. Reserve
+generous, separate layout space for each complete illustration and its text. Omit
+the small category labels; keep only the main headings and descriptions. Keep cards
+stationary, selectable, responsive, and readable with reduced motion.
+
 Keep the hero limited to its original headline, supporting sentence, and two
 actions. Do not add cards, diagrams, labels, or other content. Change positioning,
 typography, and background framing to suit the selected animation; see

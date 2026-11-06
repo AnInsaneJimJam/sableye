@@ -28,6 +28,7 @@ import {
   Slow,
 } from "@lucasmarkes/hairline/react";
 import { AgentIntegration } from "@/components/sections/agent-integration";
+import { ProductBento } from "@/components/sections/product-bento";
 import { DeveloperCode } from "@/components/sections/developer-code";
 import { FormalVerification } from "@/components/sections/formal-verification";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -77,7 +78,6 @@ const features = [
     text: "Volume, MRR and churn from on-chain data. Export to CSV.",
     tag: "Analytics",
     label: "A bar chart whose bars lift as the pointer brushes them",
-    wide: true,
   },
 ];
 
@@ -114,58 +114,57 @@ export function ProductStory() {
             <br />
             <span>And stay in control.</span>
           </h2>
-          <p>
-            Every way you get paid, in one SDK.
-          </p>
         </div>
-        <div className="product-bento">
-          <LiquidGlassCard
-            draggable={false}
-            shadowIntensity="xs"
-            glowIntensity="none"
-            className="ownership-card"
-            borderRadius="28px"
-          >
-            <div className="ownership-copy">
-              <span className="feature-tag">
-                <LockKeyhole size={13} /> Non-custodial
-              </span>
-              <h3>
-                Your revenue takes
-                <br />
-                the direct route.
-              </h3>
-              <p>Payments land in your wallet. Sableye never holds a cent.</p>
-              <GlassButton size="sm" href="#how-it-works">
-                Follow the money <ArrowUpRight size={16} />
-              </GlassButton>
-            </div>
-            <div className="ownership-figure hairline-figure">
-              <Relay
-                intensity={0.6}
-                theme="dark"
-                label="A hub and branches; the path to the tile under the pointer lights hop by hop"
-              />
-            </div>
-          </LiquidGlassCard>
-          {features.map(({ Figure, title, text, tag, label, wide }) => (
-            <LiquidGlassCard
-              key={title}
-              draggable={false}
-              shadowIntensity="none"
-              glowIntensity="none"
-              borderRadius="24px"
-              className={wide ? "feature-card feature-wide" : "feature-card"}
-            >
-              <div className="feature-figure hairline-figure">
-                <Figure intensity={0.65} theme="dark" label={label} />
-              </div>
-              <span className="feature-tag">{tag}</span>
-              <h3>{title}</h3>
-              <p>{text}</p>
-            </LiquidGlassCard>
-          ))}
-        </div>
+        <ProductBento
+          items={[
+            {
+              id: "ownership",
+              colSpan: 2,
+              rowSpan: 2,
+              content: (
+                <div className="product-bento-ownership">
+                  <div className="ownership-figure hairline-figure">
+                    <Relay
+                      intensity={0.6}
+                      theme="dark"
+                      label="A hub and branches; the path to the tile under the pointer lights hop by hop"
+                    />
+                  </div>
+                  <div className="product-bento-copy">
+                    <h3>
+                      Your revenue takes
+                      <br />
+                      the direct route.
+                    </h3>
+                    <p>
+                      Payments land in your wallet. Sableye never holds a cent.
+                    </p>
+                    <GlassButton size="sm" href="#how-it-works">
+                      Follow the money <ArrowUpRight size={16} />
+                    </GlassButton>
+                  </div>
+                </div>
+              ),
+            },
+            ...features.map(({ Figure, title, text, tag, label }) => ({
+              id: tag,
+              colSpan: tag === "Subscriptions" || tag === "Analytics" ? 2 : 1,
+              content: (
+                <div
+                  className={`product-bento-feature${tag === "Subscriptions" || tag === "Analytics" ? " product-bento-wide" : ""}`}
+                >
+                  <div className="feature-figure hairline-figure">
+                    <Figure intensity={0.65} theme="dark" label={label} />
+                  </div>
+                  <div className="product-bento-copy">
+                    <h3>{title}</h3>
+                    <p>{text}</p>
+                  </div>
+                </div>
+              ),
+            })),
+          ]}
+        />
       </section>
 
       <section
@@ -192,7 +191,8 @@ export function ProductStory() {
             },
             {
               Figure: Phone,
-              label: "A phone that opens into its layers as the pointer moves across it",
+              label:
+                "A phone that opens into its layers as the pointer moves across it",
               title: "Let your customer pay",
               subtitle: "Their wallet",
               text: "Checkout chooses gasless, permit or approve, based on token support.",
