@@ -133,10 +133,13 @@ test('indexer + webhooks + refunds + reconcile + CSV', async () => {
   const created = await sableye.invoices.create({ amount: '10.00', orderId: 'order_csv' })
   await sableye.relay(await gaslessRequest(created, await newPayer()))
 
-  await assert.rejects(sableye.refunds.create({ orderId: 'order_csv', amount: '4' }), (e) => e.code === 'refunds_not_enabled')
-  await sableye.refunds.enable()
+  // No "enable refunds" step: the SDK approves exactly the refund amount, then refunds.
+  const allowance = () => chainClient.readContract({ address: usdt, abi: usdtAbi, functionName: 'allowance', args: [sableye.merchant, processor] })
+  assert.equal(await allowance(), 0n)
   const r = await sableye.refunds.create({ orderId: 'order_csv', amount: '4' })
   assert.equal(r.amount, 4_000_000n)
+  assert.ok(r.approvalTxHash, 'approved on the fly')
+  assert.equal(await allowance(), 0n, 'no standing allowance left behind')
   await assert.rejects(sableye.refunds.create({ orderId: 'order_csv', amount: '7' }), (e) => e.code === 'refund_exceeds_paid')
 
   await indexer.poll()

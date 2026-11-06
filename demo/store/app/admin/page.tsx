@@ -1,13 +1,12 @@
 // Merchant dashboard: volume, refunds, conversion, subscription analytics, invoices, payment links (with QR),
 // webhook log and CSV, all driven by @sableye/server.
 import QRCode from 'qrcode'
-import { createPublicClient, erc20Abi, http } from 'viem'
 import { formatAmount, networks } from '@sableye/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { merchant } from '@/lib/sableye'
 import { fileLinkStore, links, mailLog, orders, webhookLog } from '@/lib/store'
 import { SdkPanel } from '@/components/SdkPanel'
-import { cancelInvoice, cancelSubscription, createInvoice, createLink, deactivateLink, enableRefunds, refund, runRenewals } from './actions'
+import { cancelInvoice, cancelSubscription, createInvoice, createLink, deactivateLink, refund, runRenewals } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,8 +29,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const subStats = await sableye.subscriptions.stats()
   // </sableye:extra>
 
-  const client = createPublicClient({ chain: net.chain, transport: http() })
-  const allowance = await client.readContract({ address: USDT.address, abi: erc20Abi, functionName: 'allowance', args: [sableye.merchant, net.processor] })
   const store = fileLinkStore()
   const savedLinks = await Promise.all(
     links.all().map(async (l) => ({ ...l, active: !(await store.isDeactivated(l.id)), qr: await QRCode.toDataURL(l.url, { margin: 1, width: 264 }) })),
@@ -59,11 +56,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         </div>
         <div className="row">
           <a href="/api/csv"><button>⬇ Download CSV (accountant export)</button></a>
-          {allowance === 0n ? (
-            <form action={enableRefunds}><button>Enable refunds (one-time approval)</button></form>
-          ) : (
-            <span className="muted">Refunds enabled ✓</span>
-          )}
         </div>
       </section>
 

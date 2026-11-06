@@ -61,7 +61,7 @@ With gasless checkout the customer spends no WBT. A little WBT lets them fall ba
 1. **Invoice:** on `/admin`, create an invoice for a customer. They get an email with the PDF, which has a QR code and a pay link.
 2. **Payment:** the customer pays from that link, or buys directly in the shop.
 3. **Receipt:** the customer gets a receipt email with a PDF, and the merchant gets a "you got paid" notice.
-4. **Refund:** on `/admin`, select **Enable refunds** once, then **Refund** a payment. The customer gets a confirmation email.
+4. **Refund:** on `/admin`, **Refund** a payment (no setup step: the SDK approves exactly the refund amount on the fly). The customer gets a confirmation email.
 5. **Check:** the **Emails** section on `/admin` lists everything sent, with its status. Use **Download CSV** for the accountant export.
 
 ## Where the data lives

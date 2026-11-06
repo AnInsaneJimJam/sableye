@@ -116,17 +116,28 @@ export interface CreatedInvoice extends SignedInvoice {
   checkoutUrl: string
 }
 
-/** An unsigned refund transaction from {@link Sableye.refunds.prepare}, for the merchant to sign. */
-export interface PreparedRefund {
+/** One unsigned transaction for the merchant to sign. */
+export interface UnsignedTx {
   to: Address
   data: Hex
   value: bigint
   chainId: number
-  /** The merchant address that must send it. */
+  /** The address that must send it. */
   from: Address
+}
+
+/** An unsigned refund from {@link Sableye.refunds.prepare}, for the merchant to sign. */
+export interface PreparedRefund extends UnsignedTx {
   amount: bigint
   /** Human-readable description to show before signing. */
   summary: string
+  /**
+   * Present when the payout wallet hasn't approved enough for this refund: an `approve` for exactly the refund
+   * amount, to be sent (and mined) before the refund itself. Afterwards the allowance is used up again.
+   */
+  approval?: UnsignedTx
+  /** Every transaction to send, in order: `[approval?, refund]`. */
+  transactions: UnsignedTx[]
 }
 
 /** Result of {@link Sableye.verifyPayment}. */
@@ -302,8 +313,8 @@ export class Sableye {
   /** Refunds: on-chain, capped at the amount paid, sent from the payout address back to the payer. */
   readonly refunds = {
     /**
-     * One-time setup: let the PaymentProcessor pull refunds from your payout wallet (an ERC-20 approve).
-     * Only possible when the payout is this merchant key. Costs gas once.
+     * Optional: pre-approve the PaymentProcessor for unlimited refunds from your payout wallet, so each later refund
+     * is a single transaction. Not required: `refunds.create()` approves exactly what it needs on its own.
      */
     enable: async (token = 'USDT'): Promise<{ txHash: Hex }> => {
       const processor = requireProcessor(this.network)
@@ -317,9 +328,9 @@ export class Sableye {
     },
 
     /**
-     * Build (but don't send) a refund transaction: validates status, the cap and the payout's allowance, and returns
-     * calldata for the merchant to sign in their own wallet. This is what AI agents / the MCP server use, so no
-     * agent ever holds spending power.
+     * Build (but don't send) a refund: validates status and the cap, and returns calldata for the merchant to sign
+     * in their own wallet. If the payout hasn't approved the processor, it also returns an `approval` for exactly
+     * the refund amount, to send first. This is what AI agents / the MCP server use, so no agent holds spending power.
      * @param params.amount decimal string; default: everything not yet refunded.
      */
     prepare: async (params: { orderId: string; amount?: string }): Promise<PreparedRefund> => {
@@ -337,31 +348,55 @@ export class Sableye {
       if (amount > remaining) {
         throw new SableyeError('refund_exceeds_paid', `Refund exceeds what is left (${formatAmount(remaining, token.decimals)}).`, 'Refund at most the remaining amount.')
       }
+      const chainId = this.network.chain.id
       const allowance = await this.client.readContract({ address: r.token, abi: erc20Abi, functionName: 'allowance', args: [r.payout, processor] })
+      let approval: UnsignedTx | undefined
       if (allowance < amount) {
-        throw new SableyeError('refunds_not_enabled', 'The payout address has not approved the PaymentProcessor.', r.payout.toLowerCase() === this.merchant.toLowerCase() ? 'Call `sableye.refunds.enable()` once.' : `Approve the processor (${processor}) from the payout wallet ${r.payout}.`)
+        // The refund pulls from the payout wallet, which needs an allowance. When the payout is this merchant key we
+        // approve exactly this refund amount, so no standing allowance is left behind. Another payout wallet must
+        // approve itself: we can't sign for it.
+        if (r.payout.toLowerCase() !== this.merchant.toLowerCase()) {
+          throw new SableyeError(
+            'refunds_not_enabled',
+            `The payout wallet ${r.payout} has not approved the PaymentProcessor for this refund.`,
+            `From ${r.payout}, approve ${processor} for at least ${formatAmount(amount, token.decimals)} ${token.symbol}.`,
+          )
+        }
+        // ponytail: approve(amount) from a non-zero allowance reverts on mainnet-USDT-style tokens; reset to 0 first if we ever support one.
+        approval = {
+          to: r.token, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [processor, amount] }),
+          value: 0n, chainId, from: this.merchant,
+        }
+      }
+      const refundTx: UnsignedTx = {
+        to: processor, data: encodeFunctionData({ abi: paymentProcessorAbi, functionName: 'refund', args: [id, amount] }),
+        value: 0n, chainId, from: this.merchant,
       }
       return {
-        to: processor,
-        data: encodeFunctionData({ abi: paymentProcessorAbi, functionName: 'refund', args: [id, amount] }),
-        value: 0n,
-        chainId: this.network.chain.id,
-        from: this.merchant,
+        ...refundTx,
         amount,
-        summary: `Refund ${formatAmount(amount, token.decimals)} ${token.symbol} to ${r.payer} for order ${params.orderId}`,
+        summary: `Refund ${formatAmount(amount, token.decimals)} ${token.symbol} to ${r.payer} for order ${params.orderId}${approval ? ' (approve first, then refund)' : ''}`,
+        ...(approval && { approval }),
+        transactions: approval ? [approval, refundTx] : [refundTx],
       }
     },
 
     /**
      * Refund a paid invoice, fully (default) or partially. Funds go from the payout back to the original payer.
+     * No setup needed: if the payout hasn't approved the processor, this approves exactly the refund amount first.
      * @param params.amount decimal string; default: everything not yet refunded.
-     * @throws {SableyeError} `refunds_not_enabled` when the payout hasn't approved the processor; call `refunds.enable()`.
+     * @throws {SableyeError} `refunds_not_enabled` only when the payout is a different wallet that must approve itself.
      */
-    create: async (params: { orderId: string; amount?: string }): Promise<{ txHash: Hex; amount: bigint }> => {
+    create: async (params: { orderId: string; amount?: string }): Promise<{ txHash: Hex; amount: bigint; approvalTxHash?: Hex }> => {
       const tx = await this.refunds.prepare(params)
-      const txHash = await this.wallet().sendTransaction({ account: this.signer as LocalAccount, chain: this.network.chain, to: tx.to, data: tx.data })
-      await this.mined(txHash, 'the refund reverted')
-      return { txHash, amount: tx.amount }
+      const send = async (t: UnsignedTx, what: string) => {
+        const hash = await this.wallet().sendTransaction({ account: this.signer as LocalAccount, chain: this.network.chain, to: t.to, data: t.data })
+        await this.mined(hash, what)
+        return hash
+      }
+      const approvalTxHash = tx.approval ? await send(tx.approval, 'the refund approval reverted') : undefined
+      const txHash = await send(tx, 'the refund reverted')
+      return { txHash, amount: tx.amount, ...(approvalTxHash && { approvalTxHash }) }
     },
   }
 

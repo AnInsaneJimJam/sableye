@@ -71,22 +71,19 @@ test('agent creates an invoice, customer pays, agent sees it; refund comes back 
   assert.equal((await call('stats')).data.count, 1)
   assert.match((await call('export_csv')).data, /agent_1/)
 
-  // Refund needs the payout's approval first: the agent gets a remedy, not a crash.
-  const blocked = await call('prepare_refund', { order_id: 'agent_1' })
-  assert.equal(blocked.isError, true)
-  assert.equal(blocked.data.error, 'refunds_not_enabled')
-
-  await sableye.refunds.enable()
+  // No setup step: the agent gets an exact-amount approval followed by the refund, both unsigned.
   const prepared = (await call('prepare_refund', { order_id: 'agent_1', amount: '2.50' })).data
   assert.equal(prepared.signed, false)
-  assert.equal(prepared.unsigned_transaction.to, processor)
+  assert.equal(prepared.unsigned_transactions.length, 2)
+  assert.equal(prepared.unsigned_transactions[0].to.toLowerCase(), usdt.toLowerCase())       // approve(processor, 2.5 USDT)
+  assert.equal(prepared.unsigned_transactions[1].to.toLowerCase(), processor.toLowerCase())  // refund
   assert.match(prepared.summary, /Refund 2.5 USDT/)
   // Nothing was sent: the receipt still shows zero refunded.
   const r = await c.readContract({ address: processor, abi: paymentProcessorAbi, functionName: 'getReceipt', args: [sableye.merchant, signed.invoice.orderId] })
   assert.equal(r.refunded, 0n)
 
-  // The merchant signs it themselves.
-  await c.waitForTransactionReceipt({ hash: await w.sendTransaction({ to: prepared.unsigned_transaction.to, data: prepared.unsigned_transaction.data }) })
+  // The merchant signs them themselves, in order.
+  for (const t of prepared.unsigned_transactions) await c.waitForTransactionReceipt({ hash: await w.sendTransaction({ to: t.to, data: t.data }) })
   assert.equal((await call('get_invoice', { order_id: 'agent_1' })).data.status, 'partially_refunded')
 })
 

@@ -58,15 +58,6 @@ export async function refund(form: FormData) {
   })
 }
 
-export async function enableRefunds() {
-  await requireAdmin()
-  await attempt('Enable refunds', async () => {
-    // <sableye:extra>
-    const r = await merchant().sableye.refunds.enable()
-    // </sableye:extra>
-    return `Refunds enabled (one-time approval) · tx ${r.txHash.slice(0, 10)}…`
-  })
-}
 
 export async function cancelInvoice(form: FormData) {
   await requireAdmin()

@@ -119,12 +119,14 @@ export function createMcpServer(sableye: Sableye, opts: McpOptions = {}): McpSer
   server.registerTool('prepare_refund', {
     title: 'Prepare refund (unsigned)',
     description:
-      'Validate a refund and return an UNSIGNED transaction. It is NOT sent: show the summary to the merchant, who signs it in their own wallet. Agents never move money out.',
+      'Validate a refund and return the UNSIGNED transaction(s) to send in order (an exact-amount approval first, if needed). Nothing is sent: show the summary to the merchant, who signs them in their own wallet. Agents never move money out.',
     inputSchema: { order_id: z.string(), amount: z.string().regex(/^\d+(\.\d+)?$/).optional().describe('Default: everything not yet refunded') },
     annotations: { readOnlyHint: true },
   }, safe(async ({ order_id, amount }) => {
     const tx = await sableye.refunds.prepare({ orderId: order_id, amount })
-    return json({ unsigned_transaction: { to: tx.to, data: tx.data, value: '0', chainId: tx.chainId, from: tx.from }, summary: tx.summary, signed: false })
+    // Send in order; the first is an exact-amount approval when the payout hasn't approved the processor yet.
+    const unsigned = tx.transactions.map((t) => ({ to: t.to, data: t.data, value: '0', chainId: t.chainId, from: t.from }))
+    return json({ unsigned_transactions: unsigned, summary: tx.summary, signed: false })
   }))
 
   return server

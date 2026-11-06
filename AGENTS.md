@@ -106,8 +106,8 @@ const { paid } = await sableye.verifyPayment('order_123')
 
 **Level 2 server APIs** (#32, #33, #45, #34)
 ```ts
-// Refunds (on-chain, capped). One-time approve from the payout wallet first:
-await sableye.refunds.enable()                                   // payout == merchant key
+// Refunds (on-chain, capped). No setup: if the payout hasn't approved the processor, create() approves exactly
+// the refund amount first (2 txs), leaving no standing allowance. refunds.enable() is an optional pre-approval.
 await sableye.refunds.create({ orderId: 'order_123', amount: '2.00' }) // default: everything left
 
 // Gasless relayer (Scale track). Next.js: app/api/relay/route.ts
@@ -137,7 +137,7 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 
 **MCP server** (#49, `@sableye/mcp`): `claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye-mcp`
 - Read tools: `get_invoice`, `list_invoices`, `stats`, `export_csv`, `doctor`. Create tools: `create_invoice`, `create_payment_link`. Both only ever move money *in*.
-- `prepare_refund` returns an **unsigned** transaction plus a summary; the merchant signs it. Agents never move money out. The SDK equivalent is `sableye.refunds.prepare()`.
+- `prepare_refund` returns the **unsigned** transaction(s) in order (an exact-amount approval first, if needed) plus a summary; the merchant signs them. Agents never move money out. The SDK equivalent is `sableye.refunds.prepare()`.
 
 **React**
 ```tsx
