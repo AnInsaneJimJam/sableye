@@ -56,8 +56,8 @@ test('invoice email: sent to the customer with the PDF, once', async () => {
 
 test('payment: receipt to the customer and a notice to the merchant; a replayed event sends nothing new', async () => {
   const { sent, outbox, mail } = setup()
-  await mail.onEvent(event('invoice.paid'))
-  await mail.onEvent(event('invoice.paid')) // replay / reorg re-emission
+  mail.onPaid(ORDER_ID, order)
+  mail.onPaid(ORDER_ID, order) // replay / reorg re-emission
   await outbox.drain()
   assert.deepEqual(sent.map((m) => m.to).sort(), ['ada@example.com', 'shop@gmail.com'])
   const receipt = sent.find((m) => m.to === 'ada@example.com')
@@ -68,14 +68,14 @@ test('payment: receipt to the customer and a notice to the merchant; a replayed 
 
 test('no receipt when the chain does not show the payment', async () => {
   const { sent, outbox, mail } = setup({ paid: false })
-  await mail.onEvent(event('invoice.paid'))
+  mail.onPaid(ORDER_ID, order)
   await outbox.drain()
   assert.equal(sent.length, 0)
 })
 
 test('an old payment the server did not create is not announced (indexer backfill)', async () => {
   const { sent, outbox, mail } = setup({ orders: {}, paidAt: new Date(Date.now() - 2 * 3600_000) })
-  await mail.onEvent(event('invoice.paid'))
+  mail.onPaid(ORDER_ID, undefined)
   await outbox.drain()
   assert.equal(sent.length, 0)
   assert.deepEqual(mail.emails.log().map((e) => e.status), ['skipped']) // logged as skipped, not as sent

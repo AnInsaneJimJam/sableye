@@ -281,15 +281,17 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
     onInvoiceCreated(order: OrderDetails) {
       if (order.customer?.email) queue(`invoice:${order.orderId}`, { kind: 'invoice', orderId: order.orderId, to: order.customer.email })
     },
-    /** Indexer events → receipts, merchant notices, refund confirmations. Keys make replays and reorgs harmless. */
+    /** A confirmed payment (from verifyPayment or the indexer) → receipt and "you got paid". Keyed: queued once. */
+    onPaid(orderId: Hex, order: OrderDetails | undefined) {
+      if (!cfg) return
+      if (order?.customer?.email) queue(`receipt:${orderId}`, { kind: 'receipt', orderId, to: order.customer.email })
+      queue(`notice:${orderId}`, { kind: 'merchant_notice', orderId, ours: !!order, to: notifyTo() })
+    },
+    /** Indexer events → refund confirmations (payments go through onPaid). Keys make replays and reorgs harmless. */
     async onEvent(e: WebhookEvent) {
       if (!cfg) return
       const orderId = e.data.orderId as Hex
-      if (e.type === 'invoice.paid') {
-        const order = await deps.getOrder(orderId)
-        if (order?.customer?.email) queue(`receipt:${orderId}`, { kind: 'receipt', orderId, to: order.customer.email })
-        queue(`notice:${orderId}`, { kind: 'merchant_notice', orderId, ours: !!order, to: notifyTo() })
-      } else if (e.type === 'invoice.refunded') {
+      if (e.type === 'invoice.refunded') {
         const order = await deps.getOrder(orderId)
         queue(`refund:${e.data.txHash}`, { kind: 'refund', orderId, txHash: e.data.txHash as Hex, amount: e.data.amount, to: order?.customer?.email })
       }

@@ -77,6 +77,7 @@ const RULES = [
   'Create `new Sableye(...)` inside a request handler or a lazy getter (module level breaks `next build`).',
   'Use network `whitechain-sepolia` (testnet) unless told otherwise. Don\'t hand-roll wallet calls: `<Checkout>` handles chain, gas and token approval.',
   'Errors are `SableyeError` with `code` and `remedy`: act on the remedy.',
+  'Emails: pass `customer: { email, name }` to `invoices.create` (ask for the email at checkout if the app doesn\'t know it). With email set up in the env, Sableye then emails the invoice and, once `verifyPayment` (or the indexer) confirms payment, the receipt (PDFs) and a "you got paid" notice. Use `orderStore: fileOrderStore(\'.sableye/orders.json\')` (or your DB) so order details survive restarts.',
 ]
 const groups = navigation.map((g) => {
   const items = g.items.flatMap((i) => i.children ?? [i]).filter((i) => i.slug !== undefined)
@@ -97,7 +98,7 @@ Rules:
 ${RULES.map((r) => `- ${r}`).join('\n')}
 
 Imports: \`sableye\` (browser-safe core) · \`sableye/server\` (Sableye client, holds the key) · \`sableye/react\` (\`<Checkout>\`) · \`sableye/mcp\`.
-Env (already configured, names only): MERCHANT_KEY, SABLEYE_BUSINESS_NAME; optional SABLEYE_SMTP_USER/PASS, ARKIV_ACCESS_KEY, NEXT_PUBLIC_REOWN_PROJECT_ID.
+Env (already configured, names only): MERCHANT_KEY, SABLEYE_BUSINESS_NAME; optional SABLEYE_SMTP_USER/PASS or SABLEYE_RESEND_API_KEY + SABLEYE_EMAIL_FROM, MERCHANT_EMAIL, ARKIV_ACCESS_KEY, NEXT_PUBLIC_REOWN_PROJECT_ID.
 Check your work: \`npx sableye doctor\`, then the app's build.
 
 Docs index (node_modules/sableye/docs/<name>.md; api.md = full API reference; README.md = descriptions):

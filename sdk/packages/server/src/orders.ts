@@ -38,6 +38,8 @@ export interface OrderDetails {
   createdAt: number
   /** Unix ms. */
   expiresAt: number
+  /** Unix ms when the payment was first confirmed here (receipt + "you got paid" queued once). */
+  paidHandledAt?: number
 }
 
 /** Where order details live. Implement it over your database; {@link fileOrderStore} and {@link memoryOrderStore} ship built in. */

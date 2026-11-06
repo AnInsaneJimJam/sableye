@@ -247,7 +247,7 @@ export class Sableye {
       businessName: this.business.name,
       merchant: this.merchant,
       getOrder: (id) => this.orders.get(id),
-      verify: (id) => this.verifyPayment(id),
+      verify: (id) => this.checkPayment(id),
       invoicePdf: (order) => invoicePdf(order, { business: this.business, merchant: this.merchant }),
       receiptPdf: (id, order) => this.receipt(id, order, true),
       explorerTx: (hash) => (this.network.chain.blockExplorers ? `${this.network.chain.blockExplorers.default.url}/tx/${hash}` : undefined),
@@ -257,7 +257,7 @@ export class Sableye {
     this.records = attachArkiv(config.arkiv === false ? undefined : (config.arkiv ?? arkivConfigFromEnv()), this.outbox, {
       merchant: this.merchant, account, network: this.network.name, chainId: this.network.chain.id, businessName: this.business.name,
       getOrder: (id) => this.orders.get(id),
-      receipt: (id) => this.verifyPayment(id),
+      receipt: (id) => this.checkPayment(id),
     })
   }
 
@@ -292,6 +292,18 @@ export class Sableye {
     },
   }
 
+  /**
+   * A payment confirmed here, by `verifyPayment` or by the indexer, whichever sees it first: redeem the coupon and queue
+   * the receipt and "you got paid". Runs once per order (marked on the order), so polling verifyPayment never resends.
+   */
+  private async onPaid(orderId: Hex) {
+    const order = await this.orders.get(orderId)
+    if (order?.paidHandledAt) return
+    if (order) await this.orders.put({ ...order, paidHandledAt: Date.now() })
+    await this.redeemCoupon(orderId)
+    this.mail.onPaid(orderId, order)
+  }
+
   /** A paid order that used a coupon counts as one redemption (idempotent). */
   private async redeemCoupon(orderId: Hex) {
     const order = await this.orders.get(orderId)
@@ -322,7 +334,7 @@ export class Sableye {
   }
 
   private async receipt(orderId: Hex, order: OrderDetails | undefined, includeCustomer: boolean): Promise<Uint8Array | undefined> {
-    const p = await this.verifyPayment(orderId)
+    const p = await this.checkPayment(orderId)
     if (!p.paid) return undefined
     const token = Object.values(this.network.tokens).find((t) => t.address.toLowerCase() === p.token?.toLowerCase())
     return receiptPdf(order?.orderRef ?? orderId, {
@@ -774,7 +786,7 @@ export class Sableye {
     this.attachedIndexer = new Indexer(this.client, this.network, this.merchant, options)
     // Emails only enqueue here, so they never slow down or break indexing.
     this.attachedIndexer.on('*', async (e) => {
-      if (e.type === 'invoice.paid') await this.redeemCoupon(e.data.orderId as Hex)
+      if (e.type === 'invoice.paid') await this.onPaid(e.data.orderId as Hex)
       this.records.onEvent(e)
       await this.mail.onEvent(e)
     })
@@ -786,6 +798,14 @@ export class Sableye {
    * @param orderId the `orderRef` from `invoices.create` (or the bytes32 orderId).
    */
   async verifyPayment(orderId: string): Promise<PaymentVerification> {
+    const v = await this.checkPayment(orderId)
+    // Orders created here get their receipt and "you got paid" email without needing an indexer. Never throws.
+    if (v.paid && (await this.orders.get(toOrderId(orderId)))) await this.onPaid(toOrderId(orderId)).catch(() => {})
+    return v
+  }
+
+  /** The on-chain check behind verifyPayment, with no side effects. */
+  private async checkPayment(orderId: string): Promise<PaymentVerification> {
     const processor = requireProcessor(this.network)
     await this.checkChain()
     const id = toOrderId(orderId)

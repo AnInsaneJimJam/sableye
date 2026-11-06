@@ -102,3 +102,25 @@ test('coupon: the invoice is signed for the discounted total, pays on-chain, and
   const pdf = Buffer.from(await sableye.documents.invoicePdf('order_coupon'))
   assert.equal(pdf.subarray(0, 4).toString(), '%PDF')
 })
+
+test('emails without an indexer: verifyPayment on a paid order queues the receipt and "you got paid" exactly once', async () => {
+  const nodemailer = (await import('nodemailer')).default
+  const sent = []
+  const transport = nodemailer.createTransport({ jsonTransport: true })
+  const send = transport.sendMail.bind(transport)
+  transport.sendMail = async (m) => { sent.push(m); return send(m) }
+  const shop = new Sableye({
+    privateKey: MERCHANT_KEY, network: 'local', chain, processor, rpcUrl: RPC,
+    tokens: { USDT: { symbol: 'USDT', address: usdt, decimals: 6 } },
+    business: { name: 'Acme Coffee' }, email: { user: 'shop@example.com', pass: 'x', transport, notify: 'owner@example.com' },
+  })
+  const created = await shop.invoices.create({ amount: '2.00', orderId: 'order_email', customer: { email: 'ada@example.com', name: 'Ada' } })
+  await shop.emails.flush()
+  assert.deepEqual(sent.map((m) => m.to), ['ada@example.com'], 'the invoice email')
+  await payer.waitForTransactionReceipt({ hash: await payer.writeContract({ address: processor, abi: paymentProcessorAbi, functionName: 'pay', args: [created.invoice, created.signature] }) })
+  for (let i = 0; i < 3; i++) assert.equal((await shop.verifyPayment('order_email')).paid, true) // polled, like a thank-you page
+  await shop.emails.flush()
+  assert.deepEqual(sent.map((m) => m.to).sort(), ['ada@example.com', 'ada@example.com', 'owner@example.com'])
+  assert.match(sent.find((m) => /Receipt/.test(m.subject)).subject, /Receipt from Acme Coffee: 2 USDT/)
+  assert.match(sent.find((m) => m.to === 'owner@example.com').subject, /You got paid: 2 USDT/)
+})

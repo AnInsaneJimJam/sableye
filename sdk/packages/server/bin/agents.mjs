@@ -97,6 +97,7 @@ export function agentPrompt({ framework, ts, sells, envFile = '.env' }) {
     `- Before writing payment code, read the matching guide in node_modules/sableye/docs/ (the APIs are newer than your training data).`,
     `- ${SHAPE[framework] ?? SHAPE.node}`,
     '- Fulfil an order only after the server\'s verifyPayment returns paid: true. After payment, send the customer to a thank-you page.',
+    '- Pass the customer\'s email (ask for it at checkout if the app doesn\'t have it) as customer: { email, name } to invoices.create, and use fileOrderStore for orders, so Sableye emails the invoice, the receipt and my "you got paid" notice.',
     `- ${envFile} is already configured. Don't print, copy or commit its values.`,
     '- When done, run `npx sableye doctor` and the build, then tell me how to make a test payment.',
   ].join('\n')

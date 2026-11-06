@@ -16,6 +16,7 @@ The merchant's server signs an invoice (no gas). The customer pays it in one on-
 5. **Use testnet first.** Start on `whitechain-sepolia` with a fresh key. Move to mainnet only when the user asks; official USDT is not on mainnet yet.
 6. **Amounts are decimal strings** like `'5.00'`, never JS numbers.
 7. **Create the client inside a request handler or a lazy getter.** Creating it at module level breaks `next build` when the key isn't set. In a Next.js `GET` route, read the request before creating the client.
+8. **Pass the customer's email.** `invoices.create({ amount, customer: { email, name } })` (ask for it at checkout if needed), with `orderStore: fileOrderStore('.sableye/orders.json')` in the `Sableye` config. With email configured, Sableye then sends the invoice, the receipt and the merchant's "you got paid" notice by itself, once `verifyPayment` confirms the payment. No indexer needed.
 
 ## Fastest start
 
