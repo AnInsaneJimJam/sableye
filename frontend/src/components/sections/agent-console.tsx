@@ -97,7 +97,13 @@ export function AgentConsole() {
     <div className="agent-console" ref={root}>
       <div className="agent-console-screen">
         <div className="agent-console-head">
-          <AiOrb state={state} size="lg" colorToken="--orb-ink" decorative />
+          <AiOrb
+            state={state}
+            size="lg"
+            colorToken="--orb-ink"
+            settleMs={0}
+            decorative
+          />
           <div>
             <p className="agent-console-ask">“{turn.ask}”</p>
             <p className="agent-console-status" aria-live="polite">

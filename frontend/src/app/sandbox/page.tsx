@@ -101,7 +101,6 @@ export default function SandboxHome() {
             <br />
             <span>to the test.</span>
           </h1>
-          <p>Live demos. Integration code. Test USDT on Whitechain Sepolia.</p>
         </div>
         <GlassButton href="/docs" size="sm">
           Read the docs <ArrowUpRight size={15} />

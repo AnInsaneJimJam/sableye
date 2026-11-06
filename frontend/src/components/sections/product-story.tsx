@@ -312,10 +312,6 @@ export function ProductStory() {
           <h2>
             Trust you can <span>inspect.</span>
           </h2>
-          <p>
-            Signed invoices. Public contracts. Server-side verification. Your
-            customers’ personal details stay off-chain.
-          </p>
         </div>
         <div className="trust-grid">
           <div>
