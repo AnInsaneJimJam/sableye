@@ -2,3 +2,4 @@ packages:
   - sdk/packages/*
   - demo/*
   - frontend
+  - docs
