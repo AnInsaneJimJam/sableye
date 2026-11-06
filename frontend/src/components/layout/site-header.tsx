@@ -8,16 +8,10 @@ import {
   Route,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LiquidNavbar } from "@/components/ui/liquid-glass-navbar";
 
 const items = [
-  {
-    label: "Docs",
-    href: "/docs",
-    icon: <BookOpen size={16} />,
-    fx: "glow" as const,
-  },
   {
     label: "Product",
     href: "#product",
@@ -48,37 +42,87 @@ const items = [
     icon: <ShieldCheck size={16} />,
     fx: "pop" as const,
   },
+  {
+    label: "Docs",
+    href: "/docs",
+    icon: <BookOpen size={16} />,
+    fx: "glow" as const,
+  },
 ];
 
 /** Wordmark at the top; the glass navigation is docked to the bottom of the viewport. */
 export function SiteHeader() {
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(-1);
+  const clickedTarget = useRef<number | null>(null);
+  const selectSection = (index: number) => {
+    // Keep explicit navigation selected until the user starts scrolling manually.
+    // Scroll-end events can belong to an interrupted earlier animation.
+    clickedTarget.current = index;
+    setActive(index);
+  };
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const index = items.findIndex(
-              (item) => item.href === `#${entry.target.id}`,
-            );
-            if (index >= 0) setActive(index);
-          }
-        }
-      },
-      { rootMargin: "-15% 0px -60% 0px" },
-    );
-    for (const item of items) {
-      const section = item.href.startsWith("#")
-        ? document.querySelector(item.href)
-        : null;
-      if (section) observer.observe(section);
-    }
-    return () => observer.disconnect();
+    let frame = 0;
+    const update = () => {
+      if (clickedTarget.current !== null) return;
+      let next = -1;
+      const threshold = Math.max(110, window.innerHeight * 0.25);
+      items.forEach((item, index) => {
+        if (!item.href.startsWith("#")) return;
+        const section = document.querySelector(item.href);
+        if (section && section.getBoundingClientRect().top <= threshold)
+          next = index;
+      });
+      setActive(next);
+    };
+    const release = () => {
+      clickedTarget.current = null;
+    };
+    const onScroll = () => {
+      if (clickedTarget.current !== null) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    const interrupt = () => {
+      release();
+      onScroll();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "PageUp",
+          "PageDown",
+          "Home",
+          "End",
+          " ",
+        ].includes(event.key)
+      )
+        interrupt();
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", interrupt, { passive: true });
+    window.addEventListener("touchstart", interrupt, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      release();
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", interrupt);
+      window.removeEventListener("touchstart", interrupt);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
   return (
     <>
       <header className="site-header">
-        <a href="#home" className="wordmark" aria-label="Sableye home">
+        <a
+          href="#home"
+          className="wordmark"
+          aria-label="Sableye home"
+          onClick={() => selectSection(-1)}
+        >
           <img
             src="/logo.svg"
             width={27}
@@ -94,7 +138,7 @@ export function SiteHeader() {
           tone="dark"
           items={items}
           active={active}
-          onChange={setActive}
+          onChange={selectSection}
           compact={false}
         />
       </div>
