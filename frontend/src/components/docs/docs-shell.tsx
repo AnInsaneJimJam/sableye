@@ -51,15 +51,15 @@ function SidebarItem({
   if (item.children)
     return (
       <div className="nav-branch">
-        <GlassButton
-          size="sm"
+        <button
+          type="button"
           className={`nav-item nav-parent ${activeChild ? "active" : ""}`}
           onClick={() => setOpen(!open)}
           aria-expanded={open}
         >
           {item.title}
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        </GlassButton>
+        </button>
         {open && (
           <div className="nav-children">
             {item.children.map((child) => (
