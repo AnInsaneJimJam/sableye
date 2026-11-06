@@ -28,13 +28,6 @@ export const THEMES: Theme[] = [
     glass: { pane: "#2563eb", void: "#080f1f", edge: "#60a5fa" },
   },
   {
-    id: "iris",
-    name: "Iris",
-    note: "The same night at a shorter wavelength.",
-    swatch: ["#0c0820", "#7c3aed", "#a78bfa"],
-    glass: { pane: "#7c3aed", void: "#0c0820", edge: "#a78bfa" },
-  },
-  {
     id: "mint",
     name: "Mint Ledger",
     note: "Teal base, mint edge: settlement and money moving.",
@@ -42,25 +35,11 @@ export const THEMES: Theme[] = [
     glass: { pane: "#0d9488", void: "#04131a", edge: "#5eead4" },
   },
   {
-    id: "amber",
-    name: "Graphite Amber",
-    note: "Near-neutral graphite with one warm accent.",
-    swatch: ["#0b0b0d", "#b45309", "#fbbf24"],
-    glass: { pane: "#b45309", void: "#0b0b0d", edge: "#fbbf24" },
-  },
-  {
     id: "ice",
     name: "Ice",
     note: "Cyan edges on the coldest base.",
     swatch: ["#04111c", "#0284c7", "#67e8f9"],
     glass: { pane: "#0284c7", void: "#04111c", edge: "#67e8f9" },
-  },
-  {
-    id: "rose",
-    name: "Rose Noir",
-    note: "Warm plum under a rose edge. The only one that is not cold.",
-    swatch: ["#140910", "#be123c", "#fb7185"],
-    glass: { pane: "#be123c", void: "#140910", edge: "#fb7185" },
   },
 ];
 

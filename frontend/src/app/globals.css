@@ -31,19 +31,6 @@
   --t-glass-edge: #60a5fa;
 }
 
-/* Indigo moving to violet: the same night, a shorter wavelength. */
-:root[data-theme="iris"] {
-  --t-base-hue: 292deg;
-  --t-base-sat: 0.95;
-  --t-ink-hue: 290deg;
-  --t-ink-sat: 0.8;
-  --t-accent-hue: 300deg;
-  --t-accent-sat: 1.08;
-  --t-glass-pane: #7c3aed;
-  --t-glass-void: #0c0820;
-  --t-glass-edge: #a78bfa;
-}
-
 /* Teal base, mint edge: reads as settlement and money moving. */
 :root[data-theme="mint"] {
   --t-base-hue: 196deg;
@@ -57,19 +44,6 @@
   --t-glass-edge: #5eead4;
 }
 
-/* Near-neutral graphite with one warm accent. The quietest of the set. */
-:root[data-theme="amber"] {
-  --t-base-hue: 264deg;
-  --t-base-sat: 0.22;
-  --t-ink-hue: 258deg;
-  --t-ink-sat: 0.3;
-  --t-accent-hue: 72deg;
-  --t-accent-sat: 1.15;
-  --t-glass-pane: #b45309;
-  --t-glass-void: #0b0b0d;
-  --t-glass-edge: #fbbf24;
-}
-
 /* Cyan on near-black: the brightest edges, the coldest base. */
 :root[data-theme="ice"] {
   --t-base-hue: 232deg;
@@ -81,19 +55,6 @@
   --t-glass-pane: #0284c7;
   --t-glass-void: #04111c;
   --t-glass-edge: #67e8f9;
-}
-
-/* Warm plum base under a rose edge. The only theme that is not cold. */
-:root[data-theme="rose"] {
-  --t-base-hue: 328deg;
-  --t-base-sat: 0.8;
-  --t-ink-hue: 334deg;
-  --t-ink-sat: 0.62;
-  --t-accent-hue: 14deg;
-  --t-accent-sat: 1.1;
-  --t-glass-pane: #be123c;
-  --t-glass-void: #140910;
-  --t-glass-edge: #fb7185;
 }
 
 @theme inline {
