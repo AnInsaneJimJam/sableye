@@ -35,6 +35,12 @@ generous, separate layout space for each complete illustration and its text. Omi
 the small category labels; keep only the main headings and descriptions. Keep cards
 stationary, selectable, responsive, and readable with reduced motion.
 
+The `/sandbox` overview reuses this connected bento surface and the warm heading
+color. Keep one short description per product, with line illustrations for featured
+demos. Remove redundant navigation and comparison labels from the overview; the
+deeper product pages keep their sidebar, full explanations and live controls.
+Scope overview styling to `.sandbox-overview` and its containing shell.
+
 Keep the hero limited to its original headline, supporting sentence, and two
 actions. Do not add cards, diagrams, labels, or other content. Change positioning,
 typography, and background framing for Gradient Waves; see

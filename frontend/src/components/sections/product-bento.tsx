@@ -21,12 +21,20 @@ const surfaces = {
 } as CSSProperties;
 
 /** Existing merchant products in React Bits' Magic Bento grid, using the active site palette. */
-export function ProductBento({ items }: { items: MagicBentoItem[] }) {
+export function ProductBento({
+  items,
+  rowHeight = 370,
+  className = "",
+}: {
+  items: MagicBentoItem[];
+  rowHeight?: number;
+  className?: string;
+}) {
   return (
     <MagicBento
       items={items}
       columns={4}
-      rowHeight={370}
+      rowHeight={rowHeight}
       gap={0}
       radius={0}
       glowColor={SITE_THEME.glass.edge}
@@ -39,7 +47,7 @@ export function ProductBento({ items }: { items: MagicBentoItem[] }) {
       enableMagnetism={false}
       clickEffect
       intro={false}
-      className="sableye-product-bento"
+      className={`sableye-product-bento ${className}`.trim()}
       style={surfaces}
     />
   );

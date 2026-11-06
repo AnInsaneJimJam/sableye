@@ -1,6 +1,5 @@
 Do the following.
 
-1. Currently we have the structure and everything to be able to make docs for any kind of system.
-2. So currently we have placeholder docs, what I want you to do is to properly do a thorough analysis of the sdk, and update the docs accordingly, keep the theme, design etc everything same, just update it as per the codebase.
-3. These docs are developer docs so make these docs accordingly.
-4. Also update the navbar accordingly
+1. properly understand what we have done in the landing page, how it is now different from the original one when we started doing the changes
+2. learn how boxes were merged, bento boxes were made, titles were colored and most importantly how and what junk were removed.
+3. How only important stuffs were kept, understand and learn from there and refurbish /sandbox page. Don't go into deeper pages for now, just the /sandbox top level page. Fix it all. I believe in you. Make sure harmony is maintained, its comfortable to look at, look nicely and is consistent with the landing page.

@@ -181,6 +181,7 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 ## 6. Demo: the Sandbox (`frontend/`)
 
 - The demo is the **Sableye Sandbox** at `/sandbox` in the `frontend/` app: one page per product, each with a live "Try it" panel running the real SDK, a Sableye vs Stripe code toggle, and how it works.
+- The `/sandbox` overview follows the landing page: Midnight Blue, warm headings, a continuous Magic Bento surface with glowing internal dividers, short descriptions and spacious line illustrations. Omit the repeated sidebar, category labels and Stripe comparison labels on the overview. Keep these styles scoped to the overview; product pages retain their navigation and detailed demos.
 - Product copy and code live in `frontend/src/lib/sandbox/products.ts`; the merchant's server side is `frontend/src/app/api/sandbox/`.
 - It's a public sandbox on a real testnet key: refunds and cancels only work on sandbox orders (`sbx_` / `plink_`), and gas-spending actions are rate-limited.
 - `/sandbox/books` reads the merchant's Arkiv records **with no Sableye code** (`frontend/src/components/sandbox/demo-books.tsx`). Keep it that way: `pnpm --filter sableye-frontend check:books` enforces it.

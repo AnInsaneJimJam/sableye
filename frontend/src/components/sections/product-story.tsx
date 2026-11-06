@@ -312,19 +312,35 @@ export function ProductStory() {
           <h2>
             Trust you can <span>inspect.</span>
           </h2>
+          <p>
+            Signed invoices. Public contracts. Server-side verification. Your
+            customers’ personal details stay off-chain.
+          </p>
         </div>
         <div className="trust-grid">
           <div>
             <Fingerprint size={21} />
             <h3>Checked before checkout</h3>
+            <p>
+              Merchant signatures and the trusted processor are checked before
+              any wallet prompt.
+            </p>
           </div>
           <div>
             <LockKeyhole size={21} />
             <h3>Guardrails on-chain</h3>
+            <p>
+              No double payments. Refunds capped at the amount paid. Customer
+              authorizations bound to the invoice.
+            </p>
           </div>
           <div>
             <Code2 size={21} />
             <h3>Open to inspection</h3>
+            <p>
+              Explore the contract source and test suite. Make your own assessment
+              before integrating.
+            </p>
           </div>
         </div>
         <FormalVerification />
