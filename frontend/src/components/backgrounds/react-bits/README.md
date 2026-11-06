@@ -1,10 +1,9 @@
-# React Bits backgrounds
+# Gradient Waves
 
-Source: https://github.com/DavidHDev/react-bits/tree/main/src/ts-default/Backgrounds
-Retrieved November 6, 2026. Copyright (c) 2026 David Haz.
+React Bits by David Haz, copyright 2026.
 
-PatternWaves, GhostFibers, GradientWaves, and Threads are vendored here with their original styles and license. They use WebGL 2; PatternWaves additionally uses `ogl`. See [LICENSE.md](./LICENSE.md) for the MIT + Commons Clause terms.
+Source: https://github.com/DavidHDev/react-bits/tree/main/src/ts-default/Backgrounds/GradientWaves
 
-Sableye's palette colors, composition, performance settings, reduced-motion handling, and lazy loading are configured in `../landing-background.tsx` and `app/landing-backgrounds.css`. Keep product-specific tuning outside these source files.
+GradientWaves and its styles are included under the accompanying [MIT + Commons Clause license](./LICENSE.md). This is the only landing background. The surrounding integration supplies fixed Ice colors while the website stays Midnight Blue. The renderer respects reduced motion, pauses offscreen, and has a static fallback.
 
-Integration fixes: GradientWaves deletes its GPU resources without calling `loseContext()` during effect cleanup. React Strict Mode reuses their canvas during setup/cleanup checks; forcibly losing that context left the remounted renderer blank.
+Integration fix: effect cleanup deletes GPU resources without calling `loseContext()`. React Strict Mode reuses the canvas during setup/cleanup checks, so forcibly losing the context left it blank.

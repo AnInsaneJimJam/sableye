@@ -15,8 +15,7 @@
      ink    body copy, labels and hairlines
      accent the brand blue, the lit glass edges and the focus ring
 
-   Switch themes with the control at the bottom right of any page, or
-   set data-theme on <html> by hand. No value means Midnight Blue.
+   Midnight Blue is fixed site-wide. Only the Gradient Waves artwork uses Ice.
    --------------------------------------------------------------------------- */
 :root,
 :root[data-theme="midnight"] {
@@ -29,32 +28,6 @@
   --t-glass-pane: #5263b8;
   --t-glass-void: #080f1f;
   --t-glass-edge: #72dacb;
-}
-
-/* Teal base, mint edge: reads as settlement and money moving. */
-:root[data-theme="mint"] {
-  --t-base-hue: 196deg;
-  --t-base-sat: 0.9;
-  --t-ink-hue: 188deg;
-  --t-ink-sat: 0.72;
-  --t-accent-hue: 168deg;
-  --t-accent-sat: 1;
-  --t-glass-pane: #287f78;
-  --t-glass-void: #04131a;
-  --t-glass-edge: #9fbef5;
-}
-
-/* Cyan on near-black: the brightest edges, the coldest base. */
-:root[data-theme="ice"] {
-  --t-base-hue: 232deg;
-  --t-base-sat: 0.7;
-  --t-ink-hue: 226deg;
-  --t-ink-sat: 0.85;
-  --t-accent-hue: 228deg;
-  --t-accent-sat: 1.2;
-  --t-glass-pane: #367eaa;
-  --t-glass-void: #04111c;
-  --t-glass-edge: #b9acf4;
 }
 
 @theme inline {
@@ -2176,14 +2149,6 @@ h2 span {
 .landing-page {
   padding-bottom: 120px;
 }
-@media (max-width: 1200px) {
-  .site-dock {
-    bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px));
-  }
-  .landing-page {
-    padding-bottom: 180px;
-  }
-}
 @media (max-width: 520px) {
   .site-dock .nimbus-item {
     padding: 0 16px;
@@ -2526,30 +2491,6 @@ h2 span {
   --palette-muted: #99a5b8;
   --orb-ink: #b7a5f5;
 }
-:root[data-theme="mint"] {
-  --palette-motion: #8dd8c0;
-  --palette-emphasis: #e9d39a;
-  --palette-active: #c4b1e7;
-  --palette-success: #85d8b0;
-  --palette-heading: #edf5ef;
-  --palette-type: #a8cce4;
-  --palette-error: #ecb0a2;
-  --palette-copy: #c6d5d3;
-  --palette-muted: #9aafac;
-  --orb-ink: #c4b1e7;
-}
-:root[data-theme="ice"] {
-  --palette-motion: #b9acf4;
-  --palette-emphasis: #edb79f;
-  --palette-active: #8bd9ce;
-  --palette-success: #a2d89f;
-  --palette-heading: #eef3fa;
-  --palette-type: #a6cdef;
-  --palette-error: #f0a8be;
-  --palette-copy: #c9d2df;
-  --palette-muted: #9eaec2;
-  --orb-ink: #b9acf4;
-}
 
 .landing-page .hairline-figure {
   --hairline-hi: color-mix(in oklab, var(--palette-motion) 30%, white);
@@ -2632,14 +2573,6 @@ h2 span {
 /* Card headings share the same theme emphasis as the payment-flow titles. */
 .landing-page :is(.agent-card h3, .tier-card h3, .trust-grid h3, .verification-list b) {
   color: var(--palette-emphasis);
-}
-.closing-logo {
-  display: inline-flex;
-  margin-bottom: 18px;
-}
-.closing-logo .brand-mark {
-  width: 34px;
-  height: 37px;
 }
 
 .landing-page .gasless-callout h3 {

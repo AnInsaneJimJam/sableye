@@ -1,9 +1,9 @@
 # Sableye: liquid glass
 
 A dark liquid-glass language for a merchant and developer audience. Preserve
-the Satoshi wordmark and the shared Midnight Blue, Mint Ledger, and Ice palettes.
-GlassFold is the default landing background; the bottom-left switch offers five
-React Bits alternatives with their own hero compositions.
+the Satoshi wordmark and the fixed Midnight Blue palette. Gradient Waves is the
+only landing background, with Ice colors scoped to its artwork. There are no
+appearance switchers or saved theme preferences.
 Design settings: variance 7, motion 4, density 3. This is a web approximation of
 liquid glass, using layered highlights, blur and a WebGL navigation effect.
 
@@ -11,7 +11,7 @@ liquid glass, using layered highlights, blur and a WebGL navigation effect.
 
 - Background: #080f1f. Foreground: #f8fafc. Supporting copy: #acbbd2.
 - Midnight uses #60a5fa for decorative accents and #2563eb for filled surfaces;
-  Mint and Ice replace these through the shared theme tokens.
+  Ice is used only within the Gradient Waves artwork.
 - Green or red are reserved for actual payment states, not decoration.
 - Satoshi for display, Geist for text, Geist Mono for code. All are self-hosted.
 - Cards use 24, 28 or 32px radii; buttons and navigation use pill shapes. Small
@@ -37,11 +37,11 @@ stationary, selectable, responsive, and readable with reduced motion.
 
 Keep the hero limited to its original headline, supporting sentence, and two
 actions. Do not add cards, diagrams, labels, or other content. Change positioning,
-typography, and background framing to suit the selected animation; see
-`docs/landing-compositions.md`. Every background follows the current palette and
-fades into the rest of the page. Keep content legible with a scrim. The homepage's
+typography, and background framing for Gradient Waves; see
+`docs/landing-compositions.md`. The Ice-colored artwork
+fades into the Midnight Blue page. Keep content legible with a scrim. The homepage's
 React Bits Gooey Nav is the main interaction flourish; its active pill and particles
-follow the palette. Preserve anchor links, section highlighting, keyboard access,
+use Midnight Blue. Preserve anchor links, section highlighting, keyboard access,
 reduced motion, and the static fallback when WebGL is unavailable.
 Cards containing content do not drag. Reduced motion removes entry movement,
 physics and smooth scrolling. Keep keyboard focus visible.
@@ -70,4 +70,4 @@ future Arkiv/Swarm features as shipped.
   `GlassButton`. Rules, and the verbatim source prompt: `docs/liquid-glass-button.md`.
 - `homepage-gooey-nav.tsx` adapts React Bits Gooey Nav, with source and license in
   `src/components/ui/react-bits/gooey-nav/`. The bottom dock keeps the existing
-  homepage links and stays clear of both appearance controls on smaller screens.
+  homepage links and stays clear of the viewport edges on smaller screens.

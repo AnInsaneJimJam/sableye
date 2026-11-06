@@ -1,10 +1,10 @@
 "use client";
 
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties } from "react";
 import GooeyNav, {
   type GooeyNavItem,
 } from "@/components/ui/react-bits/gooey-nav/GooeyNav";
-import { DEFAULT_THEME, onThemeChange, readTheme } from "@/lib/themes";
+import { SITE_THEME } from "@/lib/themes";
 import "./homepage-gooey-nav.css";
 
 const surface = {
@@ -28,21 +28,15 @@ export function HomepageGooeyNav({
   active: number;
   onChange: (index: number) => void;
 }) {
-  const [theme, setTheme] = useState(DEFAULT_THEME);
-  useEffect(() => {
-    setTheme(readTheme());
-    return onThemeChange(setTheme);
-  }, []);
-
   return (
     <GooeyNav
       items={items}
       activeIndex={active}
       onChange={onChange}
       theme="dark"
-      color={theme.glass.edge}
-      activeTextColor={theme.glass.void}
-      colors={[theme.glass.edge, theme.glass.pane]}
+      color={SITE_THEME.glass.edge}
+      activeTextColor={SITE_THEME.glass.void}
+      colors={[SITE_THEME.glass.edge, SITE_THEME.glass.pane]}
       animationTime={650}
       particleCount={12}
       timeVariance={150}

@@ -2,8 +2,7 @@ import type { Viewport } from "next";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createMetadata } from "@/lib/seo";
-import { THEME_INIT_SCRIPT } from "@/lib/themes";
-import { BACKGROUND_INIT_SCRIPT } from "@/lib/backgrounds";
+import { SITE_THEME } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 import "./landing-backgrounds.css";
@@ -35,27 +34,18 @@ const fontMono = localFont({
 export const metadata = createMetadata();
 
 export const viewport: Viewport = {
-  themeColor: "#080f1f",
+  themeColor: SITE_THEME.glass.void,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme="midnight"
+      data-background="gradient-waves"
       suppressHydrationWarning
       className={cn(fontSans.variable, fontDisplay.variable, fontMono.variable)}
     >
-      <head>
-        <script
-          id="sableye-palette"
-          // The script contains only our palette IDs and storage key, never user input.
-          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
-        />
-        <script
-          id="sableye-background"
-          dangerouslySetInnerHTML={{ __html: BACKGROUND_INIT_SCRIPT }}
-        />
-      </head>
       <body className="min-h-dvh bg-background text-foreground antialiased">
         <ThemeProvider forcedTheme="dark">{children}</ThemeProvider>
       </body>

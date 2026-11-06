@@ -1,10 +1,10 @@
 "use client";
 
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties } from "react";
 import MagicBento, {
   type MagicBentoItem,
 } from "@/components/ui/react-bits/magic-bento/MagicBento";
-import { DEFAULT_THEME, onThemeChange, readTheme } from "@/lib/themes";
+import { SITE_THEME } from "@/lib/themes";
 import "./product-bento.css";
 
 const surfaces = {
@@ -22,12 +22,6 @@ const surfaces = {
 
 /** Existing merchant products in React Bits' Magic Bento grid, using the active site palette. */
 export function ProductBento({ items }: { items: MagicBentoItem[] }) {
-  const [theme, setTheme] = useState(DEFAULT_THEME);
-  useEffect(() => {
-    setTheme(readTheme());
-    return onThemeChange(setTheme);
-  }, []);
-
   return (
     <MagicBento
       items={items}
@@ -35,7 +29,7 @@ export function ProductBento({ items }: { items: MagicBentoItem[] }) {
       rowHeight={370}
       gap={0}
       radius={0}
-      glowColor={theme.glass.edge}
+      glowColor={SITE_THEME.glass.edge}
       textAutoHide={false}
       enableBorderGlow
       enableSpotlight

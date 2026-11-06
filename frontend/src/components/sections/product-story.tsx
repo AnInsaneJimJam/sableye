@@ -29,7 +29,6 @@ import { AgentIntegration } from "@/components/sections/agent-integration";
 import { ProductBento } from "@/components/sections/product-bento";
 import { DeveloperCode } from "@/components/sections/developer-code";
 import { FormalVerification } from "@/components/sections/formal-verification";
-import { BrandMark } from "@/components/ui/brand-mark";
 import { GlassButton } from "@/components/ui/glass-button";
 import { siteConfig } from "@/lib/site";
 
@@ -383,9 +382,6 @@ export function ProductStory() {
         <div className="homepage-panel closing-glass">
           <div className="relative">
             <div>
-              <span className="closing-logo" aria-hidden="true">
-                <BrandMark />
-              </span>
               <h2>
                 Make room for
                 <br />
