@@ -38,6 +38,8 @@ export interface IndexerState {
   deliveries: Delivery[]
   /** bytes32 orderId → the merchant's own order reference. */
   orderRefs: Record<string, string>
+  /** The finalized block as of the last successful sync: everything stored at or below it is known canonical. */
+  finalSeen?: number
 }
 
 /** Where indexer state lives. Implement this for Postgres/Redis; {@link fileStore} and {@link memoryStore} ship built in. */
@@ -211,8 +213,24 @@ export class Indexer {
     }
   }
 
+  // Transactional: a sync works on a copy and only commits it once the whole step succeeded. Otherwise an RPC error
+  // part-way leaves half-applied state behind: a re-fetched chunk duplicated its logs, and a rollback that failed
+  // after dropping logs never emitted `invoice.reorged` for them.
   private async sync() {
     await this.load()
+    const committed = this.state
+    this.state = structuredClone(committed)
+    try {
+      await this.syncStep()
+    } catch (e) {
+      this.state = committed
+      throw e
+    }
+    // 4. Deliver webhooks that are due (after the commit: it persists its own progress)
+    await this.deliver()
+  }
+
+  private async syncStep() {
     const s = this.state
     const head = await this.client.getBlock({ blockTag: 'latest' })
     const headNum = Number(head.number)
@@ -247,9 +265,8 @@ export class Indexer {
 
     // 3. Emit events for everything new (or newly safe/final)
     await this.emitPending()
+    s.finalSeen = this.heads.final
     await this.store.save(s)
-    // 4. Deliver webhooks that are due
-    await this.deliver()
   }
 
   private async fetchLogs(fromBlock: bigint, toBlock: bigint): Promise<StoredLog[]> {
@@ -272,7 +289,10 @@ export class Indexer {
   /** Walk back to the newest stored block that's still canonical, drop everything after it, emit `invoice.reorged`. */
   private async rollback() {
     const s = this.state
-    let ancestor = this.heads.final // finalized blocks can't reorg
+    // Only blocks that were already final at our LAST sync are known canonical. Not today's finalized head: a block
+    // stored while unfinalized may have been reorged out while we were offline, and finality may have passed it
+    // since (found by the Quint model, specs/indexer.qnt).
+    let ancestor = s.finalSeen ?? this.heads.final // (state saved before finalSeen existed: previous behaviour)
     for (const n of Object.keys(s.recentHashes).map(Number).sort((a, b) => b - a)) {
       if (n <= ancestor) break
       if ((await this.client.getBlock({ blockNumber: BigInt(n) })).hash === s.recentHashes[n]) {

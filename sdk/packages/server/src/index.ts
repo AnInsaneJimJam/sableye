@@ -494,6 +494,7 @@ export class Sableye {
             const b = await this.client.getBlock({ blockTag: 'latest' })
             return { number: b.number!, timestamp: b.timestamp }
           },
+          finalized: async () => (await this.client.getBlock({ blockTag: 'finalized' })).number!,
         },
         opts,
       )
