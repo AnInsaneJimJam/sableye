@@ -78,6 +78,7 @@ test('an old payment the server did not create is not announced (indexer backfil
   await mail.onEvent(event('invoice.paid'))
   await outbox.drain()
   assert.equal(sent.length, 0)
+  assert.deepEqual(mail.emails.log().map((e) => e.status), ['skipped']) // logged as skipped, not as sent
 })
 
 test('refund confirmation goes to the customer', async () => {
