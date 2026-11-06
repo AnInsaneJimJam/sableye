@@ -70,6 +70,11 @@ export default function IntroductionPage() {
         <div className="resource-grid">
           {[
             {
+              title: "Choose your integration",
+              text: "Understand the packages and your setup options.",
+              href: "/packages",
+            },
+            {
               title: "Invoices & payment links",
               text: "Create, share, and verify payments.",
               href: "/invoices/create",
@@ -88,6 +93,26 @@ export default function IntroductionPage() {
               title: "API reference",
               text: "Explore the complete SDK interface.",
               href: "/api-reference",
+            },
+            {
+              title: "Coupons and discounts",
+              text: "Apply discounts before signing an invoice.",
+              href: "/coupons",
+            },
+            {
+              title: "Emails and PDFs",
+              text: "Send invoices, receipts and refund confirmations.",
+              href: "/emails",
+            },
+            {
+              title: "WalletConnect",
+              text: "Connect Whitewallet and other phone wallets.",
+              href: "/checkout/walletconnect",
+            },
+            {
+              title: "Arkiv records",
+              text: "Keep merchant-owned records with private details.",
+              href: "/arkiv",
             },
           ].map((item) => (
             <Link key={item.href} href={item.href}>
