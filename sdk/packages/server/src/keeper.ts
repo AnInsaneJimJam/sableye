@@ -15,6 +15,8 @@ export interface KeeperDeps {
   /** Subscription ids created in blocks (from, to]. */
   subscribedSince(fromBlock: bigint, toBlock: bigint): Promise<Hex[]>
   head(): Promise<{ number: bigint; timestamp: bigint }>
+  /** The finalized block number (blocks at or below it can't reorg). Without it, discovery follows the head. */
+  finalized?(): Promise<bigint>
 }
 
 export interface KeeperOptions {
@@ -32,6 +34,8 @@ export interface KeeperResult {
   subId: Hex
   result: 'charged' | 'failed' | 'not_due' | 'cap_reached' | 'inactive'
   txHash?: Hex
+  /** Set when `charge()` threw; the subscription is retried after the backoff. */
+  error?: unknown
 }
 
 export interface Keeper {
@@ -74,12 +78,16 @@ export function startKeeper(deps: KeeperDeps, opts: KeeperOptions = {}): Keeper 
   }
 
   const discover = async (head: bigint) => {
+    // The cursor stops at the finalized block, so each discovery re-scans the unfinalized range: a reorg can move a
+    // Subscribed log into a block we already scanned (found by the Quint model, specs/keeper.qnt). Re-seeing a
+    // subscription is harmless (upsert).
+    const final = deps.finalized ? await deps.finalized().catch(() => head) : head
     if (cursor === undefined) {
       for (const s of await deps.list()) upsert(s)
     } else if (head > cursor) {
       for (const id of await deps.subscribedSince(cursor + 1n, head)) upsert(await deps.get(id))
     }
-    cursor = head
+    cursor = final < head ? final : head
     lastDiscover = Date.now()
   }
 
@@ -90,14 +98,17 @@ export function startKeeper(deps: KeeperDeps, opts: KeeperOptions = {}): Keeper 
     const results: KeeperResult[] = []
     for (const [subId, e] of subs) {
       if (chainNow < e.nextChargeAt || (e.retryAt && Date.now() < e.retryAt)) continue
-      const r = await deps.charge(subId)
+      // A throw (RPC error, unrecognised revert) counts as a failed attempt for THIS subscription only: it gets the
+      // normal backoff instead of aborting the pass, which would stall every later subscription and retry the bad
+      // one every 250 ms (found by the Quint model, specs/keeper.qnt).
+      const r = await deps.charge(subId).catch((error: unknown) => ({ result: 'failed' as const, error }))
       results.push({ subId, ...r })
       opts.onResult?.({ subId, ...r })
       if (r.result === 'cap_reached' || r.result === 'inactive') {
         subs.delete(subId)
         continue
       }
-      upsert(await deps.get(subId))
+      if (!('error' in r)) upsert(await deps.get(subId))
       const entry = subs.get(subId)
       if (entry) entry.retryAt = r.result === 'failed' ? Date.now() + retryMs : undefined
     }

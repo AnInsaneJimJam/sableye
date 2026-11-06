@@ -64,6 +64,9 @@ export type SerializedSignedInvoice = Omit<SignedInvoice, 'invoice'> & {
 export const hashInvoice = (s: Pick<SignedInvoice, 'invoice' | 'chainId' | 'processor'>): Hex =>
   hashTypedData({ domain: invoiceDomain(s.chainId, s.processor), types: invoiceTypes, primaryType: 'Invoice', message: s.invoice })
 
+const MAX_UINT256 = 2n ** 256n - 1n
+const MAX_UINT64 = 2n ** 64n - 1n
+
 /** Convert to a plain JSON-safe object (bigints become decimal strings). Inverse of {@link normalizeSignedInvoice}. */
 export function serializeSignedInvoice(s: SignedInvoice): SerializedSignedInvoice {
   const { invoice: i, signature, chainId, processor, relayUrl } = s
@@ -88,8 +91,12 @@ export function normalizeSignedInvoice(input: SignedInvoice | SerializedSignedIn
   if (typeof input === 'string') return decodeSignedInvoice(input)
   try {
     const { invoice: i, signature, chainId, processor, relayUrl } = input
-    const invoice: Invoice = { orderId: i.orderId, merchant: i.merchant, payout: i.payout, token: i.token, amount: BigInt(i.amount), expiry: BigInt(i.expiry), nonce: BigInt(i.nonce) }
+    const invoice: Invoice = { orderId: (typeof i.orderId === 'string' ? i.orderId.toLowerCase() : i.orderId) as Hex, merchant: i.merchant, payout: i.payout, token: i.token, amount: BigInt(i.amount), expiry: BigInt(i.expiry), nonce: BigInt(i.nonce) }
     if (!isHex(invoice.orderId) || invoice.orderId.length !== 66) throw new Error('bad orderId')
+    // Range-check the uints so a corrupted link fails here, not later inside hashing/encoding.
+    for (const [name, v, max] of [['amount', invoice.amount, MAX_UINT256], ['nonce', invoice.nonce, MAX_UINT256], ['expiry', invoice.expiry, MAX_UINT64]] as const) {
+      if (v < 0n || v > max) throw new Error(`${name} out of range`)
+    }
     for (const [name, a] of Object.entries({ merchant: i.merchant, payout: i.payout, token: i.token, processor })) {
       if (!isAddress(a)) throw new Error(`bad ${name} address`)
     }
