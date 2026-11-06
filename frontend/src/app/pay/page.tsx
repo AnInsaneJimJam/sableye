@@ -28,7 +28,7 @@ export default function PayPage() {
       <main className="sbx-pay-card">
         <Link href="/" className="wordmark">
           <BrandMark />
-          Sableye<span className="brand-period">.</span>
+          Sableye
         </Link>
         <h1>Complete your payment</h1>
         {hash === null ? null : !hash ? (

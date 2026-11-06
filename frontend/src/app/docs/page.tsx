@@ -1,136 +1,136 @@
+import { Exploded, Plug, Relay, Terminal } from "@lucasmarkes/hairline/react";
+import { ArrowUpRight } from "lucide-react";
 import Link from "@/components/docs/docs-link";
-import { ArrowUpRight, ArrowRight } from "lucide-react";
-import { HeroIllustration, Illustration } from "@/components/docs/illustration";
+import { ProductBento } from "@/components/sections/product-bento";
+import "./overview.css";
 
-const cards = [
+const guides = [
   {
     title: "Quickstart",
-    description:
-      "Accept your first USDT payment in minutes with our step-by-step guide.",
-    href: "/quickstart",
-    kind: "rocket" as const,
+    text: "Accept your first USDT payment.",
+    href: "/docs/quickstart",
+    Figure: Plug,
   },
   {
     title: "CLI installation",
-    description:
-      "Set up the SDK and check your environment with the Sableye CLI.",
-    href: "/cli/installation",
-    kind: "terminal" as const,
+    text: "Install the SDK and check your setup.",
+    href: "/docs/cli/installation",
+    Figure: Terminal,
   },
   {
     title: "Gasless payments",
-    description:
-      "Let customers pay in USDT while you take care of the network fee.",
-    href: "/gasless",
-    kind: "bolt" as const,
+    text: "Sponsor the network fee for your customers.",
+    href: "/docs/gasless",
+    Figure: Relay,
   },
   {
     title: "React checkout",
-    description:
-      "Build a seamless payment experience with our ready-to-use components.",
-    href: "/checkout/react",
-    kind: "blocks" as const,
+    text: "Add checkout to your app.",
+    href: "/docs/checkout/react",
+    Figure: Exploded,
   },
 ];
 
-/** Documentation landing page with paths into the main guides. */
+const resources = [
+  { title: "Packages", text: "Choose your integration.", href: "/packages" },
+  {
+    title: "Invoices & payment links",
+    text: "Create, share and verify payments.",
+    href: "/invoices/create",
+  },
+  {
+    title: "Subscriptions",
+    text: "Set up recurring USDT payments.",
+    href: "/subscriptions",
+  },
+  {
+    title: "Webhooks",
+    text: "Receive signed payment events.",
+    href: "/webhooks",
+  },
+  {
+    title: "API reference",
+    text: "Find methods, types and options.",
+    href: "/api-reference",
+  },
+  {
+    title: "Coupons",
+    text: "Apply discounts before signing.",
+    href: "/coupons",
+  },
+  {
+    title: "Emails & PDFs",
+    text: "Send invoices and receipts.",
+    href: "/emails",
+  },
+  {
+    title: "WalletConnect",
+    text: "Connect phone wallets.",
+    href: "/checkout/walletconnect",
+  },
+  {
+    title: "Arkiv records",
+    text: "Read wallet-owned sales records.",
+    href: "/arkiv",
+  },
+];
+
+/** A concise entry point to the guides and SDK reference. */
 export default function IntroductionPage() {
   return (
-    <main id="main-content" className="home-page">
-      <HeroIllustration />
-      <div className="home-content">
-        <div className="home-heading">
-          <h1>Documentation</h1>
-          <p>
-            Build USDT payments with the Sableye SDK.
-            <br className="desktop-break" /> Server-signed invoices, browser
-            checkout, and on-chain verification.
-          </p>
-        </div>
-        <div className="feature-grid">
-          {cards.map((card) => (
-            <Link
-              key={card.href}
-              href={card.href}
-              className="docs-feature-card"
-            >
-              <div className="card-art">
-                <Illustration kind={card.kind} />
-                <ArrowUpRight size={18} className="card-arrow" />
+    <main id="main-content" className="docs-overview">
+      <header className="docs-overview__intro">
+        <h1>Documentation</h1>
+        <p>Build USDT payments with Sableye.</p>
+      </header>
+      <section aria-label="Start building">
+        <ProductBento
+          className="docs-overview__guides"
+          rowHeight={280}
+          items={guides.map(({ title, text, href, Figure }) => ({
+            id: href,
+            href,
+            colSpan: 2,
+            content: (
+              <div className="docs-guide">
+                <div className="docs-guide__copy">
+                  <h2>{title}</h2>
+                  <p>{text}</p>
+                </div>
+                <div
+                  className="docs-guide__figure hairline-figure"
+                  aria-hidden="true"
+                >
+                  <Figure theme="dark" intensity={0.6} play />
+                </div>
+                <ArrowUpRight
+                  size={18}
+                  strokeWidth={1.4}
+                  className="docs-guide__arrow"
+                  aria-hidden="true"
+                />
               </div>
-              <h2>{card.title}</h2>
-              <p>{card.description}</p>
+            ),
+          }))}
+        />
+      </section>
+      <section
+        className="docs-overview__resources"
+        aria-labelledby="docs-resources-heading"
+      >
+        <h2 id="docs-resources-heading">Guides & reference</h2>
+        <div className="docs-resource-grid">
+          {resources.map(({ title, text, href }) => (
+            <Link key={href} href={href}>
+              <div>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
+              <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
           ))}
         </div>
-        <div className="explore-heading">
-          <h2>Everything you need to get paid</h2>
-          <p>From your first invoice to your day-to-day operations.</p>
-        </div>
-        <div className="resource-grid">
-          {[
-            {
-              title: "Choose your integration",
-              text: "Understand the packages and your setup options.",
-              href: "/packages",
-            },
-            {
-              title: "Invoices & payment links",
-              text: "Create, share, and verify payments.",
-              href: "/invoices/create",
-            },
-            {
-              title: "Subscriptions",
-              text: "Recurring payments with customer control.",
-              href: "/subscriptions",
-            },
-            {
-              title: "Webhooks",
-              text: "Keep your business in sync with the chain.",
-              href: "/webhooks",
-            },
-            {
-              title: "API reference",
-              text: "Explore the complete SDK interface.",
-              href: "/api-reference",
-            },
-            {
-              title: "Coupons and discounts",
-              text: "Apply discounts before signing an invoice.",
-              href: "/coupons",
-            },
-            {
-              title: "Emails and PDFs",
-              text: "Send invoices, receipts and refund confirmations.",
-              href: "/emails",
-            },
-            {
-              title: "WalletConnect",
-              text: "Connect Whitewallet and other phone wallets.",
-              href: "/checkout/walletconnect",
-            },
-            {
-              title: "Arkiv records",
-              text: "Keep merchant-owned records with private details.",
-              href: "/arkiv",
-            },
-          ].map((item) => (
-            <Link key={item.href} href={item.href}>
-              <span>
-                <strong>{item.title}</strong>
-                <small>{item.text}</small>
-              </span>
-              <ArrowRight size={16} />
-            </Link>
-          ))}
-        </div>
-        <footer className="docs-footer">
-          <span>Sableye documentation</span>
-          <Link href="/security">
-            Built for trust <ArrowUpRight size={13} />
-          </Link>
-        </footer>
-      </div>
+      </section>
     </main>
   );
 }

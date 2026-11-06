@@ -1441,3 +1441,27 @@
 .docs-root .article h3 {
   color: var(--palette-heading);
 }
+
+/* Keep documentation chrome quiet and consistent with the merchant UI. */
+.docs-root {
+  --header-height: 72px;
+  --sidebar-width: 236px;
+  --text: var(--palette-heading);
+  --accent: var(--palette-active);
+  padding-bottom: 0;
+}
+.docs-root .topbar { background: var(--bg); box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.docs-root .header-actions { gap: 12px; }
+.docs-root .header-actions .outline-button { min-height: 40px; gap: 8px; border-radius: 8px; }
+.docs-root .search-trigger { min-height: 40px; border-radius: 8px; }
+.docs-root .nav-group { margin-bottom: 26px; }
+.docs-root .nav-group h2 { font-size: 12px; font-weight: 500; color: var(--palette-muted); }
+.docs-root .nav-item { font-size: 14px; line-height: 1.6; padding: 8px 10px; border-radius: 7px; }
+.docs-root .nav-item.active { background: color-mix(in oklab, var(--palette-active) 8%, transparent); }
+.docs-root .article h1, .docs-root .article h2, .docs-root .article h2 > a { color: var(--palette-emphasis); }
+@media (max-width: 760px) {
+  .docs-root { --header-height: 64px; }
+  .docs-root .icon-button { min-width: 40px; min-height: 40px; }
+  .docs-root .header-actions { gap: 8px; }
+}
+.docs-root .sidebar { padding-inline: 24px; }
