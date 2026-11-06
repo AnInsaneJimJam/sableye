@@ -1,0 +1,73 @@
+// Off-chain order details (customer, description, line items). The signed invoice never contains them, so they
+// stay private: they feed emails, PDFs and the encrypted part of the Arkiv record, nothing else.
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
+import type { Hex } from 'viem'
+
+/** One line on an invoice. `amount` is a decimal string in token units, shown as-is. */
+export interface LineItem {
+  name: string
+  quantity?: number
+  amount?: string
+}
+
+/** Who the invoice is for. */
+export interface Customer {
+  email?: string
+  name?: string
+}
+
+/** What the merchant's server remembers about an order it created. */
+export interface OrderDetails {
+  /** The merchant's own order reference (`orderRef`). */
+  orderRef: string
+  /** The bytes32 on-chain order id. */
+  orderId: Hex
+  /** Decimal string, e.g. "5.00". */
+  amount: string
+  token: string
+  customer?: Customer
+  description?: string
+  items?: LineItem[]
+  checkoutUrl: string
+  /** Unix ms. */
+  createdAt: number
+  /** Unix ms. */
+  expiresAt: number
+}
+
+/** Where order details live. Implement it over your database; {@link fileOrderStore} and {@link memoryOrderStore} ship built in. */
+export interface OrderStore {
+  get(orderId: Hex): Promise<OrderDetails | undefined>
+  put(order: OrderDetails): Promise<void>
+}
+
+export function memoryOrderStore(): OrderStore {
+  const m = new Map<string, OrderDetails>()
+  return { get: async (id) => m.get(id.toLowerCase()), put: async (o) => void m.set(o.orderId.toLowerCase(), o) }
+}
+
+/** JSON file store (atomic write via rename). Fine for a single server process. */
+export function fileOrderStore(path = '.sableye/orders.json'): OrderStore {
+  let cache: Record<string, OrderDetails> | undefined
+  const load = () => {
+    if (cache) return cache
+    try {
+      cache = JSON.parse(readFileSync(path, 'utf8')) as Record<string, OrderDetails>
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+      cache = {}
+    }
+    return cache
+  }
+  return {
+    get: async (id) => load()[id.toLowerCase()],
+    put: async (o) => {
+      const all = load()
+      all[o.orderId.toLowerCase()] = o
+      mkdirSync(dirname(path), { recursive: true })
+      writeFileSync(`${path}.tmp`, JSON.stringify(all))
+      renameSync(`${path}.tmp`, path)
+    },
+  }
+}

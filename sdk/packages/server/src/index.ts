@@ -41,6 +41,10 @@ import { RateLimiter, RelayRejectedError, relayRouteHandler, type RelayOptions }
 import { startKeeper, type Keeper, type KeeperOptions } from './keeper.js'
 import { decodeLink, encodeLink, memoryLinkStore, PaymentLinkError, type LinkStore, type PaymentLink, type PaymentLinkData } from './links.js'
 import { privateKeyToAccount } from 'viem/accounts'
+import { attachEmails, emailConfigFromEnv, type EmailConfig, type Emails } from './email.js'
+import { memoryOrderStore, type Customer, type LineItem, type OrderDetails, type OrderStore } from './orders.js'
+import { createOutbox, type Outbox, type OutboxOptions } from './outbox.js'
+import { invoicePdf, receiptPdf, type BusinessInfo } from './pdf.js'
 
 export * from '@sableye/core'
 export { doctor, printDoctor, type DoctorCheck, type DoctorOptions } from './doctor.js'
@@ -49,6 +53,10 @@ export * from './relay.js'
 export * from './links.js'
 export * from './keeper.js'
 export * from './webhooks.js'
+export * from './email.js'
+export * from './orders.js'
+export * from './outbox.js'
+export * from './pdf.js'
 
 /**
  * Anything that can sign EIP-712 typed data for the merchant: a viem `LocalAccount`, or your own KMS/HSM adapter.
@@ -94,6 +102,17 @@ export interface SableyeConfig {
   paymentLinkUrl?: string
   /** Where link deactivations are kept. Default: in memory. */
   linkStore?: LinkStore
+  /** Your business, shown on invoices, receipts and emails. Default name: `SABLEYE_BUSINESS_NAME`, else "Merchant". */
+  business?: BusinessInfo
+  /**
+   * Send invoices, receipts, "you got paid" notices and refund confirmations from your own email account.
+   * Default: from `SMTP_USER` / `SMTP_PASS` (run `npx sableye init`). `false` turns email off.
+   */
+  email?: EmailConfig | false
+  /** Where order details (customer, description, items) are kept. Default: in memory. Use `fileOrderStore()` or your DB. */
+  orderStore?: OrderStore
+  /** Queue for emails (and other side effects). Pass `{ path: '.sableye/outbox.json' }` so retries survive restarts. */
+  outbox?: OutboxOptions
 }
 
 /** Parameters for {@link Sableye.invoices.create}. */
@@ -108,6 +127,11 @@ export interface CreateInvoiceParams {
   expiresIn?: number
   /** Where funds go. Default: the merchant address. */
   payout?: Address
+  /** Who it's for. With an email (and email configured), the invoice is emailed with a PDF, then the receipt. */
+  customer?: Customer
+  /** Shown on the invoice, receipt and emails. Never on-chain. */
+  description?: string
+  items?: LineItem[]
 }
 
 /** Result of {@link Sableye.invoices.create}. Safe to send to the browser. */
@@ -182,6 +206,10 @@ export class Sableye {
   private readonly relaying = new Map<Hex, Promise<{ txHash: Hex }>>()
   private readonly paymentLinkUrl: string
   private readonly linkStore: LinkStore
+  private readonly orders: OrderStore
+  private readonly outbox: Outbox
+  readonly business: BusinessInfo
+  private readonly mail: ReturnType<typeof attachEmails>
 
   constructor(config: SableyeConfig) {
     if (typeof window !== 'undefined' && config.privateKey) throw new SecretInClientError()
@@ -194,6 +222,49 @@ export class Sableye {
     this.relayUrl = config.relayUrl
     this.paymentLinkUrl = config.paymentLinkUrl ?? 'http://localhost:3000/api/pay'
     this.linkStore = config.linkStore ?? memoryLinkStore()
+    this.orders = config.orderStore ?? memoryOrderStore()
+    this.outbox = createOutbox(config.outbox)
+    this.business = config.business ?? { name: process.env.SABLEYE_BUSINESS_NAME || 'Merchant' }
+    this.mail = attachEmails(config.email === false ? undefined : (config.email ?? emailConfigFromEnv()), this.outbox, {
+      businessName: this.business.name,
+      merchant: this.merchant,
+      getOrder: (id) => this.orders.get(id),
+      verify: (id) => this.verifyPayment(id),
+      invoicePdf: (order) => invoicePdf(order, { business: this.business, merchant: this.merchant }),
+      receiptPdf: (id, order) => this.receipt(id, order, true),
+      explorerTx: (hash) => (this.network.chain.blockExplorers ? `${this.network.chain.blockExplorers.default.url}/tx/${hash}` : undefined),
+      format: (units) => formatAmount(BigInt(units), getToken(this.network, 'USDT').decimals),
+    })
+  }
+
+  /** Email: `test()`, `log()`. Messages are sent automatically once email is configured. */
+  get emails(): Emails {
+    return this.mail.emails
+  }
+
+  /** Invoice and receipt PDFs (Uint8Array), e.g. for a download route. */
+  readonly documents = {
+    /** The invoice for an order created by this server, with a QR code that opens the checkout. */
+    invoicePdf: async (orderRef: string): Promise<Uint8Array> => {
+      const order = await this.orders.get(toOrderId(orderRef))
+      if (!order) throw new SableyeError('order_not_found', `No order details for ${orderRef}.`, 'Only orders created by this server (with its orderStore) have invoice PDFs.')
+      return invoicePdf(order, { business: this.business, merchant: this.merchant })
+    },
+    /**
+     * The receipt, built from the on-chain payment. Undefined if it isn't paid. `includeCustomer` adds the
+     * customer's name and email: only for copies you send to that customer, never a public download.
+     */
+    receiptPdf: async (orderRef: string, opts: { includeCustomer?: boolean } = {}): Promise<Uint8Array | undefined> =>
+      this.receipt(toOrderId(orderRef), await this.orders.get(toOrderId(orderRef)), !!opts.includeCustomer),
+  }
+
+  private async receipt(orderId: Hex, order: OrderDetails | undefined, includeCustomer: boolean): Promise<Uint8Array | undefined> {
+    const p = await this.verifyPayment(orderId)
+    if (!p.paid) return undefined
+    const token = Object.values(this.network.tokens).find((t) => t.address.toLowerCase() === p.token?.toLowerCase())
+    return receiptPdf(order?.orderRef ?? orderId, {
+      ...p, refundedFormatted: p.refunded && token ? formatAmount(p.refunded, token.decimals) : undefined,
+    }, { business: this.business, merchant: this.merchant, token: token?.symbol ?? 'USDT', order, includeCustomer })
   }
 
   /** Invoices: signed payment requests the customer pays on-chain. */
@@ -226,6 +297,15 @@ export class Sableye {
       const signed: SignedInvoice = { invoice, signature, chainId, processor, ...(this.relayUrl ? { relayUrl: this.relayUrl } : {}) }
       const created: CreatedInvoice = { ...signed, orderRef, checkoutUrl: `${this.checkoutUrl}#${encodeSignedInvoice(signed)}` }
       await this.attachedIndexer?.rememberRef(invoice.orderId, orderRef)
+      const order: OrderDetails = {
+        orderRef, orderId: invoice.orderId, amount: params.amount, token: token.symbol, checkoutUrl: created.checkoutUrl,
+        createdAt: Date.now(), expiresAt: Number(invoice.expiry) * 1000,
+        ...(params.customer && { customer: params.customer }),
+        ...(params.description && { description: params.description }),
+        ...(params.items && { items: params.items }),
+      }
+      await this.orders.put(order)
+      this.mail.onInvoiceCreated(order)
       // Lets `Response.json(inv)` / `res.json(inv)` work: plain JSON.stringify throws on the bigint fields.
       Object.defineProperty(created, 'toJSON', { enumerable: false, value: () => ({ ...serializeSignedInvoice(signed), orderRef, checkoutUrl: created.checkoutUrl }) })
       return created
@@ -619,6 +699,8 @@ export class Sableye {
   indexer(options: IndexerOptions = {}): Indexer {
     requireProcessor(this.network)
     this.attachedIndexer = new Indexer(this.client, this.network, this.merchant, options)
+    // Emails only enqueue here, so they never slow down or break indexing.
+    this.attachedIndexer.on('*', (e) => this.mail.onEvent(e))
     return this.attachedIndexer
   }
 
