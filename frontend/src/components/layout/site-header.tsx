@@ -9,48 +9,43 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { LiquidNavbar } from "@/components/ui/liquid-glass-navbar";
+import { BrandMark } from "@/components/ui/brand-mark";
+import { HomepageGooeyNav } from "@/components/ui/homepage-gooey-nav";
 
 const items = [
   {
     label: "Product",
     href: "#product",
     icon: <Layers3 size={16} />,
-    fx: "glow" as const,
   },
   {
     label: "How it works",
     href: "#how-it-works",
     icon: <Route size={16} />,
-    fx: "drop" as const,
   },
   {
     label: "Developers",
     href: "#developers",
     icon: <Code2 size={16} />,
-    fx: "spin" as const,
   },
   {
     label: "Agents",
     href: "#agents",
     icon: <Bot size={16} />,
-    fx: "glow" as const,
   },
   {
     label: "Trust",
     href: "#trust",
     icon: <ShieldCheck size={16} />,
-    fx: "pop" as const,
   },
   {
     label: "Docs",
     href: "/docs",
     icon: <BookOpen size={16} />,
-    fx: "glow" as const,
   },
 ];
 
-/** Wordmark at the top; the glass navigation is docked to the bottom of the viewport. */
+/** Wordmark at the top; themed Gooey Nav stays docked above the appearance controls. */
 export function SiteHeader() {
   const [active, setActive] = useState(-1);
   const clickedTarget = useRef<number | null>(null);
@@ -123,23 +118,15 @@ export function SiteHeader() {
           aria-label="Sableye home"
           onClick={() => selectSection(-1)}
         >
-          <img
-            src="/logo.svg"
-            width={27}
-            height={29}
-            alt=""
-            aria-hidden="true"
-          />
+          <BrandMark />
           Sableye
         </a>
       </header>
       <div className="site-dock">
-        <LiquidNavbar
-          tone="dark"
+        <HomepageGooeyNav
           items={items}
           active={active}
           onChange={selectSection}
-          compact={false}
         />
       </div>
     </>

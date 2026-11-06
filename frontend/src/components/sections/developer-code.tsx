@@ -143,12 +143,11 @@ export function DeveloperCode() {
           ))}
         </code>
       </pre>
-      <output className="copy-feedback" aria-live="polite">
-        {error ||
-          (copied
-            ? "Copied to clipboard."
-            : "The merchant key stays on your server.")}
-      </output>
+      {(error || copied) && (
+        <output className="copy-feedback" aria-live="polite">
+          {error || "Copied to clipboard."}
+        </output>
+      )}
     </div>
   );
 }

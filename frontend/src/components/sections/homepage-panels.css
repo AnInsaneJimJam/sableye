@@ -1,0 +1,86 @@
+/* Connected, square surfaces for the homepage's supporting sections. */
+.landing-page .developer-copy {
+  text-align: center;
+}
+
+.landing-page {
+  --homepage-panel: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--sheet) 92%, var(--brand) 8%) 50%,
+    var(--background) 50%
+  );
+}
+
+.landing-page .homepage-panel {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--homepage-panel);
+  box-shadow: none;
+}
+
+.landing-page .agents-grid,
+.landing-page .business-tiers,
+.landing-page .trust-grid {
+  gap: 0;
+  background: var(--homepage-panel);
+}
+
+.landing-page .agents-grid > .agent-card + .agent-card {
+  border-left: 1px solid var(--rule);
+}
+
+.landing-page .business-tiers > .tier-card + .tier-card {
+  border-top: 1px solid var(--rule);
+}
+
+.landing-page .trust-grid > div {
+  min-width: 0;
+  padding: 30px;
+}
+
+.landing-page .trust-grid > div + div {
+  border-left: 1px solid var(--rule);
+}
+
+.landing-page .agent-console-screen,
+.landing-page .agent-command,
+.landing-page .agent-console-status code,
+.landing-page .agent-tools li,
+.landing-page .tier-icon,
+.landing-page .agent-icon,
+.landing-page .flow-icon {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.landing-page .agent-console-screen {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+}
+
+.landing-page .agent-notes {
+  margin-top: 0;
+  padding: 22px 30px;
+  border-top: 1px solid var(--rule);
+  background: var(--homepage-panel);
+}
+
+@media (max-width: 767px) {
+  .landing-page .agents-grid > .agent-card + .agent-card,
+  .landing-page .trust-grid > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .landing-page .trust-grid > div,
+  .landing-page .agent-notes {
+    padding: 24px;
+  }
+
+  .landing-page .trust-grid > div > svg {
+    position: static;
+  }
+}

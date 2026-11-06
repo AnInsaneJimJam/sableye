@@ -1,19 +1,14 @@
 import { ArrowUpRight } from "lucide-react";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { siteConfig } from "@/lib/site";
 
-/** Product links and the current deployment stage. */
+/** Brand and product links at the bottom of the homepage. */
 export function SiteFooter() {
   return (
     <footer className="site-footer page-width">
       <div className="footer-top">
         <a className="wordmark" href="#home">
-          <img
-            src="/logo.svg"
-            width={27}
-            height={29}
-            alt=""
-            aria-hidden="true"
-          />
+          <BrandMark />
           Sableye
         </a>
         <div>
@@ -25,13 +20,6 @@ export function SiteFooter() {
           </a>
           <a href="#trust">Security</a>
         </div>
-      </div>
-      <div className="footer-bottom">
-        <p>Built for businesses.</p>
-        <span>
-          ETHGlobal Mumbai 2026 <span className="footer-separator">/</span>{" "}
-          Testnet
-        </span>
       </div>
     </footer>
   );

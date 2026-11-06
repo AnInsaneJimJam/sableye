@@ -2,6 +2,7 @@
 
 import Link from "@/components/docs/docs-link";
 import HomeLink from "next/link";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -19,13 +20,7 @@ import { navigation, pages, type NavItem } from "@/lib/docs/content";
 function Brand() {
   return (
     <HomeLink href="/" className="brand" aria-label="Sableye home">
-      <img
-        src="/docs/logo.svg"
-        width={25}
-        height={28}
-        alt=""
-        aria-hidden="true"
-      />
+      <BrandMark />
       <span>Sableye</span>
     </HomeLink>
   );
@@ -204,7 +199,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   }, [mobile]);
 
   return (
-    <div className="docs-root" data-theme="dark">
+    <div className="docs-root">
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
