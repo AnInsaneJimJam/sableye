@@ -5,6 +5,8 @@
 `<a className="…">` or `<button className="…">` for actions. This applies to the
 homepage, the sandbox and any new page. Humans and AI agents both follow it.
 
+Documentation sidebar disclosure rows (Checkout, Invoices, Subscriptions) are plain native buttons styled as navigation text, with a chevron and no glass pill or shadow.
+
 ```tsx
 import { GlassButton } from "@/components/ui/glass-button";
 
