@@ -12,9 +12,7 @@ import {
   ChevronRight,
   Command,
   Menu,
-  Moon,
   Search,
-  Sun,
   X,
 } from "lucide-react";
 import { navigation, pages, type NavItem } from "@/lib/docs/content";
@@ -29,7 +27,7 @@ function Brand() {
         alt=""
         aria-hidden="true"
       />
-      <span>sableye</span>
+      <span>Sableye</span>
     </Link>
   );
 }
@@ -94,7 +92,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
     .replace(/^\//, "")
     .replace(/\/$/, "");
   const [mobile, setMobile] = useState(false);
-  const [light, setLight] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -132,11 +129,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    try {
-      setLight(localStorage.getItem("sableye-docs-theme") === "light");
-    } catch {
-      /* Theme remains usable when storage is unavailable. */
-    }
     const onKey = (event: KeyboardEvent) => {
       if (
         (event.metaKey || event.ctrlKey) &&
@@ -182,7 +174,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   }, [mobile]);
 
   return (
-    <div className="docs-root" data-theme={light ? "light" : "dark"}>
+    <div className="docs-root" data-theme="dark">
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -200,7 +192,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             <Menu size={20} />
           </GlassButton>
           <Brand />
-          <span className="language">English</span>
         </div>
         <nav className="top-links" aria-label="Main navigation">
           <Link
@@ -242,8 +233,8 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           </details>
         </nav>
         <div className="header-actions">
-          <GlassButton
-            size="sm"
+          <button
+            type="button"
             ref={searchTrigger}
             className="search-trigger"
             onClick={openSearch}
@@ -254,7 +245,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             <kbd>
               <Command size={10} /> K
             </kbd>
-          </GlassButton>
+          </button>
           <Link
             className="outline-button header-reference"
             href="/configuration"
@@ -264,26 +255,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           <Link className="primary-button" href="/quickstart">
             Get started
           </Link>
-          <GlassButton
-            size="sm"
-            className="icon-button theme-toggle"
-            aria-label={
-              light ? "Switch to dark theme" : "Switch to light theme"
-            }
-            onClick={() => {
-              setLight(!light);
-              try {
-                localStorage.setItem(
-                  "sableye-docs-theme",
-                  light ? "dark" : "light",
-                );
-              } catch {
-                /* Optional persistence. */
-              }
-            }}
-          >
-            {light ? <Sun size={16} /> : <Moon size={16} />}
-          </GlassButton>
         </div>
       </header>
       {mobile && (
