@@ -14,7 +14,22 @@ const PORT = process.env.PORT ?? "3000";
 const URL = `http://localhost:${PORT}`;
 const DEADLINE_MS = 60_000;
 /** Proof the page rendered, not just that something answered. */
-const MUST_CONTAIN = ["<h1", "Sableye"];
+const MUST_CONTAIN = [
+  "<h1",
+  "Sableye",
+  'id="product"',
+  'id="how-it-works"',
+  'id="developers"',
+  'id="trust"',
+  "Interactive walkthrough",
+  "No wallet or funds involved",
+  "invoices.create",
+  "Verify and fulfil",
+  "Whitechain Sepolia",
+  "mainnet",
+  "chai-shop.webp",
+  'aria-label="Integration steps"',
+];
 
 const started = Date.now();
 let lastProblem = "no response yet";

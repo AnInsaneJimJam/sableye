@@ -80,3 +80,13 @@ prop rather than Radix style `asChild`.
 
 Next.js picks up `src/app/opengraph-image.(png|tsx)` and `src/app/twitter-image.(png|tsx)`
 automatically. No metadata edit is needed once a file exists.
+
+## Homepage design
+
+The full product homepage uses the established blue GlassFold background and the
+liquid-glass language documented in [DESIGN.md](DESIGN.md). Supplied glass cards
+and the Waterline navbar live in `src/components/ui`; no new dependencies are
+needed. The checkout walkthrough is an illustration and never requests funds.
+
+To check the rendered product content, run the app, then `bun run check:render`
+(or `PORT=3111 bun run check:render` if using that port).
