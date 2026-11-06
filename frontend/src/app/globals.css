@@ -26,9 +26,9 @@
   --t-ink-sat: 1;
   --t-accent-hue: 262.88deg;
   --t-accent-sat: 1;
-  --t-glass-pane: #2563eb;
+  --t-glass-pane: #5263b8;
   --t-glass-void: #080f1f;
-  --t-glass-edge: #60a5fa;
+  --t-glass-edge: #72dacb;
 }
 
 /* Teal base, mint edge: reads as settlement and money moving. */
@@ -39,9 +39,9 @@
   --t-ink-sat: 0.72;
   --t-accent-hue: 168deg;
   --t-accent-sat: 1;
-  --t-glass-pane: #0d9488;
+  --t-glass-pane: #287f78;
   --t-glass-void: #04131a;
-  --t-glass-edge: #5eead4;
+  --t-glass-edge: #9fbef5;
 }
 
 /* Cyan on near-black: the brightest edges, the coldest base. */
@@ -52,9 +52,9 @@
   --t-ink-sat: 0.85;
   --t-accent-hue: 228deg;
   --t-accent-sat: 1.2;
-  --t-glass-pane: #0284c7;
+  --t-glass-pane: #367eaa;
   --t-glass-void: #04111c;
-  --t-glass-edge: #67e8f9;
+  --t-glass-edge: #b9acf4;
 }
 
 @theme inline {
@@ -2510,4 +2510,121 @@ h2 span {
     margin: 20px 8px 20px 20px;
     transform: scale(1.5);
   }
+}
+
+/* Color roles keep typography, motion and interaction visually distinct. */
+:root,
+:root[data-theme="midnight"] {
+  --palette-motion: #72dacb;
+  --palette-emphasis: #edc397;
+  --palette-active: #b7a5f5;
+  --palette-success: #8ed6ad;
+  --palette-heading: #f0f1f8;
+  --palette-type: #c4b7ef;
+  --palette-error: #efa7ae;
+  --palette-copy: #c3cad6;
+  --palette-muted: #99a5b8;
+  --orb-ink: #b7a5f5;
+}
+:root[data-theme="mint"] {
+  --palette-motion: #8dd8c0;
+  --palette-emphasis: #e9d39a;
+  --palette-active: #c4b1e7;
+  --palette-success: #85d8b0;
+  --palette-heading: #edf5ef;
+  --palette-type: #a8cce4;
+  --palette-error: #ecb0a2;
+  --palette-copy: #c6d5d3;
+  --palette-muted: #9aafac;
+  --orb-ink: #c4b1e7;
+}
+:root[data-theme="ice"] {
+  --palette-motion: #b9acf4;
+  --palette-emphasis: #edb79f;
+  --palette-active: #8bd9ce;
+  --palette-success: #a2d89f;
+  --palette-heading: #eef3fa;
+  --palette-type: #a6cdef;
+  --palette-error: #f0a8be;
+  --palette-copy: #c9d2df;
+  --palette-muted: #9eaec2;
+  --orb-ink: #b9acf4;
+}
+
+.landing-page .hairline-figure {
+  --hairline-hi: color-mix(in oklab, var(--palette-motion) 30%, white);
+  --hairline-edge: var(--palette-motion);
+  --hairline-mid: color-mix(in oklab, var(--palette-motion) 52%, var(--sheet));
+  --hairline-lo: color-mix(in oklab, var(--palette-motion) 18%, var(--background));
+}
+.landing-page :is(h1, h2, h3) {
+  color: var(--palette-heading);
+}
+.landing-page h2 span {
+  color: var(--palette-emphasis);
+}
+.landing-page .flow-step h3 {
+  color: var(--palette-emphasis);
+}
+.landing-page :is(.section-kicker, .business-label, .feature-tag, .flow-runtime) {
+  color: var(--palette-motion);
+}
+.landing-page :is(.section-intro > p, .business-copy > p, .trust-top > p,
+  .feature-card p, .sableye-product-bento p, .agent-card p, .tier-card p,
+  .trust-grid p, .flow-step p, .gasless-callout p, .faq-items p,
+  .closing-glass p, .verification-head p, .verification-list span) {
+  color: var(--palette-copy);
+}
+.landing-page :is(.agent-console-hint, .verification-scope, .agent-notes,
+  .code-comment, .line-number) {
+  color: var(--palette-muted);
+}
+.landing-page :is(.tier-icon, .gasless-icon, .trust-grid > div > svg) {
+  color: var(--palette-motion);
+}
+.landing-page :is(.agent-proof svg, .verification-list svg) {
+  color: var(--palette-success);
+}
+.landing-page :is(.agent-command, .code-filename) {
+  color: var(--palette-motion);
+}
+.landing-page .code-toolbar button[aria-selected="true"] {
+  color: var(--palette-active);
+  background-color: color-mix(in oklab, var(--palette-active) 12%, transparent);
+}
+.landing-page .nimbus-nav [aria-current="location"] {
+  color: var(--palette-active);
+  text-decoration-color: var(--palette-active);
+}
+.landing-page .glass-button:hover .glass-button-text {
+  color: var(--palette-emphasis);
+}
+.landing-page :focus-visible,
+.docs-root :focus-visible {
+  outline-color: var(--palette-active);
+}
+
+/* Semantic states share the palette without blending into decorative accents. */
+:root {
+  --orb-ink: var(--palette-active);
+}
+.landing-page ::selection {
+  background-color: color-mix(in oklab, var(--palette-active) 30%, transparent);
+  color: var(--palette-heading);
+}
+.landing-page .glass-button-text {
+  color: var(--palette-heading);
+}
+.landing-page .agent-console-reply {
+  color: var(--palette-copy);
+}
+.landing-page .copy-feedback {
+  color: var(--palette-emphasis);
+}
+
+[data-sableye-error] {
+  color: var(--palette-error);
+}
+[data-sableye-success] {
+  color: var(--palette-success);
 }

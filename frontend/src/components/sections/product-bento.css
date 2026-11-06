@@ -1,4 +1,8 @@
 /* A single surface. Only shared dividers catch Magic Bento's cursor light. */
+.landing-page .sableye-product-bento h3 {
+  color: var(--palette-emphasis);
+}
+
 .sableye-product-bento {
   background: var(--mb-surface);
   isolation: isolate;

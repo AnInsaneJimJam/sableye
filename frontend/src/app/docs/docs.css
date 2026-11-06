@@ -1409,3 +1409,35 @@
   font-size: 16px;
   line-height: 26px;
 }
+
+/* Distinct text, syntax and interaction colors within the selected palette. */
+.docs-root {
+  --muted: var(--palette-copy);
+  --subtle: var(--palette-muted);
+  --syntax-keyword: var(--palette-active);
+  --syntax-string: var(--palette-success);
+  --syntax-function: var(--palette-motion);
+  --syntax-number: var(--palette-emphasis);
+  --syntax-type: var(--palette-type);
+  --syntax-tag: var(--palette-motion);
+  --syntax-base: var(--palette-heading);
+  --syntax-comment: var(--palette-muted);
+  --syntax-punctuation: var(--palette-copy);
+}
+.docs-root .article a,
+.docs-root .toc a.active {
+  color: var(--palette-motion);
+}
+
+.docs-root .toc {
+  --accent: var(--palette-motion);
+}
+
+.docs-root .nav-item.active {
+  color: var(--palette-active);
+}
+.docs-root .article h1,
+.docs-root .article h2,
+.docs-root .article h3 {
+  color: var(--palette-heading);
+}

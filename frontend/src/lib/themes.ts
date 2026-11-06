@@ -24,22 +24,22 @@ export const THEMES: Theme[] = [
     id: "midnight",
     name: "Midnight Blue",
     note: "The palette on the site today.",
-    swatch: ["#080f1f", "#2563eb", "#60a5fa"],
-    glass: { pane: "#2563eb", void: "#080f1f", edge: "#60a5fa" },
+    swatch: ["#080f1f", "#5263b8", "#72dacb"],
+    glass: { pane: "#5263b8", void: "#080f1f", edge: "#72dacb" },
   },
   {
     id: "mint",
     name: "Mint Ledger",
     note: "Teal base, mint edge: settlement and money moving.",
-    swatch: ["#04131a", "#0d9488", "#5eead4"],
-    glass: { pane: "#0d9488", void: "#04131a", edge: "#5eead4" },
+    swatch: ["#04131a", "#287f78", "#9fbef5"],
+    glass: { pane: "#287f78", void: "#04131a", edge: "#9fbef5" },
   },
   {
     id: "ice",
     name: "Ice",
     note: "Cyan edges on the coldest base.",
-    swatch: ["#04111c", "#0284c7", "#67e8f9"],
-    glass: { pane: "#0284c7", void: "#04111c", edge: "#67e8f9" },
+    swatch: ["#04111c", "#367eaa", "#b9acf4"],
+    glass: { pane: "#367eaa", void: "#04111c", edge: "#b9acf4" },
   },
 ];
 
