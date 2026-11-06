@@ -46,6 +46,7 @@ import { memoryOrderStore, type Customer, type LineItem, type OrderDetails, type
 import { createOutbox, type Outbox, type OutboxOptions } from './outbox.js'
 import { invoicePdf, receiptPdf, type BusinessInfo } from './pdf.js'
 import { arkivConfigFromEnv, attachArkiv, type ArkivApi, type ArkivConfig } from './arkiv.js'
+import { formatQuote, memoryCouponStore, newCoupon, normalizeCode, quoteCoupon, redeem, type Coupon, type CouponQuote, type CouponStore } from './coupons.js'
 
 export * from '@sableye/core'
 export { doctor, printDoctor, type DoctorCheck, type DoctorOptions } from './doctor.js'
@@ -59,6 +60,7 @@ export * from './orders.js'
 export * from './outbox.js'
 export * from './pdf.js'
 export * from './arkiv.js'
+export * from './coupons.js'
 
 /**
  * Anything that can sign EIP-712 typed data for the merchant: a viem `LocalAccount`, or your own KMS/HSM adapter.
@@ -120,6 +122,8 @@ export interface SableyeConfig {
    * Default: on when `ARKIV_ACCESS_KEY` is set. `false` turns it off.
    */
   arkiv?: ArkivConfig | false
+  /** Where coupons and their redemptions are kept. Default: in memory. Use `fileCouponStore()` or your DB. */
+  couponStore?: CouponStore
 }
 
 /** Parameters for {@link Sableye.invoices.create}. */
@@ -138,6 +142,8 @@ export interface CreateInvoiceParams {
   customer?: Customer
   /** Shown on the invoice, receipt and emails. Never on-chain. */
   description?: string
+  /** A promo code from {@link Sableye.coupons}. `amount` is the price before it; the invoice is signed for the discounted total. */
+  coupon?: string
   items?: LineItem[]
 }
 
@@ -220,6 +226,7 @@ export class Sableye {
   readonly business: BusinessInfo
   private readonly mail: ReturnType<typeof attachEmails>
   private readonly records: ReturnType<typeof attachArkiv>
+  private readonly couponStore: CouponStore
 
   constructor(config: SableyeConfig) {
     if (typeof window !== 'undefined' && config.privateKey) throw new SecretInClientError()
@@ -233,6 +240,7 @@ export class Sableye {
     this.paymentLinkUrl = config.paymentLinkUrl ?? 'http://localhost:3000/api/pay'
     this.linkStore = config.linkStore ?? memoryLinkStore()
     this.orders = config.orderStore ?? memoryOrderStore()
+    this.couponStore = config.couponStore ?? memoryCouponStore()
     this.outbox = createOutbox(config.outbox)
     this.business = config.business ?? { name: process.env.SABLEYE_BUSINESS_NAME || 'Merchant' }
     this.mail = attachEmails(config.email === false ? undefined : (config.email ?? emailConfigFromEnv()), this.outbox, {
@@ -256,6 +264,40 @@ export class Sableye {
   /** Merchant-owned records on Arkiv: `viewKey()`, `records()`, `status()`. Published automatically when enabled. */
   get arkiv(): ArkivApi {
     return this.records.arkiv
+  }
+
+  /** Coupons and promo codes, applied with `invoices.create({ amount, coupon })`. */
+  readonly coupons = {
+    /** Create a code: `{ code, percentOff }` or `{ code, amountOff: '2.00' }`, plus optional maxRedemptions, expiresAt, minAmount. */
+    create: async (input: { code: string; percentOff?: number; amountOff?: string; maxRedemptions?: number; expiresAt?: number | Date; minAmount?: string; token?: string }): Promise<Coupon> => {
+      const c = newCoupon(input, getToken(this.network, input.token ?? 'USDT').decimals)
+      if (await this.couponStore.get(c.code)) throw new SableyeError('coupon_exists', `Coupon ${c.code} already exists.`, 'Pick another code, or deactivate the old one first.')
+      await this.couponStore.put(c)
+      return c
+    },
+    get: (code: string) => this.couponStore.get(normalizeCode(code)),
+    list: () => this.couponStore.list(),
+    /** Stop a code from applying to new invoices. Invoices already signed with it stay valid. */
+    deactivate: async (code: string) => {
+      const c = await this.couponStore.get(normalizeCode(code))
+      if (c) await this.couponStore.put({ ...c, active: false })
+    },
+    /** What a code would do to an amount, without using it. Throws a CouponError if it doesn't apply. */
+    quote: async (code: string, amount: string, tokenSymbol = 'USDT'): Promise<CouponQuote> => {
+      const token = getToken(this.network, tokenSymbol)
+      const c = await this.couponStore.get(normalizeCode(code))
+      const subtotal = parseAmount(amount, token.decimals)
+      const { discount } = quoteCoupon(c, subtotal, token.decimals)
+      return formatQuote(c!.code, subtotal, discount, token.decimals)
+    },
+  }
+
+  /** A paid order that used a coupon counts as one redemption (idempotent). */
+  private async redeemCoupon(orderId: Hex) {
+    const order = await this.orders.get(orderId)
+    if (!order?.coupon) return
+    const c = await this.couponStore.get(order.coupon)
+    if (c && redeem(c, orderId)) await this.couponStore.put(c)
   }
 
   /** Email: `test()`, `log()`. Messages are sent automatically once email is configured. */
@@ -299,6 +341,10 @@ export class Sableye {
       await this.checkChain()
       const token = getToken(this.network, params.token ?? 'USDT')
       const orderRef = params.orderId ?? `order_${crypto.randomUUID()}`
+      const subtotal = parseAmount(params.amount, token.decimals)
+      const coupon = params.coupon ? await this.couponStore.get(normalizeCode(params.coupon)) : undefined
+      // Throws a CouponError before anything is signed if the code doesn't apply.
+      const price = params.coupon ? quoteCoupon(coupon, subtotal, token.decimals) : { total: subtotal, discount: 0n }
       const nonce = await this.client.readContract({
         address: processor, abi: paymentProcessorAbi, functionName: 'minNonce', args: [this.merchant],
       })
@@ -307,7 +353,7 @@ export class Sableye {
         merchant: this.merchant,
         payout: params.payout ?? this.merchant,
         token: token.address,
-        amount: parseAmount(params.amount, token.decimals),
+        amount: price.total,
         expiry: BigInt(Math.floor(Date.now() / 1000) + (params.expiresIn ?? 1800)),
         nonce,
       }
@@ -318,8 +364,14 @@ export class Sableye {
       const signed: SignedInvoice = { invoice, signature, chainId, processor, ...(this.relayUrl ? { relayUrl: this.relayUrl } : {}) }
       const created: CreatedInvoice = { ...signed, orderRef, checkoutUrl: `${this.checkoutUrl}#${encodeSignedInvoice(signed)}` }
       await this.attachedIndexer?.rememberRef(invoice.orderId, orderRef)
+      if (coupon) {
+        // ponytail: check-then-reserve isn't atomic across processes; one server process (or a DB-backed store) is fine
+        coupon.reservations[invoice.orderId.toLowerCase()] = Number(invoice.expiry) * 1000
+        await this.couponStore.put(coupon)
+      }
       const order: OrderDetails = {
-        orderRef, orderId: invoice.orderId, amount: params.amount, token: token.symbol, checkoutUrl: created.checkoutUrl,
+        orderRef, orderId: invoice.orderId, amount: formatAmount(price.total, token.decimals), token: token.symbol, checkoutUrl: created.checkoutUrl,
+        ...(coupon && { coupon: coupon.code, subtotal: formatAmount(subtotal, token.decimals), discount: formatAmount(price.discount, token.decimals) }),
         createdAt: Date.now(), expiresAt: Number(invoice.expiry) * 1000,
         ...(params.customer && { customer: params.customer }),
         ...(params.description && { description: params.description }),
@@ -722,6 +774,7 @@ export class Sableye {
     this.attachedIndexer = new Indexer(this.client, this.network, this.merchant, options)
     // Emails only enqueue here, so they never slow down or break indexing.
     this.attachedIndexer.on('*', async (e) => {
+      if (e.type === 'invoice.paid') await this.redeemCoupon(e.data.orderId as Hex)
       this.records.onEvent(e)
       await this.mail.onEvent(e)
     })

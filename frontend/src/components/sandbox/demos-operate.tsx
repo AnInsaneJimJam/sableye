@@ -684,6 +684,7 @@ export function EventsDemo() {
                 <span className="sbx-muted">
                   {now ? ago(now - h.receivedAt) : ""}
                 </span>
+                <ResendButton id={h.id} />
               </li>
             ))}
           </ul>
@@ -691,6 +692,33 @@ export function EventsDemo() {
       </Panel>
       <EmailsPanel now={now} />
     </div>
+  );
+}
+
+/** Deliver a past event again (same id): what you'd do after fixing a broken webhook handler. */
+function ResendButton({ id }: { id: string }) {
+  const [state, setState] = useState<"idle" | "busy" | "done" | "error">(
+    "idle",
+  );
+  const resend = async () => {
+    setState("busy");
+    try {
+      await post("/api/sandbox/events/resend", { id });
+      setState("done");
+    } catch {
+      setState("error");
+    }
+  };
+  return (
+    <Btn
+      variant="ghost"
+      busy={state === "busy"}
+      onClick={resend}
+      title="Deliver this event again, with the same id"
+    >
+      <RefreshCw size={13} />{" "}
+      {state === "done" ? "Resent" : state === "error" ? "Failed" : "Resend"}
+    </Btn>
   );
 }
 
@@ -1185,6 +1213,22 @@ export function DevelopersDemo() {
         )}
       </Panel>
       <div className="sbx-tiles">
+        <div className="sbx-tile">
+          <b>Webhooks on localhost</b>
+          <code>npx sableye listen --forward-to localhost:3000/api/webhook</code>
+          <span>
+            Like stripe listen: watches your payments and forwards signed
+            events to your dev server. --since replays history.
+          </span>
+        </div>
+        <div className="sbx-tile">
+          <b>First-time setup</b>
+          <code>npx sableye init</code>
+          <span>
+            Merchant key, business name, email (tested before saving) and
+            Arkiv, written to .env. Then runs doctor.
+          </span>
+        </div>
         <div className="sbx-tile">
           <b>Scaffold a store</b>
           <code>npx create-whitechain-checkout --name my-store</code>

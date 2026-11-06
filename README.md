@@ -119,7 +119,7 @@ pnpm --filter create-whitechain-checkout test
 cd frontend && pnpm dev                # landing page + Sandbox on :3000/sandbox
 ```
 
-The demo is the **Sableye Sandbox** (`/sandbox`): every product live on Whitechain Sepolia, next to its code and the Stripe equivalent.
+The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye-navy.vercel.app/sandbox**: every product running on Whitechain Sepolia, next to its code and the Stripe equivalent.
 
 **Testnet funds:**
 
