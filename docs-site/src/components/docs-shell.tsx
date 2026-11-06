@@ -12,7 +12,6 @@ import {
   Menu,
   Moon,
   Search,
-  Sparkles,
   Sun,
   X,
 } from "lucide-react";
@@ -260,11 +259,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             <kbd>
               <Command size={10} /> K
             </kbd>
-          </button>
-          <button className="ask-button" onClick={openSearch}>
-            <Sparkles size={16} />
-            <span>Search guides</span>
-            <kbd>⌘ I</kbd>
           </button>
           <Link
             className="outline-button header-reference"

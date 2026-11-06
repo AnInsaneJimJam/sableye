@@ -13,6 +13,8 @@ pnpm --filter sableye-docs dev
 
 Open **http://localhost:3001/docs**. The app uses `basePath: '/docs'`, including its assets and nested guide routes. It does not require a merchant key or SDK build.
 
+You can also run `bun run dev` from `docs/`; its scripts forward to this app. The same shortcut supports `build`, `start`, and `typecheck`.
+
 ```sh
 pnpm --filter sableye-docs typecheck
 pnpm --filter sableye-docs build
@@ -31,7 +33,7 @@ The header search supports Ctrl/Cmd+K, arrow keys, Enter, and Escape. Page actio
 
 ## Hosting under the main website
 
-Deploy `docs/` as its own Next.js app with access to the workspace root. Route `/docs` and `/docs/*` on the public domain to this app, preserving the prefix (including `/docs/_next/*`). The marketing app continues to own the other paths. This repository change does not alter the marketing app or configure a live hosting proxy.
+Deploy `docs-site/` as its own Next.js app with access to the workspace root. Route `/docs` and `/docs/*` on the public domain to this app, preserving the prefix (including `/docs/_next/*`). The marketing app continues to own the other paths. This repository change does not alter the marketing app or configure a live hosting proxy.
 
 For a Next.js marketing deployment, add rewrites to its configuration using your deployed docs origin:
 
