@@ -38,6 +38,7 @@ import {
 } from 'viem'
 import { Indexer, type IndexerOptions } from './indexer.js'
 import { RateLimiter, RelayRejectedError, relayRouteHandler, type RelayOptions } from './relay.js'
+import { startKeeper, type Keeper, type KeeperOptions } from './keeper.js'
 import { decodeLink, encodeLink, memoryLinkStore, PaymentLinkError, type LinkStore, type PaymentLink, type PaymentLinkData } from './links.js'
 import { privateKeyToAccount } from 'viem/accounts'
 
@@ -46,6 +47,7 @@ export { doctor, printDoctor, type DoctorCheck, type DoctorOptions } from './doc
 export * from './indexer.js'
 export * from './relay.js'
 export * from './links.js'
+export * from './keeper.js'
 export * from './webhooks.js'
 
 /**
@@ -475,7 +477,29 @@ export class Sableye {
       return { result: ok ? 'charged' : 'failed', txHash }
     },
 
-    /** Charge every due subscription once. Run it on a timer (your keeper). Uses chain time, not the server clock. */
+    /**
+     * Start the renewal scheduler: it charges each subscription exactly when it's due (chain time), discovers new
+     * subscriptions incrementally, and retries failed charges after a backoff. Prefer this to calling `runDue()`
+     * on a timer. Call `keeper.track(subId)` when your app sees a new subscription, to watch it immediately.
+     */
+    keeper: (opts: KeeperOptions = {}): Keeper => {
+      requireSubscriptions(this.network)
+      return startKeeper(
+        {
+          list: () => this.subscriptions.list(),
+          get: (id) => this.subscriptions.get(id),
+          charge: (id) => this.subscriptions.charge(id),
+          subscribedSince: async (from, to) => [...new Set((await this.eventsInChunks('Subscribed', from, to)).map((l) => l.args.subId!))],
+          head: async () => {
+            const b = await this.client.getBlock({ blockTag: 'latest' })
+            return { number: b.number!, timestamp: b.timestamp }
+          },
+        },
+        opts,
+      )
+    },
+
+    /** Charge every due subscription once, scanning everything. For a cron job; `keeper()` is cheaper for a server. */
     runDue: async (fromBlock = this.network.deployBlock ?? 0n) => {
       const now = Number((await this.client.getBlock({ blockTag: 'latest' })).timestamp) * 1000
       const due = (await this.subscriptions.list(fromBlock)).filter((x) => (x.status === 'active' || x.status === 'past_due') && x.nextChargeAt.getTime() <= now)
@@ -634,9 +658,9 @@ export class Sableye {
   }
 
   /** SubscriptionManager events for this merchant, fetched in RPC-sized block ranges (Whitechain caps at 10,000). */
-  private async eventsInChunks(eventName: 'Subscribed' | 'Charged' | 'ChargeFailed', fromBlock: bigint) {
+  private async eventsInChunks(eventName: 'Subscribed' | 'Charged' | 'ChargeFailed', fromBlock: bigint, toBlock?: bigint) {
     const address = requireSubscriptions(this.network)
-    const head = await this.client.getBlockNumber({ cacheTime: 0 }) // viem caches the head for seconds by default
+    const head = toBlock ?? (await this.client.getBlockNumber({ cacheTime: 0 })) // viem caches the head for seconds by default
     const span = this.network.maxLogRange ?? 10_000n
     const out = []
     for (let a = fromBlock; a <= head; a += span) {

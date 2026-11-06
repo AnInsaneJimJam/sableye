@@ -108,3 +108,45 @@ test('renewal tick, failed charge handled gracefully, recovery, cap, cancel', as
 test('bad interval has a remedy', async () => {
   await assert.rejects(sableye.subscriptions.createPlan({ planId: 'x', amount: '1', interval: 0 }), (e) => e.code === 'invalid_interval' && !!e.remedy)
 })
+
+test('keeper: sleeps until the renewal, charges it, backs off a failed charge, discovers new subscribers', async () => {
+  const offer = await sableye.subscriptions.createPlan({ planId: 'keeper_plan', amount: '1', interval: 120 })
+  const results = []
+  const keeper = sableye.subscriptions.keeper({ retryAfterSeconds: 3600, discoverEverySeconds: 0, onResult: (r) => results.push(r) })
+  try {
+
+  const w = await customer(10_000_000n)
+  await mined(await w.writeContract({ address: sm, abi: subscriptionManagerAbi, functionName: 'subscribe', args: [offer.plan, offer.signature, 10_000_000n] }))
+  const subId = await sableye.subscriptions.id('keeper_plan', w.account.address)
+  await keeper.track(subId)
+
+  // It doesn't poll: the next wake-up is the renewal itself, ~120 s away.
+  const sleepMs = keeper.nextRunAt.getTime() - Date.now()
+  assert.ok(sleepMs > 100_000 && sleepMs < 130_000, `next run in ${sleepMs} ms`)
+
+  // Renewal due → one pass charges it, nothing else.
+  await later(120)
+  const charged = await keeper.tick()
+  assert.deepEqual(charged.filter((r) => r.subId === subId).map((r) => r.result), ['charged'])
+  assert.equal((await sableye.subscriptions.get(subId)).charged, 2_000_000n)
+
+  // Empty wallet → failed charge → past_due, and the keeper waits out the backoff instead of hammering.
+  const bal = await c.readContract({ address: usdt, abi: usdtAbi, functionName: 'balanceOf', args: [w.account.address] })
+  await mined(await w.writeContract({ address: usdt, abi: usdtAbi, functionName: 'transfer', args: [deployer.account.address, bal] }))
+  await later(120)
+  assert.deepEqual((await keeper.tick()).filter((r) => r.subId === subId).map((r) => r.result), ['failed'])
+  assert.equal((await sableye.subscriptions.get(subId)).status, 'past_due')
+  const nonce = await c.getTransactionCount({ address: sableye.merchant })
+  assert.deepEqual((await keeper.tick()).filter((r) => r.subId === subId), [], 'no retry inside the backoff window')
+  assert.equal(await c.getTransactionCount({ address: sableye.merchant }), nonce, 'and no transaction sent')
+
+  // A subscriber the app never told the keeper about is found incrementally.
+  const before = keeper.watching
+  const w2 = await customer(5_000_000n)
+  await mined(await w2.writeContract({ address: sm, abi: subscriptionManagerAbi, functionName: 'subscribe', args: [offer.plan, offer.signature, 5_000_000n] }))
+  await keeper.tick()
+  assert.equal(keeper.watching, before + 1)
+  } finally {
+    keeper.stop() // never leave a timer behind, even if an assertion fails
+  }
+})
