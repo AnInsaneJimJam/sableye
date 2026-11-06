@@ -200,7 +200,8 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 - **Docs:** TSDoc on every export. Every error has a remedy.
 - **Secrets:** the merchant key stays on the server only (`.env`, never committed). The client never sees it. Always check the chain ID.
 - **No trackers or analytics** in any client.
-- **Buttons (frontend):** documentation pages use plain native buttons and flat call-to-action links, without liquid-glass styling. Docs use a fixed dark theme without a theme toggle. Elsewhere, buttons and call-to-action links use `<GlassButton/>` from `frontend/src/components/ui/glass-button.tsx`. Rules and source prompt: `frontend/docs/liquid-glass-button.md`.
+- **Buttons (frontend):** documentation pages use plain native buttons and flat call-to-action links, without liquid-glass styling. All pages, including docs, share the selected dark color palette and the persistent native palette switch in the bottom-right corner. Elsewhere, buttons and call-to-action links use `<GlassButton/>` from `frontend/src/components/ui/glass-button.tsx`. Rules and source prompt: `frontend/docs/liquid-glass-button.md`.
+- **Landing backgrounds:** a native switch in the bottom-left corner of the homepage cycles Glass Fold, Pattern Waves, Ghost Fibers, Gradient Waves, and Threads. It changes the hero composition in place, independently of the color palette, and remembers the choice. Both appearance switches are exceptions to the GlassButton rule. React Bits sources and their license live in `frontend/src/components/backgrounds/react-bits/`; keep Sableye tuning in the surrounding integration. Respect reduced motion, provide static fallbacks, and run only the selected background.
 - **Commits:** small and frequent; judges read the history. Reference issues (`Closes #NN`).
 - **Workflow:** after changing the contract, run `forge build && node scripts/gen-abi.mjs` to refresh the ABI in core.
 - **Tests:**

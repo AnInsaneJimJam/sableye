@@ -3,8 +3,10 @@ import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createMetadata } from "@/lib/seo";
 import { THEME_INIT_SCRIPT } from "@/lib/themes";
+import { BACKGROUND_INIT_SCRIPT } from "@/lib/backgrounds";
 import { cn } from "@/lib/utils";
 import "./globals.css";
+import "./landing-backgrounds.css";
 
 // Bundle fonts so first-time compilation does not wait for Google Fonts.
 const fontSans = localFont({
@@ -48,6 +50,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           id="sableye-palette"
           // The script contains only our palette IDs and storage key, never user input.
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+        <script
+          id="sableye-background"
+          dangerouslySetInnerHTML={{ __html: BACKGROUND_INIT_SCRIPT }}
         />
       </head>
       <body className="min-h-dvh bg-background text-foreground antialiased">

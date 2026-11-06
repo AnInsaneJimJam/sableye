@@ -1,8 +1,9 @@
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { BackgroundSwitch } from "@/components/backgrounds/background-switch";
+import { LandingBackground } from "@/components/backgrounds/landing-background";
 import { Hero } from "@/components/sections/hero";
 import { ProductStory } from "@/components/sections/product-story";
-import { ThemedGlassFold } from "@/components/ui/themed-glass-fold";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
@@ -17,9 +18,7 @@ export default function HomePage() {
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <div className="landing-background" aria-hidden="true">
-        <ThemedGlassFold />
-      </div>
+      <LandingBackground />
       <div className="landing-scrim" aria-hidden="true" />
       <SiteHeader />
       <main id="main-content">
@@ -27,6 +26,7 @@ export default function HomePage() {
         <ProductStory />
       </main>
       <SiteFooter />
+      <BackgroundSwitch />
     </div>
   );
 }
