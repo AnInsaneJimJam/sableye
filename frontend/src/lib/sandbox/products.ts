@@ -307,16 +307,22 @@ const stats = indexer.stats()                 // volume, refund rate, conversion
     slug: "dashboard",
     group: "Operate",
     title: "Dashboard",
-    tagline: "Volume, refunds, conversion, MRR and churn.",
+    tagline: "Revenue over time, refunds, conversion, MRR and churn.",
     summary:
       "The numbers a business watches, computed from on-chain data: payment volume, refund rate, invoice conversion, and for subscriptions MRR, churn and failed-charge rate.",
     stripe: { name: "Dashboard home & Billing analytics", how: "Gross volume, successful payments, MRR, churn and retries in the Stripe Dashboard." },
     differences: ["Computed from events anyone can audit", "No vendor database: lose the server, rebuild from the chain", "MRR is normalised to 30 days for any interval"],
-    steps: ["Indexer stats for one-off payments", "Subscription stats from contract events", "Rendered here, refreshed live"],
+    steps: ["Indexer stats and a revenue series for one-off payments", "Subscription stats from contract events", "Rendered here, refreshed live"],
     code: {
       sableye: {
         file: "server.ts",
         code: `const { count, volume, refundRate, conversion } = indexer.stats()
+
+// Net revenue per day / week / month (refunds count when they happen)
+const [usdt] = indexer.revenue({ bucket: 'day', from: Date.now() - 30 * 86_400_000 })
+usdt.points // [{ start, gross, refunded, net, count }, ...]
+usdt.averageOrder
+
 const { mrr, churnRate, failedChargeRate, active } =
   await sableye.subscriptions.stats()`,
       },
