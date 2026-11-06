@@ -32,10 +32,7 @@ const fontMono = localFont({
 export const metadata = createMetadata();
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#080f1f" },
-  ],
+  themeColor: "#080f1f",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -46,9 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={cn(fontSans.variable, fontDisplay.variable, fontMono.variable)}
     >
       <body className="min-h-dvh bg-background text-foreground antialiased">
-        <ThemeProvider>
-          <main>{children}</main>
-        </ThemeProvider>
+        <ThemeProvider forcedTheme="dark">{children}</ThemeProvider>
       </body>
     </html>
   );
