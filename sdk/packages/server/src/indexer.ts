@@ -97,6 +97,29 @@ export interface IndexedInvoice {
   refundTxs: Hex[]
 }
 
+/** One period of {@link Indexer.revenue}. Amounts in token base units. */
+export interface RevenuePoint {
+  start: Date
+  gross: bigint
+  refunded: bigint
+  net: bigint
+  /** Payments in the period. */
+  count: number
+}
+
+/** Revenue over time for one token. */
+export interface RevenueSeries {
+  token: Address
+  bucket: 'day' | 'week' | 'month'
+  points: RevenuePoint[]
+  gross: bigint
+  refunded: bigint
+  net: bigint
+  count: number
+  /** Gross / count, base units. */
+  averageOrder: bigint
+}
+
 /** A difference between the indexer and the contract, from {@link Indexer.reconcile}. */
 export interface Mismatch {
   orderId: Hex
@@ -432,6 +455,61 @@ export class Indexer {
       count: paid.length, volume, refunded, refundRate: paid.length ? refundCount / paid.length : 0,
       created, conversion: created ? paidOfCreated / created : 0,
     }
+  }
+
+  /**
+   * Revenue over time, per token, for charts. Payments count by payment time, refunds by refund time (cash
+   * basis), so a refund lowers the period it happened in. Amounts in token base units; empty periods included.
+   * @example indexer.revenue({ bucket: 'day', from: Date.now() - 30 * 86_400_000 })
+   */
+  revenue(opts: { bucket?: 'day' | 'week' | 'month'; from?: number | Date; to?: number | Date } = {}): RevenueSeries[] {
+    const bucket = opts.bucket ?? 'day'
+    const startOf = (ms: number) => {
+      const d = new Date(ms)
+      if (bucket === 'month') return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)
+      const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+      return bucket === 'week' ? day - ((d.getUTCDay() + 6) % 7) * 86_400_000 : day // weeks start on Monday
+    }
+    const next = (ms: number) => {
+      if (bucket !== 'month') return ms + (bucket === 'week' ? 7 : 1) * 86_400_000
+      const d = new Date(ms)
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)
+    }
+    const logs = this.state.logs.filter((l) => l.kind !== 'cancelled' && l.timestamp)
+    const tokenOf = new Map(logs.filter((l) => l.kind === 'paid').map((l) => [l.orderId, l.token!]))
+    const times = logs.map((l) => l.timestamp * 1000)
+    const from = startOf(opts.from !== undefined ? +opts.from : times.length ? Math.min(...times) : Date.now())
+    const to = opts.to !== undefined ? +opts.to : Date.now()
+    const out = new Map<string, RevenueSeries>()
+    for (const l of logs) {
+      const ms = l.timestamp * 1000
+      const token = tokenOf.get(l.orderId)
+      if (ms < from || ms > to || !token) continue
+      let series = out.get(token)
+      if (!series) {
+        series = { token, bucket, points: [], gross: 0n, refunded: 0n, net: 0n, count: 0, averageOrder: 0n }
+        for (let t = from; t <= to; t = next(t)) series.points.push({ start: new Date(t), gross: 0n, refunded: 0n, net: 0n, count: 0 })
+        out.set(token, series)
+      }
+      const point = series.points.find((p, i) => ms >= +p.start && (i === series!.points.length - 1 || ms < +series!.points[i + 1]!.start))
+      if (!point) continue
+      const amount = BigInt(l.amount ?? 0)
+      if (l.kind === 'paid') {
+        point.gross += amount
+        point.count++
+      } else point.refunded += amount
+      point.net = point.gross - point.refunded
+    }
+    for (const s of out.values()) {
+      for (const p of s.points) {
+        s.gross += p.gross
+        s.refunded += p.refunded
+        s.count += p.count
+      }
+      s.net = s.gross - s.refunded
+      s.averageOrder = s.count ? s.gross / BigInt(s.count) : 0n
+    }
+    return [...out.values()]
   }
 
   /**

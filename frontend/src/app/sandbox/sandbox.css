@@ -240,3 +240,16 @@
   .sbx-card, .sbx-card-arrow, .sbx-bar span { transition: none; }
   .sbx-spin { animation: none; }
 }
+
+/* Revenue chart: one series, thin bars rounded at the data end, recessive axis, hover tooltip */
+.sbx-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; border: 1px solid var(--edge); }
+.sbx-seg button { white-space: nowrap; padding: 4px 10px; border-radius: 999px; font-size: 12px; color: var(--muted-foreground); background: none; border: 0; cursor: pointer; }
+.sbx-seg button[aria-pressed="true"] { background: var(--brand-weak, #ffffff14); color: var(--ink); }
+.sbx-chart { position: relative; margin-bottom: 12px; }
+.sbx-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.sbx-chart-axis { stroke: var(--edge); stroke-width: 1; }
+.sbx-chart-tick { font-size: 10px; fill: var(--muted-foreground); }
+.sbx-chart-bar { fill: var(--brand); opacity: 0.85; transition: opacity 120ms; }
+.sbx-chart-bar.on { opacity: 1; }
+.sbx-chart-tip { position: absolute; top: 0; transform: translate(-50%, -105%); display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #0a1322f2; border: 1px solid var(--edge); font-size: 12px; color: var(--ink); white-space: nowrap; pointer-events: none; z-index: 2; }
+.sbx-chart-tip span { color: var(--muted-foreground); font-variant-numeric: tabular-nums; }

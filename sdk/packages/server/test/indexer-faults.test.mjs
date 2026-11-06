@@ -84,3 +84,19 @@ test('a payment reorged out while the indexer was offline is not reported final 
   assert.deepEqual(seen, ['invoice.paid', 'invoice.reorged'])
   assert.equal(ix.invoices().length, 0)
 })
+
+test('revenue(): payments by payment day, refunds by refund day, empty days included', async () => {
+  const c = fakeChain()
+  c.head = c.safe = c.final = 2 * 86_400 + 10
+  const a = h(0x0d, 1), b = h(0x0e, 1)
+  c.logs.push(paid(5, a), paid(6, b), { ...refunded(2 * 86_400 + 5, a), args: { orderId: a, payer: MERCHANT, amount: 2n, totalRefunded: 2n } })
+  const ix = new Indexer(c.client, network, MERCHANT, { fromBlock: 0n, chunkSize: 10_000 })
+  await ix.poll()
+  const [s] = ix.revenue({ bucket: 'day', to: (1_700_000_000 + 2 * 86_400 + 10) * 1000 })
+  assert.equal(s.count, 2)
+  assert.equal(s.gross, 10n)
+  assert.equal(s.refunded, 2n)
+  assert.equal(s.net, 8n)
+  assert.equal(s.averageOrder, 5n)
+  assert.deepEqual(s.points.map((p) => [p.count, p.gross, p.refunded]), [[2, 10n, 0n], [0, 0n, 0n], [0, 0n, 2n]])
+})

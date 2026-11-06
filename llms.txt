@@ -80,6 +80,9 @@ await sableye.arkiv.records()   // read back, decrypted
 sableye.arkiv.status()          // { published, pending, failed, lastError? }
 ```
 
+### Revenue analytics
+`indexer.stats()` returns `{ count, volume, refunded, refundRate, created, conversion }`. `indexer.revenue({ bucket: 'day'|'week'|'month', from?, to? })` returns one series per token: `{ token, bucket, points: [{ start, gross, refunded, net, count }], gross, refunded, net, count, averageOrder }`. Refunds count in the period they happened (cash basis); empty periods are included. `sableye.subscriptions.stats()` returns `{ mrr, churnRate, failedChargeRate, active, pastDue, … }`.
+
 ### CLI
 `npx sableye init` runs first-time setup: merchant key, business name, email (logs in and sends a test email before saving), Arkiv access key. It writes `.env`. `npx sableye init --email` reruns only the email step. `npx sableye doctor` checks the chain setup and the SMTP login. `npx sableye view-key` prints the Arkiv view key.
 
