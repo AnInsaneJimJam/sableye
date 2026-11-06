@@ -20,14 +20,14 @@ const MUST_CONTAIN = [
   'id="product"',
   'id="how-it-works"',
   'id="developers"',
+  'id="agents"',
+  "sableye-mcp",
   'id="trust"',
-  "Interactive walkthrough",
-  "No wallet or funds involved",
   "invoices.create",
   "Verify and fulfil",
   "Whitechain Sepolia",
   "mainnet",
-  "chai-shop.webp",
+  "Any size of business",
   'aria-label="Integration steps"',
 ];
 

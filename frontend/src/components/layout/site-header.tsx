@@ -1,9 +1,8 @@
 "use client";
 
-import { ArrowUpRight, Code2, Layers3, Route, ShieldCheck } from "lucide-react";
+import { Bot, Code2, Layers3, Route, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { LiquidNavbar } from "@/components/ui/liquid-glass-navbar";
-import { siteConfig } from "@/lib/site";
 
 const items = [
   {
@@ -25,6 +24,12 @@ const items = [
     fx: "spin" as const,
   },
   {
+    label: "Agents",
+    href: "#agents",
+    icon: <Bot size={16} />,
+    fx: "glow" as const,
+  },
+  {
     label: "Trust",
     href: "#trust",
     icon: <ShieldCheck size={16} />,
@@ -32,7 +37,7 @@ const items = [
   },
 ];
 
-/** Shared glass navigation; section visibility keeps the active drop in sync. */
+/** Wordmark at the top; the glass navigation is docked to the bottom of the viewport. */
 export function SiteHeader() {
   const [active, setActive] = useState(0);
   useEffect(() => {
@@ -56,23 +61,24 @@ export function SiteHeader() {
     return () => observer.disconnect();
   }, []);
   return (
-    <header className="site-header">
-      <a href="#home" className="wordmark" aria-label="Sableye home">
-        <span className="brand-symbol" aria-hidden="true">
-          s
-        </span>
-        Sableye<span className="brand-period">.</span>
-      </a>
-      <LiquidNavbar
-        tone="dark"
-        items={items}
-        active={active}
-        onChange={setActive}
-        compact={false}
-      />
-      <a href={`${siteConfig.links.github}#quickstart`} className="nav-start">
-        Start building <ArrowUpRight size={15} />
-      </a>
-    </header>
+    <>
+      <header className="site-header">
+        <a href="#home" className="wordmark" aria-label="Sableye home">
+          <span className="brand-symbol" aria-hidden="true">
+            s
+          </span>
+          Sableye<span className="brand-period">.</span>
+        </a>
+      </header>
+      <div className="site-dock">
+        <LiquidNavbar
+          tone="dark"
+          items={items}
+          active={active}
+          onChange={setActive}
+          compact={false}
+        />
+      </div>
+    </>
   );
 }

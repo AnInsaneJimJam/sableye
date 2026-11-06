@@ -1,45 +1,33 @@
-import { ArrowDownRight, ArrowRight } from "lucide-react";
-import { CheckoutPreview } from "@/components/sections/checkout-preview";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { GlassButton } from "@/components/ui/glass-button";
 import { siteConfig } from "@/lib/site";
 
-/** Product promise and an interactive, non-transactional checkout walkthrough. */
+/** Product promise and the primary calls to action. */
 export function Hero() {
   return (
     <section id="home" className="hero page-width">
       <div className="hero-copy">
-        <a className="launch-note" href="/sandbox">
+        <span className="launch-note">
           <span className="status-light" /> Built on Whitechain{" "}
-          <span className="note-separator">/</span> Explore the testnet{" "}
-          <ArrowRight size={13} />
-        </a>
+        </span>
         <h1>
           Payments,
           <br />
           <span>in your hands.</span>
         </h1>
         <p>
-          Accept USDT. Settle into your own wallet. Give your customers a
-          checkout that just flows.
+          Accept USDT payments, settled straight to your wallet.
         </p>
         <div className="hero-actions">
-          <a
-            className="action-primary"
+          <GlassButton
+            tone="accent"
             href={`${siteConfig.links.github}#quickstart`}
           >
             Start building <ArrowRight size={17} />
-          </a>
-          <a className="action-text" href="/sandbox">
-            Try the sandbox <ArrowDownRight size={17} />
-          </a>
-        </div>
-      </div>
-      <CheckoutPreview />
-      <div className="hero-foundation">
-        <span>Built for the way business moves.</span>
-        <div>
-          <span>USDT payments</span>
-          <span>Non-custodial by design</span>
-          <span>Open-source SDK</span>
+          </GlassButton>
+          <GlassButton href="/sandbox">
+            Try the sandbox <ArrowUpRight size={17} />
+          </GlassButton>
         </div>
       </div>
     </section>

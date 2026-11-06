@@ -8,7 +8,7 @@ import { createMetadata } from "@/lib/seo";
 export const metadata = createMetadata({
   title: "Payments, in your hands",
   description:
-    "Accept USDT on Whitechain with Sableye. Non-custodial settlement, gasless checkout, invoices, subscriptions and refunds in a small TypeScript integration.",
+    "The all-in-one USDT payment stack for businesses of every size: checkout, invoices, subscriptions, refunds, cross-border payments and analytics. Non-custodial, on Whitechain.",
 });
 
 export default function HomePage() {
