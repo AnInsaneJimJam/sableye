@@ -200,7 +200,7 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 - **Docs:** TSDoc on every export. Every error has a remedy.
 - **Secrets:** the merchant key stays on the server only (`.env`, never committed). The client never sees it. Always check the chain ID.
 - **No trackers or analytics** in any client.
-- **Buttons (frontend):** docs sidebar disclosure rows use plain text buttons with chevrons and docs search and copy/page-action controls use their original flat buttons; docs use a fixed dark theme without a theme toggle; other buttons and call-to-action links use `<GlassButton/>` from `frontend/src/components/ui/glass-button.tsx`. Never hand-roll button styles. Rules and the source prompt: `frontend/docs/liquid-glass-button.md`.
+- **Buttons (frontend):** documentation pages use plain native buttons and flat call-to-action links, without liquid-glass styling. Docs use a fixed dark theme without a theme toggle. Elsewhere, buttons and call-to-action links use `<GlassButton/>` from `frontend/src/components/ui/glass-button.tsx`. Rules and source prompt: `frontend/docs/liquid-glass-button.md`.
 - **Commits:** small and frequent; judges read the history. Reference issues (`Closes #NN`).
 - **Workflow:** after changing the contract, run `forge build && node scripts/gen-abi.mjs` to refresh the ABI in core.
 - **Tests:**

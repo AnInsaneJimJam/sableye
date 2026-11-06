@@ -765,7 +765,7 @@
   border-radius: 50%;
   background: var(--accent);
 }
-.docs-root .toc a:hover {
+.docs-root .toc a:not(.active):hover {
   color: var(--text);
 }
 .docs-root .mobile-toc {
@@ -1208,19 +1208,6 @@
     inset 0 0 0 1px var(--line);
   color: var(--accent);
 }
-.docs-root .primary-button {
-  background: linear-gradient(135deg, #397bf5, #2563eb);
-  border: 1px solid rgb(147 197 253 / 35%);
-  box-shadow:
-    inset 0 1px rgb(255 255 255 / 23%),
-    0 4px 16px rgb(37 99 235 / 20%);
-}
-.docs-root .outline-button {
-  background:
-    linear-gradient(135deg, var(--glass-highlight), transparent), var(--glass);
-  box-shadow: inset 0 1px var(--glass-highlight);
-  border: 1px solid var(--line);
-}
 .docs-root .resource-grid a,
 .docs-root .pagination a,
 .docs-root .code-block {
@@ -1387,4 +1374,29 @@
 }
 .docs-root .search-trigger:hover {
   background: var(--raised);
+}
+
+/* Documentation controls use flat surfaces rather than liquid-glass effects. */
+.docs-root button,
+.docs-root .primary-button,
+.docs-root .outline-button {
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.docs-root .primary-button {
+  background: var(--button);
+  color: #f8fafc;
+}
+.docs-root .outline-button {
+  background: transparent;
+}
+.docs-root .top-links > a.selected {
+  background: var(--raised);
+  box-shadow: none;
+}
+.docs-root .pagination a,
+.docs-root .resource-grid a {
+  background: var(--panel);
+  box-shadow: none;
 }
