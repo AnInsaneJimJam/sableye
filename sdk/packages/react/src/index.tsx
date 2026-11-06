@@ -1,12 +1,12 @@
 'use client'
 // @sableye/react: <Checkout/> and useCheckout. All payment logic lives in the headless engine in @sableye/core.
 import {
-  createCheckout, discoverWallets, hostedPayUrl, isMobileBrowser, normalizeSignedInvoice,
+  createCheckout, discoverWallets, hostedPayUrl, isMobileBrowser, networks, normalizeSignedInvoice,
   type CheckoutOptions, type CheckoutState, type CheckoutStatus, type DiscoveredWallet,
   type SableyeError, type SerializedSignedInvoice, type SignedInvoice, type WalletProvider,
 } from '@sableye/core'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { OpenInWallet, PhonePay, QrToggle } from './phone-pay.js'
+import { OpenInWallet, PhonePay, QrToggle, WalletConnectPay } from './phone-pay.js'
 import type { Hex } from 'viem'
 
 /** A signed invoice in any form it reaches the browser in: the object, its JSON form, or an encoded link payload. */
@@ -81,6 +81,11 @@ export interface CheckoutProps extends CheckoutOptions {
    * `checkoutUrl`, or this page when the invoice came from the URL. Without one, no QR icon is shown.
    */
   payUrl?: string
+  /**
+   * Your Reown (WalletConnect) project id from cloud.reown.com. Adds "WalletConnect": pay from Whitewallet or any
+   * WalletConnect wallet by scanning a QR code. Needs `@walletconnect/universal-provider` installed.
+   */
+  walletConnectProjectId?: string
 }
 
 const PROGRESS: Partial<Record<CheckoutStatus, string>> = {
@@ -103,9 +108,11 @@ const FINAL_ERRORS = new Set(['invoice_expired', 'invoice_revoked', 'invalid_sig
  * @example
  * <Checkout invoice={inv} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />
  */
-export function Checkout({ invoice, onSuccess, onError, className, qr = true, payUrl, ...options }: CheckoutProps) {
+export function Checkout({ invoice, onSuccess, onError, className, qr = true, payUrl, walletConnectProjectId, ...options }: CheckoutProps) {
   const { state, wallets, pay, refresh } = useCheckout(invoice, options)
   const [showQr, setShowQr] = useState(false)
+  const [showWc, setShowWc] = useState(false)
+  const wcChain = useWalletConnectChain(invoice, options.rpcUrl)
   const phoneUrl = usePhoneUrl(invoice, payUrl)
   // Remember which wallet the customer picked, so "Use a different account" reopens the same one.
   const lastProvider = useRef<WalletProvider | undefined>(undefined)
@@ -164,12 +171,38 @@ export function Checkout({ invoice, onSuccess, onError, className, qr = true, pa
           ) : (
             <button type="button" data-sableye-pay onClick={() => pay()}>{status === 'error' ? 'Try again' : `Pay ${label}`}</button>
           )}
+          {walletConnectProjectId && wcChain && (
+            <button type="button" data-sableye-walletconnect-toggle aria-expanded={showWc} onClick={() => setShowWc(!showWc)}>WalletConnect</button>
+          )}
           {offerPhone && <QrToggle open={showQr} onClick={() => setShowQr(!showQr)} />}
         </div>
       )}
-      {offerPhone && showQr && <PhonePay payUrl={phoneUrl} onPoll={refresh} />}
+      {payable && showWc && walletConnectProjectId && wcChain && (
+        <WalletConnectPay projectId={walletConnectProjectId} {...wcChain} onConnected={(p) => { lastProvider.current = p; setShowWc(false); pay(p) }} />
+      )}
+      {offerPhone && showQr && (
+        <PhonePay
+          payUrl={phoneUrl}
+          onPoll={refresh}
+          walletConnect={walletConnectProjectId && wcChain ? <WalletConnectPay projectId={walletConnectProjectId} {...wcChain} onConnected={(p) => { lastProvider.current = p; setShowQr(false); pay(p) }} /> : undefined}
+        />
+      )}
     </div>
   )
+}
+
+/** The invoice's chain id and an RPC URL for WalletConnect, or undefined if the invoice can't be read. */
+function useWalletConnectChain(invoice: CheckoutInvoice, rpcUrl?: string): { chainId: number; rpcUrl: string } | undefined {
+  return useMemo(() => {
+    try {
+      const { chainId } = normalizeSignedInvoice(invoice as Parameters<typeof normalizeSignedInvoice>[0])
+      const net = Object.values(networks).find((n) => n.chain.id === chainId)
+      const url = rpcUrl ?? net?.chain.rpcUrls.default.http[0]
+      return url ? { chainId, rpcUrl: url } : undefined
+    } catch {
+      return undefined
+    }
+  }, [invoice, rpcUrl])
 }
 
 /** The hosted-checkout URL a phone should open for this invoice, or undefined if there's nowhere to send it. */
@@ -189,3 +222,6 @@ function usePhoneUrl(invoice: CheckoutInvoice, payUrl?: string): string | undefi
     }
   }, [invoice, payUrl, here])
 }
+
+export { QrCode, WalletConnectPay } from './phone-pay.js'
+export { connectWalletConnect, type WalletConnectOptions, type WalletConnectProvider } from './walletconnect.js'

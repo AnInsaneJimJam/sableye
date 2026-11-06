@@ -5,7 +5,7 @@ import { encodeSignedInvoice, type SignedInvoice } from './invoice.js'
 /**
  * Mobile wallets the checkout offers. `deepLink: true` wallets have a documented "open this dapp URL" link.
  * Whitewallet (Whitechain's own wallet, whitewallet.app) publishes no such link; it connects to apps through
- * WalletConnect, so it's listed without a deep link until WalletConnect is supported.
+ * WalletConnect, which `<Checkout walletConnectProjectId>` offers (a pairing QR instead of a deep link).
  */
 export const mobileWallets = [
   { id: 'metamask', name: 'MetaMask', deepLink: true },
