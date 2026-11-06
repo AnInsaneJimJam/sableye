@@ -2,7 +2,7 @@
 
 This file lists the architecture, then every feature, level and phase that Sableye
 builds. It holds nothing else. For the pitch and the reasons behind the design, read
-[docs/PROJECT.md](docs/PROJECT.md).
+[project-docs/PROJECT.md](project-docs/PROJECT.md).
 
 A ✅ marks work that already exists. Everything else is planned. A `#` number is the
 GitHub issue that tracks the item.
@@ -401,7 +401,7 @@ differential- and property-tested against them.
 4. Run Gambit, then report how many mutants each property kills. Review any spec that
    kills nothing.
 5. Stretch: get Certora access, then port the properties to CVL.
-6. Write `docs/VERIFICATION.md`. State what was proved, with the tool and the bound.
+6. Write `project-docs/VERIFICATION.md`. State what was proved, with the tool and the bound.
    State what was fuzzed, with runs and depth. State what nobody covered.
 7. A human reviews any invariant that AI drafts. Mutation testing is the safety net.
 

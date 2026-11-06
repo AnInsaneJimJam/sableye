@@ -131,3 +131,7 @@ needed. The checkout walkthrough is an illustration and never requests funds.
 
 To check the rendered product content, run the app, then `pnpm check:render`
 (or `PORT=3111 pnpm check:render` if using that port).
+
+## Documentation
+
+The same application serves `/docs` and its guide routes. Run the usual frontend dev/build/start commands. Content and maintenance instructions: [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md). No separate documentation deployment is required.

@@ -200,7 +200,7 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 - **Docs:** TSDoc on every export. Every error has a remedy.
 - **Secrets:** the merchant key stays on the server only (`.env`, never committed). The client never sees it. Always check the chain ID.
 - **No trackers or analytics** in any client.
-- **Buttons (frontend):** every button and call-to-action link is `<GlassButton/>` from `frontend/src/components/ui/glass-button.tsx`. Never hand-roll button styles. Rules and the source prompt: `frontend/docs/liquid-glass-button.md`.
+- **Buttons (frontend):** docs sidebar disclosure rows use plain text buttons with chevrons; other buttons and call-to-action links use `<GlassButton/>` from `frontend/src/components/ui/glass-button.tsx`. Never hand-roll button styles. Rules and the source prompt: `frontend/docs/liquid-glass-button.md`.
 - **Commits:** small and frequent; judges read the history. Reference issues (`Closes #NN`).
 - **Workflow:** after changing the contract, run `forge build && node scripts/gen-abi.mjs` to refresh the ABI in core.
 - **Tests:**
@@ -218,8 +218,8 @@ sdk/packages/react/     @sableye/react
 sdk/packages/checkout/  static checkout page (payment links, #40)
 sdk/packages/create-whitechain-checkout/  scaffolder (#43)
 frontend/               landing page + the Sableye Sandbox (/sandbox) and hosted /pay page
-docs/                   project docs (Markdown): VERIFICATION, THREAT_MODEL, PROJECT, …
-docs-site/              docs website (Next.js, port 3001, served at /docs)
+project-docs/           project docs (Markdown): VERIFICATION, THREAT_MODEL, PROJECT, …
+frontend/src/app/docs/  docs website, served at /docs by the same frontend app
 skills/whitechain-pay/  Agent Skill (#42)
 llms.txt                SDK docs for AI agents (#37): update it when an API changes
 scripts/                gen-abi, check-sdk-lines

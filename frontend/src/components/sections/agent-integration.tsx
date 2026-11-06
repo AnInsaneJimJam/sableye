@@ -63,7 +63,7 @@ export function AgentIntegration() {
               only the skill and llms.txt.
             </span>
           </div>
-          <GlassButton size="sm" href={`${repo}/blob/main/docs/AI_EVAL.md`}>
+          <GlassButton size="sm" href={`${repo}/blob/main/project-docs/AI_EVAL.md`}>
             Read the eval <ArrowUpRight size={16} />
           </GlassButton>
         </LiquidGlassCard>
