@@ -209,6 +209,7 @@ sdk/packages/react/     @sableye/react
 sdk/packages/checkout/  static checkout page (payment links, #40)
 sdk/packages/create-whitechain-checkout/  scaffolder (#43)
 frontend/               landing page + the Sableye Sandbox (/sandbox) and hosted /pay page
+docs/                   docs website (Next.js, port 3001); the project's Markdown docs also live here
 skills/whitechain-pay/  Agent Skill (#42)
 llms.txt                SDK docs for AI agents (#37): update it when an API changes
 scripts/                gen-abi, check-sdk-lines
