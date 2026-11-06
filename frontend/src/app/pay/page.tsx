@@ -1,4 +1,5 @@
 "use client";
+import { BrandMark } from "@/components/ui/brand-mark";
 // Hosted checkout accepts fragment payment links and ?i= phone-wallet links.
 import { decodeSignedInvoice, invoiceFromLocation } from "@sableye/core";
 import { Checkout } from "@sableye/react";
@@ -26,9 +27,7 @@ export default function PayPage() {
       <div className="sbx-glow" aria-hidden="true" />
       <main className="sbx-pay-card">
         <Link href="/" className="wordmark">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
+          <BrandMark />
           Sableye<span className="brand-period">.</span>
         </Link>
         <h1>Complete your payment</h1>

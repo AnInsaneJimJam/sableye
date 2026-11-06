@@ -97,12 +97,7 @@ export function AgentConsole() {
     <div className="agent-console" ref={root}>
       <div className="agent-console-screen">
         <div className="agent-console-head">
-          <AiOrb
-            state={state}
-            size="lg"
-            colorToken="--orb-ink"
-            decorative
-          />
+          <AiOrb state={state} size="lg" colorToken="--orb-ink" decorative />
           <div>
             <p className="agent-console-ask">“{turn.ask}”</p>
             <p className="agent-console-status" aria-live="polite">
@@ -117,9 +112,7 @@ export function AgentConsole() {
           </div>
         </div>
       </div>
-      <p className="agent-console-hint">
-        Hover a tool to try it · example data
-      </p>
+      <p className="agent-console-hint">Interactive example</p>
       <ul className="agent-tools" aria-label="MCP tools">
         {TOOLS.map((t) => (
           <li key={t}>

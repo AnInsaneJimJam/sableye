@@ -25,8 +25,8 @@ const MUST_CONTAIN = [
   'id="trust"',
   "invoices.create",
   "Verify and fulfil",
-  "Whitechain Sepolia",
-  "mainnet",
+  "Proved, not just tested.",
+  "Refunds never exceed the payment.",
   "Any size of business",
   'aria-label="Integration steps"',
 ];

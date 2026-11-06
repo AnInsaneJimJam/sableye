@@ -2628,3 +2628,20 @@ h2 span {
 [data-sableye-success] {
   color: var(--palette-success);
 }
+
+/* Card headings share the same theme emphasis as the payment-flow titles. */
+.landing-page :is(.agent-card h3, .tier-card h3, .trust-grid h3, .verification-list b) {
+  color: var(--palette-emphasis);
+}
+.closing-logo {
+  display: inline-flex;
+  margin-bottom: 18px;
+}
+.closing-logo .brand-mark {
+  width: 34px;
+  height: 37px;
+}
+
+.landing-page .gasless-callout h3 {
+  color: var(--palette-emphasis);
+}

@@ -29,6 +29,7 @@ import { AgentIntegration } from "@/components/sections/agent-integration";
 import { ProductBento } from "@/components/sections/product-bento";
 import { DeveloperCode } from "@/components/sections/developer-code";
 import { FormalVerification } from "@/components/sections/formal-verification";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { GlassButton } from "@/components/ui/glass-button";
 import { siteConfig } from "@/lib/site";
 
@@ -82,17 +83,17 @@ const tiers = [
   {
     icon: UserRound,
     title: "Solo & creators",
-    text: "Payment links and invoices from day one. No merchant account, no approval queue.",
+    text: "Payment links and invoices.",
   },
   {
     icon: Store,
     title: "Growing businesses",
-    text: "Checkout, subscriptions and refunds in one SDK, with signed webhooks into your stack.",
+    text: "Checkout, subscriptions and refunds.",
   },
   {
     icon: Building2,
     title: "Enterprises & platforms",
-    text: "KMS or Safe signers, reconciliation against the chain and audit-ready exports.",
+    text: "Safe and KMS signers. Reconciliation and exports.",
   },
 ];
 
@@ -278,25 +279,17 @@ export function ProductStory() {
           ))}
         </div>
         <div className="business-copy">
-          <span className="business-label">
-            FROM YOUR FIRST CUSTOMER ONWARD
-          </span>
           <h2 id="business-heading">
             One payment stack.
             <br />
             <span>Any size of business.</span>
           </h2>
-          <p>
-            A one-off sale, a monthly plan, a refund, a customer overseas. Run
-            them all through one integration, and see every number that matters
-            on one analytics page.
-          </p>
           <GlassButton
             size="sm"
             className="business-action"
             href="/sandbox/dashboard"
           >
-            Open the analytics dashboard <ArrowUpRight size={17} />
+            Open dashboard <ArrowUpRight size={17} />
           </GlassButton>
           <div className="business-figure hairline-figure">
             <Hub
@@ -320,47 +313,22 @@ export function ProductStory() {
           <h2>
             Trust you can <span>inspect.</span>
           </h2>
-          <p>
-            Signed invoices. Public contracts. Server-side verification. Your
-            customers’ personal details stay off-chain.
-          </p>
         </div>
         <div className="trust-grid">
           <div>
             <Fingerprint size={21} />
             <h3>Checked before checkout</h3>
-            <p>
-              Merchant signatures and the trusted processor are checked before
-              any wallet prompt.
-            </p>
           </div>
           <div>
             <LockKeyhole size={21} />
             <h3>Guardrails on-chain</h3>
-            <p>
-              No double payments. Refunds capped at the amount paid. Customer
-              authorizations bound to the invoice.
-            </p>
           </div>
           <div>
             <Code2 size={21} />
             <h3>Open to inspection</h3>
-            <p>
-              Explore the contract source and test suite. Make your own
-              assessment before integrating.
-            </p>
           </div>
         </div>
         <FormalVerification />
-        <div className="testnet-note">
-          <span className="status-light" />
-          <p>
-            <strong>Build on testnet today.</strong> Payments currently run on
-            Whitechain Sepolia. Mainnet payments await official USDT
-            availability. Block inclusion is not finality; choose the
-            confirmation level that fits your business.
-          </p>
-        </div>
       </section>
 
       <section
@@ -385,19 +353,19 @@ export function ProductStory() {
           {[
             {
               q: "Does Sableye hold my funds?",
-              a: "No. Payments settle into the merchant’s payout wallet. The gasless path forwards funds through the processor in the same transaction, leaving no retained token balance.",
+              a: "No. Payments settle directly into your payout wallet.",
             },
             {
               q: "Who pays the network fee?",
-              a: "When the token supports gasless authorization and your relayer is enabled, your business pays the WBT fee. Otherwise, checkout falls back to permit or approve-and-pay, where the customer pays gas.",
+              a: "Your business pays with gasless checkout. Otherwise, the customer pays.",
             },
             {
               q: "Can customers get a refund?",
-              a: "Yes. Merchants can issue full or partial refunds, capped at the amount paid. The SDK approves exactly the refund amount on the fly, so no standing allowance is left behind.",
+              a: "Yes. Issue full or partial refunds, capped at the amount paid.",
             },
             {
               q: "Is it ready for production?",
-              a: "This is a testnet project built at ETHGlobal Mumbai. Official USDT is not yet available on Whitechain mainnet. Review the source, security model and deployment configuration before any production use.",
+              a: "Currently on Whitechain Sepolia. Mainnet payments await official USDT availability.",
             },
           ].map(({ q, a }) => (
             <details key={q}>
@@ -415,15 +383,14 @@ export function ProductStory() {
         <div className="homepage-panel closing-glass">
           <div className="relative">
             <div>
-              <span className="closing-symbol" aria-hidden="true">
-                s
+              <span className="closing-logo" aria-hidden="true">
+                <BrandMark />
               </span>
               <h2>
                 Make room for
                 <br />
                 <span>better payments.</span>
               </h2>
-              <p>Your business. Your wallet. Start with Sableye.</p>
             </div>
             <div className="closing-figure hairline-figure">
               <Exploded
