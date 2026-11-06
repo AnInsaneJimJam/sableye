@@ -4,7 +4,7 @@ import "./docs.css";
 
 /** Default search and browser metadata for the documentation site. */
 export const metadata: Metadata = {
-  title: { default: "Documentation — Sableye", template: "%s — Sableye Docs" },
+  title: "Sableye",
   alternates: { canonical: "/docs" },
   description:
     "Accept USDT on Whitechain. Guides and API reference for Sableye checkout, invoices, refunds, and subscriptions.",

@@ -25,7 +25,7 @@ export function createMetadata({
 
   return {
     metadataBase: new URL(siteConfig.url),
-    title: resolvedTitle,
+    title: siteConfig.name,
     description: resolvedDescription,
     applicationName: siteConfig.name,
     alternates: { canonical: url },

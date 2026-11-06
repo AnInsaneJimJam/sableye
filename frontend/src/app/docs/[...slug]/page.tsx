@@ -20,11 +20,11 @@ export async function generateMetadata({
   const page = getPage((await params).slug.join("/"));
   return page
     ? {
-        title: page.title,
+        title: "Sableye",
         description: page.description,
         alternates: { canonical: `/docs/${page.slug}` },
       }
-    : { title: "Page not found" };
+    : { title: "Sableye" };
 }
 
 /** Render a guide with an outline, page actions, and adjacent-page navigation. */
