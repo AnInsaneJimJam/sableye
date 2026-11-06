@@ -15,7 +15,7 @@
   --glass-highlight: rgb(193 218 255 / 12%);
   --glass-shadow: 0 12px 36px rgb(0 9 30 / 22%);
   --header-height: 56px;
-  --sidebar-width: 232px;
+  --sidebar-width: 260px;
 }
 .docs-root[data-theme="light"] {
   color-scheme: light;
@@ -140,7 +140,7 @@
   width: 24px;
 }
 .docs-root .language {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 .docs-root .top-links,
@@ -205,7 +205,7 @@
   padding: 10px;
   border-radius: 5px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .docs-root .learn-menu > div a:hover,
 .docs-root .copy-menu > div button:hover {
@@ -309,7 +309,7 @@
   margin-bottom: 32px;
 }
 .docs-root .nav-group h2 {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   margin: 0 0 12px;
   line-height: 20px;
@@ -345,7 +345,7 @@
 }
 .docs-root .sidebar-bottom {
   color: var(--subtle);
-  font-size: 11px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -512,7 +512,7 @@
   display: block;
   color: var(--muted);
   line-height: 1.6;
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 6px;
 }
 .docs-root .resource-grid svg {
@@ -521,7 +521,7 @@
 .docs-root .docs-footer {
   border-top: 1px solid var(--line);
   color: var(--subtle);
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
@@ -553,7 +553,7 @@
   padding-bottom: 20px;
 }
 .docs-root .eyebrow {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--accent);
   margin: 0 0 14px;
 }
@@ -591,7 +591,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 14px;
   padding: 0 11px;
 }
 .docs-root .copy-page:hover {
@@ -678,14 +678,14 @@
   padding: 0 12px 0 18px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .docs-root pre {
   overflow-x: auto;
   padding: 17px 20px 20px;
   margin: 0;
   font-family: var(--font-mono), monospace;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 23px;
   tab-size: 2;
   color: #bed8ff;
@@ -704,7 +704,7 @@
   color: var(--muted);
   padding: 10px 18px;
   display: block;
-  font-size: 12px;
+  font-size: 14px;
 }
 .docs-root .callout {
   display: flex;
@@ -794,7 +794,7 @@
 .docs-root .pagination small {
   display: block;
   color: var(--subtle);
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 5px;
 }
 .docs-root .pagination .next-page {
@@ -843,7 +843,7 @@
   border: 1px solid var(--line);
   border-radius: 5px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px;
 }
 .docs-root .search-results {
@@ -852,7 +852,7 @@
 .docs-root .search-caption {
   padding: 0 10px;
   color: var(--subtle);
-  font-size: 12px;
+  font-size: 14px;
 }
 .docs-root .search-result {
   display: flex;
@@ -874,7 +874,7 @@
 .docs-root .search-result small {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 19px;
   margin-top: 4px;
 }
@@ -889,7 +889,7 @@
   display: flex;
   justify-content: space-between;
   color: var(--subtle);
-  font-size: 11px;
+  font-size: 14px;
   padding: 13px 20px;
   border-top: 1px solid var(--line);
 }
@@ -903,7 +903,7 @@
 }
 .docs-root .search-empty span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .docs-root .not-found {
   padding: 120px 40px;
@@ -944,7 +944,7 @@
     padding-left: 26px;
   }
   .docs-root {
-    --sidebar-width: 218px;
+    --sidebar-width: 240px;
   }
   .docs-root .article-layout {
     width: calc(100% - 72px);
@@ -984,7 +984,7 @@
     margin-bottom: 26px;
     border-bottom: 1px solid var(--line);
     padding-bottom: 15px;
-    font-size: 13px;
+    font-size: 14px;
   }
   .docs-root .mobile-toc summary {
     display: flex;
@@ -1138,7 +1138,7 @@
   }
   .docs-root .pagination a {
     padding: 12px;
-    font-size: 12px;
+    font-size: 14px;
     gap: 8px;
   }
   .docs-root .search-dialog {
@@ -1399,4 +1399,48 @@
 .docs-root .resource-grid a {
   background: var(--panel);
   box-shadow: none;
+}
+
+/* Readable navigation and secondary copy at every viewport size. */
+.docs-root .nav-group h2 {
+  font-size: 14px;
+  line-height: 22px;
+  margin-bottom: 10px;
+}
+.docs-root .nav-item {
+  font-size: 16px;
+  line-height: 24px;
+  padding-block: 7px;
+}
+.docs-root .nav-children .nav-item {
+  padding-block: 7px;
+}
+.docs-root .sidebar-bottom {
+  font-size: 14px;
+  line-height: 22px;
+}
+.docs-root .resource-grid strong {
+  font-size: 16px;
+}
+.docs-root .resource-grid small {
+  font-size: 14px;
+  line-height: 23px;
+}
+.docs-root .toc {
+  font-size: 15px;
+}
+.docs-root .toc a,
+.docs-root .mobile-toc a {
+  line-height: 23px;
+}
+.docs-root .toc a.active::before {
+  top: 15px;
+}
+.docs-root .docs-footer {
+  font-size: 14px;
+  line-height: 22px;
+}
+.docs-root .docs-feature-card p {
+  font-size: 16px;
+  line-height: 26px;
 }
