@@ -1,3 +1,4 @@
+import { additions, newPages } from "./content/details";
 /** A documentation section; its ID also drives the page outline. */
 export type DocSection = {
   id: string;
@@ -23,17 +24,26 @@ export const navigation: { title: string; items: NavItem[] }[] = [
   {
     title: "Get Started",
     items: [
-      { title: "Introduction", slug: "" },
-      { title: "Quickstart", slug: "quickstart" },
-      { title: "How it works", slug: "how-it-works" },
       {
-        title: "CLI",
-        children: [
-          { title: "Installation", slug: "cli/installation" },
-          { title: "Doctor", slug: "cli/doctor" },
-        ],
+        title: "Introduction",
+        slug: "",
       },
-      { title: "Networks", slug: "networks" },
+      {
+        title: "Quickstart",
+        slug: "quickstart",
+      },
+      {
+        title: "How it works",
+        slug: "how-it-works",
+      },
+      {
+        title: "SDK configuration",
+        slug: "configuration",
+      },
+      {
+        title: "Networks",
+        slug: "networks",
+      },
     ],
   },
   {
@@ -42,49 +52,147 @@ export const navigation: { title: string; items: NavItem[] }[] = [
       {
         title: "Checkout",
         children: [
-          { title: "React checkout", slug: "checkout/react" },
-          { title: "Headless checkout", slug: "checkout/headless" },
-          { title: "Mobile wallets", slug: "checkout/mobile" },
+          {
+            title: "React checkout",
+            slug: "checkout/react",
+          },
+          {
+            title: "Headless checkout",
+            slug: "checkout/headless",
+          },
+          {
+            title: "Mobile wallets",
+            slug: "checkout/mobile",
+          },
+          {
+            title: "Hosted checkout",
+            slug: "checkout/hosted",
+          },
         ],
       },
       {
         title: "Invoices",
         children: [
-          { title: "Create an invoice", slug: "invoices/create" },
-          { title: "Verify a payment", slug: "invoices/verify" },
-          { title: "Cancel an invoice", slug: "invoices/cancel" },
+          {
+            title: "Create an invoice",
+            slug: "invoices/create",
+          },
+          {
+            title: "Verify a payment",
+            slug: "invoices/verify",
+          },
+          {
+            title: "Cancel an invoice",
+            slug: "invoices/cancel",
+          },
         ],
       },
-      { title: "Payment links", slug: "payment-links" },
-      { title: "Gasless payments", slug: "gasless" },
-      { title: "Token permissions", slug: "token-permissions" },
+      {
+        title: "Payment links",
+        slug: "payment-links",
+      },
+      {
+        title: "Gasless payments",
+        slug: "gasless",
+      },
+      {
+        title: "Token permissions",
+        slug: "token-permissions",
+      },
     ],
   },
   {
     title: "Manage Payments",
     items: [
-      { title: "Refunds", slug: "refunds" },
-      { title: "Subscriptions", slug: "subscriptions" },
-      { title: "Webhooks", slug: "webhooks" },
-      { title: "Indexer", slug: "indexer" },
-      { title: "Reconciliation & CSV", slug: "reconciliation" },
-      { title: "Finality", slug: "finality" },
+      {
+        title: "Refunds",
+        slug: "refunds",
+      },
+      {
+        title: "Subscriptions",
+        children: [
+          {
+            title: "Subscriptions",
+            slug: "subscriptions",
+          },
+          {
+            title: "Renewal keeper",
+            slug: "subscriptions/keeper",
+          },
+        ],
+      },
+      {
+        title: "Webhooks",
+        slug: "webhooks",
+      },
+      {
+        title: "Indexer",
+        slug: "indexer",
+      },
+      {
+        title: "Reconciliation & CSV",
+        slug: "reconciliation",
+      },
+      {
+        title: "Finality",
+        slug: "finality",
+      },
     ],
   },
   {
-    title: "Build with Sableye",
+    title: "Reference",
     items: [
-      { title: "API reference", slug: "api-reference" },
-      { title: "AI & MCP", slug: "ai" },
-      { title: "Security", slug: "security" },
-      { title: "Errors & remedies", slug: "errors" },
-      { title: "Changelog", slug: "changelog" },
+      {
+        title: "API reference",
+        slug: "api-reference",
+      },
+      {
+        title: "Core utilities",
+        slug: "core",
+      },
+      {
+        title: "Contracts",
+        slug: "contracts",
+      },
+    ],
+  },
+  {
+    title: "Resources",
+    items: [
+      {
+        title: "Installation",
+        slug: "cli/installation",
+      },
+      {
+        title: "Doctor",
+        slug: "cli/doctor",
+      },
+      {
+        title: "Deployment",
+        slug: "deployment",
+      },
+      {
+        title: "AI & MCP",
+        slug: "ai",
+      },
+      {
+        title: "Security",
+        slug: "security",
+      },
+      {
+        title: "Errors & remedies",
+        slug: "errors",
+      },
+      {
+        title: "Implementation status",
+        slug: "changelog",
+      },
     ],
   },
 ];
 
 /** Content shared by article rendering, search, page metadata, and pagination. */
-export const pages: DocPage[] = [
+const introductoryPages: DocPage[] = [
   {
     slug: "quickstart",
     title: "Quickstart",
@@ -552,7 +660,7 @@ export const pages: DocPage[] = [
       {
         id: "compatibility",
         title: "Token compatibility",
-        body: "The core probes token capabilities. Fee-on-transfer tokens are rejected because the payout must receive exactly the invoice amount.",
+        body: "The diagnostic utility probes token capabilities. Fee-on-transfer tokens are rejected because the payout must receive exactly the invoice amount.",
       },
     ],
   },
@@ -614,7 +722,7 @@ export const pages: DocPage[] = [
       {
         id: "failures",
         title: "Handle failed charges",
-        body: "A failed transfer marks the subscription past_due. Three consecutive failures cancel it. Successful charges respect the interval and the customer's total cap.",
+        body: "A failed transfer marks the subscription past_due. Three consecutive failures cancel it. Each successful call advances the original schedule by one interval; overdue subscriptions can catch up through repeated calls within the cap.",
       },
       {
         id: "cancel",
@@ -899,10 +1007,10 @@ export const pages: DocPage[] = [
   },
   {
     slug: "changelog",
-    title: "Changelog",
+    title: "Implementation status",
     group: "Build with Sableye",
     description:
-      "Follow the capabilities in the current Sableye development release.",
+      "Implementation snapshot of the checked-out SDK, including current deployment and runtime limitations.",
     sections: [
       {
         id: "accept",
@@ -927,6 +1035,17 @@ export const pages: DocPage[] = [
     ],
   },
 ];
+
+/** Published guides, assembled from introductions and source-audited details. */
+const orderedSlugs = navigation
+  .flatMap((group) => group.items.flatMap((item) => item.children ?? [item]))
+  .map((item) => item.slug);
+export const pages: DocPage[] = [...introductoryPages, ...newPages]
+  .sort((a, b) => orderedSlugs.indexOf(a.slug) - orderedSlugs.indexOf(b.slug))
+  .map((page) => ({
+    ...page,
+    sections: [...page.sections, ...(additions[page.slug] ?? [])],
+  }));
 
 /** Find a guide by its route, without the /docs base path. */
 export function getPage(slug: string) {

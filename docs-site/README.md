@@ -45,3 +45,7 @@ async rewrites() {
 ```
 
 Fonts are copied from the frontend with their licenses. Card illustrations and the decorative SVG background are local copies of the Mintlify reference artwork; sources are recorded in `public/illustrations/SOURCES.md`. The project uses the same Next.js, React, TypeScript, and icon versions as the frontend, without copying its payment dependencies or server secrets.
+
+## Maintaining SDK documentation
+
+The typed source is `src/lib/content.ts`, with detailed integration sections in `src/lib/content/details.ts`. Update both when an API changes. `docs/SDK_AUDIT.md` records source coverage and implementation caveats. The current application directory is `docs-site/`; older plans referring to a docs app under `docs/` predate the repository move.
