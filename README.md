@@ -140,6 +140,41 @@ The demo is the **Sableye Sandbox** (`/sandbox`): every product live on Whitecha
 
 An AI agent given only our Agent Skill and `llms.txt` integrated Sableye into a blank Next.js app in **3/3 trials** (about 2 min and ~$0.50 each). Every trial passed seven automatic checks, including server-side signing and verification, key safety, a successful build and `sableye doctor`. Details and reproduction: [docs/AI_EVAL.md](docs/AI_EVAL.md).
 
+## Emails, PDFs and merchant-owned records (Arkiv)
+
+**Email.** `npx sableye init` asks for your email address and an app password. It detects the SMTP server, sends you a test email, and saves the details to `.env` (or add `SMTP_USER` / `SMTP_PASS` later). From then on:
+- customers get the **invoice** (PDF attached) and the **receipt** (PDF, after the payment is confirmed on-chain);
+- you get a **"you got paid"** notice;
+- refunds send a **refund confirmation**.
+
+Emails go through a keyed outbox, so a replayed event never sends twice and an SMTP failure never touches a payment. PDFs are also available directly: `sableye.documents.invoicePdf(ref)` / `receiptPdf(ref)`.
+
+**Arkiv.** With `ARKIV_ACCESS_KEY` set, every paid invoice and refund is published to Arkiv (testnet "Rabdi"), **signed by the merchant key**, so the merchant's wallet owns the records.
+- **Public columns** hold only what's already public on Whitechain (amount, token, payer, tx hash, time).
+- **Encrypted:** the order reference, items and customer, with the merchant's view key (`npx sableye view-key`).
+- **Reading:** any app can read the records without us. `/sandbox/books` does it in the browser with no Sableye code, verifies each record against its Whitechain transaction, and exports CSV.
+- **Format:** [`arkiv/schema.md`](arkiv/schema.md).
+- **Background:** [`why-arkiv.md`](arkiv/why-arkiv.md) · [`how-you-use-arkiv.md`](arkiv/how-you-use-arkiv.md) · [`reach.md`](arkiv/reach.md) · [`friction.md`](arkiv/friction.md).
+
+- **Writing wallet (sandbox merchant):** `0xF9B1a7c3374ca8d2AC63aca87D9664aa2E0bEE08`.
+- **Query it yourself:**
+  ```ts
+  import { createPublicClient } from '@arkiv-network/sdk'
+  import { rabdi } from '@arkiv-network/sdk/chains'
+  import { desc } from '@arkiv-network/sdk/query'
+  import { addr, bytes, defineSchema, str, u256, u64 } from '@arkiv-network/sdk/schema'
+  import { http } from 'viem'
+
+  const Invoices = defineSchema('sableye.invoice.v1', {
+    order_id: str().indexed(), merchant: addr().indexed(), status: str().indexed(), network: str().indexed(), chain_id: u64(),
+    token: addr().indexed(), amount: u256().indexed(), paid_at: u64().indexed(), payer: addr(), payout: addr(),
+    tx_hash: str(), refunded: u256(), private: bytes().optional(),
+  })
+  const arkiv = createPublicClient({ chain: rabdi(), transport: http() })
+  const { entities } = await arkiv.select().from(Invoices)
+    .ownedBy('0xF9B1a7c3374ca8d2AC63aca87D9664aa2E0bEE08').orderBy(desc('paid_at')).limit(20).fetch()
+  ```
+
 ## Security
 
 - Contract invariants:

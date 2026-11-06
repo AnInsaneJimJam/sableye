@@ -183,6 +183,15 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 - The demo is the **Sableye Sandbox** at `/sandbox` in the `frontend/` app: one page per product, each with a live "Try it" panel running the real SDK, a Sableye vs Stripe code toggle, and how it works.
 - Product copy and code live in `frontend/src/lib/sandbox/products.ts`; the merchant's server side is `frontend/src/app/api/sandbox/`.
 - It's a public sandbox on a real testnet key: refunds and cancels only work on sandbox orders (`sbx_` / `plink_`), and gas-spending actions are rate-limited.
+- `/sandbox/books` reads the merchant's Arkiv records **with no Sableye code** (`frontend/src/components/sandbox/demo-books.tsx`). Keep it that way: `pnpm --filter sableye-frontend check:books` enforces it.
+- Emails to an address a visitor typed are rate-limited separately (5/min), so the public sandbox can't be used to spam.
+
+### Emails, PDFs and Arkiv (Phase 2)
+- `server/src/email.ts`, `pdf.ts`, `orders.ts` and `outbox.ts` hold the merchant's SMTP emails, the PDFs, the off-chain order details, and one keyed retry queue.
+- `server/src/arkiv.ts` and `core/src/privacy.ts` hold the Arkiv publishing and the view-key encryption.
+- **The open format is `arkiv/schema.md`.** Change it only with a new schema version (`…v2`), because third-party readers depend on it.
+- Side effects hook into indexer events and **only enqueue**. Never put slow or failing work inside the indexer's `sync`, which the formal model covers.
+- Setup is `npx sableye init`; `--email` reruns only the email step.
 
 ## 7. Conventions
 
