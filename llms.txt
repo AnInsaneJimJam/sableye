@@ -17,7 +17,7 @@ Rules:
 ### new Sableye(config)
 Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, subscriptions?, checkoutUrl?, relayUrl?, paymentLinkUrl?, linkStore?, couponStore?, business?, email?, orderStore?, outbox?, arkiv? }`
 - `business`: `{ name, address?, email? }`, shown on invoices, receipts and emails. Default name from `SABLEYE_BUSINESS_NAME`.
-- `email`: `{ user, pass, host?, port?, from?, notify? }`. Default from `SABLEYE_SMTP_USER`/`SABLEYE_SMTP_PASS`/`SABLEYE_SMTP_HOST`/`SABLEYE_SMTP_PORT`/`MERCHANT_EMAIL`. `false` turns email off. The SMTP server is detected for Gmail, Outlook, Yahoo, Zoho and iCloud.
+- `email`: `{ user, pass, host?, port?, from?, notify? }`. Hosts that block SMTP (Railway Hobby): set `SABLEYE_RESEND_API_KEY` + `SABLEYE_EMAIL_FROM` (`"Shop" <receipts@yourdomain>`, domain verified in Resend) to send over HTTPS instead; it takes priority. Default from `SABLEYE_SMTP_USER`/`SABLEYE_SMTP_PASS`/`SABLEYE_SMTP_HOST`/`SABLEYE_SMTP_PORT`/`MERCHANT_EMAIL`. `false` turns email off. The SMTP server is detected for Gmail, Outlook, Yahoo, Zoho and iCloud.
 - `orderStore`: `fileOrderStore('.sableye/orders.json')` keeps customer details across restarts (default: memory). `outbox: { path: '.sableye/outbox.json' }` keeps email and Arkiv retries.
 - `arkiv`: `{ accessKey, statePath? }`, on by default when `ARKIV_ACCESS_KEY` is set. Publishes paid invoices and refunds to Arkiv, owned by the merchant wallet.
 - `signer`: any `{ address, signTypedData, signTransaction? }`, e.g. a KMS adapter.

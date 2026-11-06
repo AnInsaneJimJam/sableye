@@ -49,6 +49,14 @@ export async function doctor(opts: DoctorOptions): Promise<DoctorCheck[]> {
 }
 
 async function smtpCheck(cfg: EmailConfig): Promise<DoctorCheck> {
+  if (cfg.resendApiKey) {
+    try {
+      await smtpTransport(cfg).verify()
+      return { name: 'email', status: 'ok', detail: `Resend API key works; sending as ${cfg.user}` }
+    } catch (e) {
+      return { name: 'email', status: 'fail', detail: `Resend check failed: ${(e as Error).message}`, remedy: 'Check SABLEYE_RESEND_API_KEY (resend.com/api-keys) and that SABLEYE_EMAIL_FROM uses a domain verified in Resend.' }
+    }
+  }
   const server = cfg.host ?? smtpServerFor(cfg.user)?.host
   try {
     await smtpTransport(cfg).verify()

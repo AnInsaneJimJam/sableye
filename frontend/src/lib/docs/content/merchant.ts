@@ -95,6 +95,10 @@ export const merchantPages: DocPage[] = [
               "Override SMTP server, port and sender.",
             ],
             [
+              "SABLEYE_RESEND_API_KEY / SABLEYE_EMAIL_FROM",
+              "Send through Resend's HTTPS API instead of SMTP, for hosts that block SMTP (Railway Hobby, some clouds). Takes priority over SABLEYE_SMTP_*. The sender must be on a domain verified in Resend.",
+            ],
+            [
               "MERCHANT_EMAIL",
               "Merchant notification recipient; off disables notifications.",
             ],

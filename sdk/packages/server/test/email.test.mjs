@@ -144,3 +144,28 @@ test('emails.flush() resolves only after queued emails are sent (serverless: cal
   await mail.emails.flush()
   assert.equal(sent, 1)
 })
+
+test('Resend (HTTPS): env picks it over SMTP, messages go to the API with PDFs as base64, and doctor checks the key', async () => {
+  const { emailConfigFromEnv, resendTransport } = await import('../dist/index.js')
+  const cfg = emailConfigFromEnv({ SABLEYE_RESEND_API_KEY: 're_x', SABLEYE_EMAIL_FROM: 'Acme <receipts@acme.com>', SABLEYE_SMTP_USER: 'a@gmail.com', SABLEYE_SMTP_PASS: 'p', MERCHANT_EMAIL: 'owner@gmail.com' })
+  assert.deepEqual([cfg.user, cfg.from, cfg.notify, cfg.resendApiKey], ['receipts@acme.com', 'Acme <receipts@acme.com>', 'owner@gmail.com', 're_x'])
+  assert.equal(emailConfigFromEnv({ SABLEYE_RESEND_API_KEY: 're_x' }), undefined, 'needs a sender address')
+
+  const calls = []
+  const fake = async (url, init = {}) => {
+    calls.push({ url, init })
+    if (url.endsWith('/domains')) return new Response('{"name":"restricted_api_key"}', { status: 401 })
+    return new Response('{"id":"em_1"}', { status: 200 })
+  }
+  const t = resendTransport('re_x', fake)
+  assert.equal(await t.verify(), true)
+  await t.sendMail({ from: 'Acme <receipts@acme.com>', to: 'ada@example.com', subject: 'Receipt', text: 'hi', html: '<p>hi</p>', attachments: [{ filename: 'r.pdf', content: Buffer.from('%PDF') }] })
+  const sent = JSON.parse(calls[1].init.body)
+  assert.equal(calls[1].url, 'https://api.resend.com/emails')
+  assert.equal(calls[1].init.headers.authorization, 'Bearer re_x')
+  assert.deepEqual(sent.to, ['ada@example.com'])
+  assert.equal(sent.attachments[0].content, Buffer.from('%PDF').toString('base64'))
+
+  const bad = resendTransport('re_bad', async () => new Response('{"name":"validation_error"}', { status: 403 }))
+  await assert.rejects(bad.sendMail({ from: 'a@b.c', to: 'x@y.z', subject: 's', text: 't' }), /Resend 403/)
+})

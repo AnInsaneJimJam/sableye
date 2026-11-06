@@ -22,6 +22,40 @@ export interface EmailConfig {
   notify?: string | false
   /** Inject a nodemailer transport (tests: `nodemailer.createTransport({ jsonTransport: true })`). */
   transport?: Transporter
+  /**
+   * Send through Resend's HTTPS API instead of SMTP (for hosts that block SMTP, like Railway's Hobby plan). `user` is
+   * then the sender address, on a domain verified in Resend; `pass` is unused.
+   */
+  resendApiKey?: string
+}
+
+/**
+ * A nodemailer-shaped transport over Resend's HTTPS API (port 443). `verify()` checks the key; `sendMail()` sends one
+ * message, attachments included.
+ */
+export function resendTransport(apiKey: string, fetchImpl: typeof fetch = fetch): Transporter {
+  const call = (path: string, init: RequestInit = {}) =>
+    fetchImpl(`https://api.resend.com${path}`, { ...init, headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' } })
+  const fail = async (r: Response) => new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 300)}`)
+  return {
+    async verify() {
+      const r = await call('/domains')
+      // A sending-only key can't list domains, but a 401 "restricted_api_key" still proves the key is real.
+      if (r.ok || (r.status === 401 && /restricted_api_key/.test(await r.clone().text()))) return true
+      throw await fail(r)
+    },
+    async sendMail(m: { from: string; to: string; subject: string; text: string; html?: string; attachments?: { filename: string; content: Buffer }[] }) {
+      const r = await call('/emails', {
+        method: 'POST',
+        body: JSON.stringify({
+          from: m.from, to: [m.to], subject: m.subject, text: m.text, html: m.html,
+          attachments: m.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })),
+        }),
+      })
+      if (!r.ok) throw await fail(r)
+      return r.json()
+    },
+  } as unknown as Transporter
 }
 
 const PROVIDERS: [RegExp, { host: string; port: number }][] = [
@@ -38,8 +72,16 @@ export function smtpServerFor(address: string): { host: string; port: number } |
   return PROVIDERS.find(([re]) => re.test(domain))?.[1]
 }
 
-/** Email settings from SABLEYE_SMTP_USER / _PASS / _HOST / _PORT / _FROM and MERCHANT_EMAIL, if set. */
+/** Email settings from SABLEYE_RESEND_API_KEY + SABLEYE_EMAIL_FROM (HTTPS), else SABLEYE_SMTP_USER / _PASS / _HOST / _PORT / _FROM; plus MERCHANT_EMAIL. */
 export function emailConfigFromEnv(env: NodeJS.ProcessEnv = process.env): EmailConfig | undefined {
+  const notify = env.MERCHANT_EMAIL === 'off' ? false : env.MERCHANT_EMAIL || undefined
+  // Resend (HTTPS) when its key is set: SABLEYE_EMAIL_FROM is the sender, on a domain verified in Resend.
+  if (env.SABLEYE_RESEND_API_KEY) {
+    const from = env.SABLEYE_EMAIL_FROM
+    if (!from) return undefined
+    const address = /<([^>]+)>/.exec(from)?.[1] ?? from
+    return { user: address, pass: '', from: from.includes('<') ? from : undefined, notify, resendApiKey: env.SABLEYE_RESEND_API_KEY }
+  }
   // Only SABLEYE_SMTP_*: an app's own SMTP_* settings belong to the app and are never used or touched.
   const v = (k: string) => env[`SABLEYE_SMTP_${k}`] || undefined
   const user = v('USER')
@@ -48,13 +90,14 @@ export function emailConfigFromEnv(env: NodeJS.ProcessEnv = process.env): EmailC
   const port = v('PORT')
   return {
     user, pass, host: v('HOST'), port: port ? Number(port) : undefined, from: v('FROM'),
-    notify: env.MERCHANT_EMAIL === 'off' ? false : env.MERCHANT_EMAIL || undefined,
+    notify,
   }
 }
 
 /** A nodemailer transport for the config (detecting the provider's server). */
 export function smtpTransport(cfg: EmailConfig): Transporter {
   if (cfg.transport) return cfg.transport
+  if (cfg.resendApiKey) return resendTransport(cfg.resendApiKey)
   const known = smtpServerFor(cfg.user)
   const host = cfg.host ?? known?.host
   if (!host) throw new Error(`No SMTP server known for ${cfg.user}. Set SABLEYE_SMTP_HOST (and SABLEYE_SMTP_PORT).`)
