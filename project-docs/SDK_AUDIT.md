@@ -2,7 +2,7 @@
 
 Inspected checkout: `a0f1b0ff3df6537d997df4d3ea227a93d9dd36cb`.
 
-The application is now `docs-site/`, served at `/docs`. `plan.md` uses its earlier `docs/` location. Root AGENTS.md and the current workspace configuration establish the current location. The root has no `check:sdk-lines` package script or demo/store directory in this checkout; the obsolete demo check in the plan is not applicable.
+The website now lives in `frontend/src/app/docs/`, served at `/docs` by the main frontend. This audit was written before consolidation, when the app lived in `docs-site/`. `plan.md` uses its earlier `docs/` location. Root AGENTS.md and the current workspace configuration establish the current location. The root has no `check:sdk-lines` package script or demo/store directory in this checkout; the obsolete demo check in the plan is not applicable.
 
 ## Coverage
 

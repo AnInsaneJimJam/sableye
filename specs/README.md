@@ -1,6 +1,6 @@
 # Quint models of the SDK
 
-These are design-level models of the SDK's two concurrency-heavy components. Results and caveats are in [docs/VERIFICATION.md](../docs/VERIFICATION.md#4-sdk-quint-models).
+These are design-level models of the SDK's two concurrency-heavy components. Results and caveats are in [project-docs/VERIFICATION.md](../project-docs/VERIFICATION.md#4-sdk-quint-models).
 
 | Model | Mirrors | Modules |
 |---|---|---|

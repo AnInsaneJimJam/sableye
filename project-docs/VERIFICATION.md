@@ -25,7 +25,7 @@ This file records what is **proved**, what is **model-checked**, what is **teste
 | # | Where | Found by | Bug | Impact | Fix |
 |---|---|---|---|---|---|
 | 1 | `PaymentProcessor.refund` | Halmos | `refund(id, 0)` succeeded, flipped `Paid → PartiallyRefunded` and emitted `InvoiceRefunded` with nothing refunded | Dashboards and webhooks would report a refund that never happened | `9a4d5fb`: reverts with `ZeroRefund` |
-| 2 | Contract test suite | Gambit | Deleting **every check** from `payWithPermit` (signature, expiry, nonce, double pay) passed all tests and proofs. 24 other mutants survived too | The permit path, used by most real payments, was effectively untested beyond balances | New proofs and tests, listed in `docs/mutation-report.md` |
+| 2 | Contract test suite | Gambit | Deleting **every check** from `payWithPermit` (signature, expiry, nonce, double pay) passed all tests and proofs. 24 other mutants survived too | The permit path, used by most real payments, was effectively untested beyond balances | New proofs and tests, listed in `project-docs/mutation-report.md` |
 | 3 | `keeper.ts` | Quint model (simulation) | A subscription whose `charge()` *throws* (RPC error, unrecognised revert, a tx reverted by a racing keeper) aborted the whole pass, and the keeper retried every 250 ms | One bad subscription stops **every** renewal after it, and hammers the RPC | Each subscription's error is caught separately and goes through the normal backoff (`test/keeper.test.mjs`) |
 | 4 | `indexer.ts` sync | Indexer model (fault injection) | An RPC error between fetch chunks left part of the logs in memory, so the retry stored them twice | Refund transactions listed twice in invoices and the CSV export | The sync is transactional: it works on a copy and commits only on success |
 | 5 | `indexer.ts` rollback | Indexer model (fault injection) | An RPC error *inside* the rollback, after it had dropped the reorged logs, meant `invoice.reorged` was never sent | The merchant keeps believing a payment that vanished in a reorg | Same transactional sync |
@@ -94,7 +94,7 @@ Every unproved condition is Solidity 0.8 checked arithmetic. Its worst case is a
 
 ## 3. Contracts: mutation testing (Gambit)
 
-- **Run:** `python3 sdk/contracts/test/mutation/run.py` (about 35 min). It needs `gambit` on PATH and regenerates `docs/mutation-report.md`.
+- **Run:** `python3 sdk/contracts/test/mutation/run.py` (about 35 min). It needs `gambit` on PATH and regenerates `project-docs/mutation-report.md`.
 - **How it works:** it generates mutants of both contracts and runs the Foundry suite on each, in parallel workers. Halmos then runs on the mutants that survive.
 - **Run 1:** 165 mutants, 85% killed, 25 survivors. All were test gaps, and new tests and proofs now cover them.
 - **Run 2,** after strengthening: **161 of 165 killed (97%)**.

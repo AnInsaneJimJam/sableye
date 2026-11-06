@@ -4,7 +4,7 @@
 
 Sableye is **B2B2C**: we serve the business, and the business serves its customers. Customers pay from any wallet. On tokens that support it, they need **no gas token at all**: the business sponsors the fee.
 
-> Built at ETHGlobal Mumbai 2026 for the Whitechain **Operate** and **Scale** tracks. **New here? Read [docs/PROJECT.md](docs/PROJECT.md)** (the whole project, all four phases). Engineering rules: [AGENTS.md](AGENTS.md).
+> Built at ETHGlobal Mumbai 2026 for the Whitechain **Operate** and **Scale** tracks. **New here? Read [project-docs/PROJECT.md](project-docs/PROJECT.md)** (the whole project, all four phases). Engineering rules: [AGENTS.md](AGENTS.md).
 
 ```ts
 import { Sableye } from '@sableye/server'
@@ -138,7 +138,7 @@ The demo is the **Sableye Sandbox** (`/sandbox`): every product live on Whitecha
 
 ## AI integration
 
-An AI agent given only our Agent Skill and `llms.txt` integrated Sableye into a blank Next.js app in **3/3 trials** (about 2 min and ~$0.50 each). Every trial passed seven automatic checks, including server-side signing and verification, key safety, a successful build and `sableye doctor`. Details and reproduction: [docs/AI_EVAL.md](docs/AI_EVAL.md).
+An AI agent given only our Agent Skill and `llms.txt` integrated Sableye into a blank Next.js app in **3/3 trials** (about 2 min and ~$0.50 each). Every trial passed seven automatic checks, including server-side signing and verification, key safety, a successful build and `sableye doctor`. Details and reproduction: [project-docs/AI_EVAL.md](project-docs/AI_EVAL.md).
 
 ## Emails, PDFs and merchant-owned records (Arkiv)
 
@@ -192,9 +192,9 @@ Emails go through a keyed outbox, so a replayed event never sends twice and an S
   - The solc SMTChecker found no counterexamples.
   - Gambit mutation testing found 25 test gaps, now covered.
   - Quint models of the keeper and indexer found 5 SDK bugs, all fixed with regression tests.
-  - What's proved, what's tested and what isn't covered: [docs/VERIFICATION.md](docs/VERIFICATION.md).
+  - What's proved, what's tested and what isn't covered: [project-docs/VERIFICATION.md](project-docs/VERIFICATION.md).
 
-Full threat model and contract spec: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+Full threat model and contract spec: [project-docs/THREAT_MODEL.md](project-docs/THREAT_MODEL.md).
 
 ## Limitations
 

@@ -12,40 +12,6 @@ importers:
         specifier: ^2.31.1
         version: 2.31.1(@types/node@22.20.5)
 
-  docs-site:
-    dependencies:
-      lucide-react:
-        specifier: ^1.69.0
-        version: 1.69.0(@types/react@19.3.0)(react@19.3.0)
-      next:
-        specifier: 16.4.5
-        version: 16.4.5(@babel/core@7.29.13)(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      prismjs:
-        specifier: ^1.30.0
-        version: 1.30.0
-      react:
-        specifier: 19.3.0
-        version: 19.3.0
-      react-dom:
-        specifier: 19.3.0
-        version: 19.3.0(react@19.3.0)
-    devDependencies:
-      '@types/node':
-        specifier: ^20
-        version: 20.19.43
-      '@types/prismjs':
-        specifier: ^1.26.6
-        version: 1.26.6
-      '@types/react':
-        specifier: ^19
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19
-        version: 19.3.0(@types/react@19.3.0)
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-
   frontend:
     dependencies:
       '@arkiv-network/sdk':
@@ -87,6 +53,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -124,6 +93,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      '@types/prismjs':
+        specifier: ^1.26.5
+        version: 1.26.6
       '@types/qrcode':
         specifier: ^1.5.5
         version: 1.5.6

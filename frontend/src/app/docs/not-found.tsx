@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/docs/docs-link";
 
 /** Recovery page for unknown documentation routes. */
 export default function NotFound() {

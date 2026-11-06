@@ -1,9 +1,0 @@
-Satoshi
-Designed by Deni Anggara, published by Indian Type Foundry (Fontshare).
-
-Licensed under the ITF Free Font Licence (FFL). Free for personal and
-commercial use. Source: https://www.fontshare.com/fonts/satoshi
-
-The file satoshi-variable.woff2 in this directory is the variable weight
-(300 to 900) web font, self-hosted on purpose so that neither the build nor
-the first page load reaches out to a font CDN.

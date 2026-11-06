@@ -1,6 +1,6 @@
-import Link from "next/link";
+import Link from "@/components/docs/docs-link";
 import { ArrowUpRight, ArrowRight } from "lucide-react";
-import { HeroIllustration, Illustration } from "@/components/illustration";
+import { HeroIllustration, Illustration } from "@/components/docs/illustration";
 
 const cards = [
   {
@@ -49,7 +49,11 @@ export default function IntroductionPage() {
         </div>
         <div className="feature-grid">
           {cards.map((card) => (
-            <Link key={card.href} href={card.href} className="feature-card">
+            <Link
+              key={card.href}
+              href={card.href}
+              className="docs-feature-card"
+            >
               <div className="card-art">
                 <Illustration kind={card.kind} />
                 <ArrowUpRight size={18} className="card-arrow" />

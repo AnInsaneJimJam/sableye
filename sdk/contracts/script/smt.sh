@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # solc SMTChecker (CHC engine, z3) on both contracts, in parallel, listing every unproved condition.
 # Needs a `z3` binary on PATH (Halmos ships one: ~/.local/share/uv/tools/halmos/bin/z3). ~7 min.
-# Triage of the result: docs/VERIFICATION.md#smtchecker
+# Triage of the result: project-docs/VERIFICATION.md#smtchecker
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SOLC=${SOLC:-$HOME/.local/share/svm/0.8.30/solc-0.8.30}

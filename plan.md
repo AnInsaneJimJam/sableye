@@ -33,7 +33,7 @@ Do not call an API supported just because a similarly named method exists in ano
 
 ## 3. Source audit checklist
 
-Create `docs/SDK_AUDIT.md` as a concise maintenance record. Include the inspected Git revision, source paths, findings, and a coverage matrix mapping public API families to documentation routes. This is an internal reference, not a new navigation item.
+Create `project-docs/SDK_AUDIT.md` as a concise maintenance record. Include the inspected Git revision, source paths, findings, and a coverage matrix mapping public API families to documentation routes. This is an internal reference, not a new navigation item.
 
 | Area | Read these files | Extract and verify |
 |---|---|---|
