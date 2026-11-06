@@ -45,6 +45,7 @@ import { attachEmails, emailConfigFromEnv, type EmailConfig, type Emails } from 
 import { memoryOrderStore, type Customer, type LineItem, type OrderDetails, type OrderStore } from './orders.js'
 import { createOutbox, type Outbox, type OutboxOptions } from './outbox.js'
 import { invoicePdf, receiptPdf, type BusinessInfo } from './pdf.js'
+import { arkivConfigFromEnv, attachArkiv, type ArkivApi, type ArkivConfig } from './arkiv.js'
 
 export * from '@sableye/core'
 export { doctor, printDoctor, type DoctorCheck, type DoctorOptions } from './doctor.js'
@@ -57,6 +58,7 @@ export * from './email.js'
 export * from './orders.js'
 export * from './outbox.js'
 export * from './pdf.js'
+export * from './arkiv.js'
 
 /**
  * Anything that can sign EIP-712 typed data for the merchant: a viem `LocalAccount`, or your own KMS/HSM adapter.
@@ -113,6 +115,11 @@ export interface SableyeConfig {
   orderStore?: OrderStore
   /** Queue for emails (and other side effects). Pass `{ path: '.sableye/outbox.json' }` so retries survive restarts. */
   outbox?: OutboxOptions
+  /**
+   * Publish paid invoices and refunds to Arkiv, owned by the merchant wallet (needs a private key signer).
+   * Default: on when `ARKIV_ACCESS_KEY` is set. `false` turns it off.
+   */
+  arkiv?: ArkivConfig | false
 }
 
 /** Parameters for {@link Sableye.invoices.create}. */
@@ -172,6 +179,8 @@ export interface PaymentVerification {
   /** True for paid, partially_refunded and refunded. */
   paid: boolean
   payer?: Address
+  /** Where the funds went (the invoice's payout address). */
+  payout?: Address
   token?: Address
   /** Base units. */
   amount?: bigint
@@ -210,6 +219,7 @@ export class Sableye {
   private readonly outbox: Outbox
   readonly business: BusinessInfo
   private readonly mail: ReturnType<typeof attachEmails>
+  private readonly records: ReturnType<typeof attachArkiv>
 
   constructor(config: SableyeConfig) {
     if (typeof window !== 'undefined' && config.privateKey) throw new SecretInClientError()
@@ -235,6 +245,17 @@ export class Sableye {
       explorerTx: (hash) => (this.network.chain.blockExplorers ? `${this.network.chain.blockExplorers.default.url}/tx/${hash}` : undefined),
       format: (units) => formatAmount(BigInt(units), getToken(this.network, 'USDT').decimals),
     })
+    const account = (this.signer as Partial<LocalAccount>).signTransaction && this.signer.signMessage ? (this.signer as LocalAccount) : undefined
+    this.records = attachArkiv(config.arkiv === false ? undefined : (config.arkiv ?? arkivConfigFromEnv()), this.outbox, {
+      merchant: this.merchant, account, network: this.network.name, chainId: this.network.chain.id, businessName: this.business.name,
+      getOrder: (id) => this.orders.get(id),
+      receipt: (id) => this.verifyPayment(id),
+    })
+  }
+
+  /** Merchant-owned records on Arkiv: `viewKey()`, `records()`, `status()`. Published automatically when enabled. */
+  get arkiv(): ArkivApi {
+    return this.records.arkiv
   }
 
   /** Email: `test()`, `log()`. Messages are sent automatically once email is configured. */
@@ -700,7 +721,10 @@ export class Sableye {
     requireProcessor(this.network)
     this.attachedIndexer = new Indexer(this.client, this.network, this.merchant, options)
     // Emails only enqueue here, so they never slow down or break indexing.
-    this.attachedIndexer.on('*', (e) => this.mail.onEvent(e))
+    this.attachedIndexer.on('*', async (e) => {
+      this.records.onEvent(e)
+      await this.mail.onEvent(e)
+    })
     return this.attachedIndexer
   }
 
@@ -726,7 +750,7 @@ export class Sableye {
     const decimals = Object.values(this.network.tokens).find((t) => t.address.toLowerCase() === r.token.toLowerCase())?.decimals
     const explorer = this.network.chain.blockExplorers?.default.url
     const verification: PaymentVerification = {
-      status, paid, payer: r.payer, token: r.token, amount: r.amount, refunded: r.refunded,
+      status, paid, payer: r.payer, payout: r.payout, token: r.token, amount: r.amount, refunded: r.refunded,
       amountFormatted: decimals === undefined ? undefined : formatAmount(r.amount, decimals),
       paidAt: new Date(Number(r.paidAt) * 1000),
       txHash: log?.transactionHash ?? undefined,

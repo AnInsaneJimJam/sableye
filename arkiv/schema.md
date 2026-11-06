@@ -1,72 +1,78 @@
-# Arkiv schema: `sableye.payment.v1`
+# Arkiv schema: Sableye merchant records, v1
 
-This is the open record format every Sableye merchant writes. Any app can read it, with or without Sableye.
-**This file is the contract.** `@sableye/sdk` writes it (`sdk/packages/sdk/src/schema.ts`), and Checkout, Dashboard and Books read it.
-Breaking changes need a new name (`…v2`).
+This is the open record format a Sableye merchant publishes to Arkiv. **Any app can read it, with or without Sableye.**
+`@sableye/server` writes it (`sdk/packages/server/src/arkiv.ts`), and the Books page (`/sandbox/books`) reads it with no Sableye code.
+**This file is the contract:** breaking changes need new schema names (`…v2`).
 
-## Who owns what
+## Ownership and trust
 
 | | |
 |---|---|
-| Owner (`$owner`) | **The merchant's wallet.** The SDK signs every write with the merchant's key. Sableye never holds keys. |
-| Writers | The merchant only. Anyone *can* write an entity with the same schema tag, so **readers must always filter with `.ownedBy(merchant)`**. The `merchant` column on its own proves nothing. |
-| Network | Arkiv testnet "Rabdi", chain ID `7794095` (`rabdi()` from `@arkiv-network/sdk/chains`) |
-| Expiry | 180 days (Arkiv's maximum is about 182 days). The SDK extends any record within 30 days of expiry while it runs (`extendEntity`). |
+| **Owner** (`$owner`) | **The merchant's wallet.** The merchant's server signs every write with the same key that signs its invoices. Sableye holds no keys and runs no database. |
+| **Who can write** | Only the owner can change or extend a record. But **anyone** can create an entity carrying the same schema tag, so readers **must** filter with `.ownedBy(merchant)`. The `merchant` column alone proves nothing. |
+| **Verifying a record** | Every invoice and refund record carries `tx_hash`. Readers should fetch that Whitechain transaction and check the `InvoicePaid` / `InvoiceRefunded` event against the record. |
+| **Network** | Arkiv testnet "Rabdi", chain `7794095` (`rabdi()` from `@arkiv-network/sdk/chains`). Writes need tGLM (faucet: hub.arkiv.network/faucet). |
+| **Expiry** | 180 days per write. The writer extends any record within 30 days of expiry while it runs (`extendEntity`). |
 
-## Entity 1: payment intent, schema name `sableye.payment_intent.v1`
+## What's public, what's encrypted, what's never stored
 
-| Column | Type | Indexed | Meaning |
-|---|---|---|---|
-| `id` | `str` | ✅ | `pi_<32 hex>`. Also the CREATE2 salt input. |
-| `merchant` | `addr` | ✅ | Merchant settlement wallet (= owner) |
-| `status` | `str` | ✅ | `requires_payment` · `processing` · `succeeded` · `settled` · `expired` |
-| `network` | `str` | ✅ | `whitechain-sepolia` |
-| `chain_id` | `u64` | | `1874` |
-| `token` | `addr` | ✅ | ERC-20 address (USDT `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`) |
-| `currency` | `str` | | `USDT` |
-| `decimals` | `i32` | | `6` |
-| `amount` | `u256` | ✅ | Amount due, in base units |
-| `amount_received` | `u256` | | Total received at the deposit address, in base units |
-| `deposit_address` | `addr` | ✅ | `DepositFactory.computeAddress(merchant, id)` |
-| `factory` | `addr` | | DepositFactory used to derive the address |
-| `created_at` | `u64` | ✅ | Unix seconds (Arkiv can't sort on `$createdAt`) |
-| `expires_at` | `u64` | ✅ | Unix seconds; after this an unpaid intent becomes `expired` |
-| `payment_txs` | `str` | | Comma-separated tx hashes of the incoming USDT transfers ("" if none) |
-| `payer` | `addr` | | Sender of the first transfer (optional) |
-| `sweep_tx` | `str` | | Tx hash that moved the funds to the merchant (optional) |
-| `receipt_ref` | `str` | | **Public** Swarm reference of the receipt (optional; never an encrypted ref) |
-| `metadata` | `bytes` | | **Encrypted** merchant metadata (optional, see below) |
+- **Public:** only facts that are **already public on Whitechain**: order id, amounts, token, payer, payout, timestamps and tx hash. Publishing them reveals nothing new.
+- **Encrypted** (the `private` column): what exists only off-chain, namely the merchant's own order reference, the description, line items and customer details.
+- **Never stored:** keys, SMTP or webhook secrets, IP addresses, analytics.
+- **When records are written:**
+  - Unpaid invoices are **never** published; a record appears once the payment reaches Whitechain's `safe` head.
+  - A payment reorged out after publishing is patched to `status = "reorged"`, never deleted.
 
-## Entity 2: refund, schema name `sableye.refund.v1`
+## Entity: `sableye.invoice.v1` (one per paid invoice; patched on refunds)
 
 | Column | Type | Indexed | Meaning |
 |---|---|---|---|
-| `id` | `str` | ✅ | `re_<32 hex>` |
-| `merchant` | `addr` | ✅ | = owner |
-| `payment_intent` | `str` | ✅ | `pi_…` it refunds |
-| `network` | `str` | ✅ | `whitechain-sepolia` |
-| `token` | `addr` | | ERC-20 address |
-| `amount` | `u256` | | Base units |
-| `to` | `addr` | | Refund recipient |
-| `tx_hash` | `str` | | Refund transfer tx |
+| `order_id` | `str` | ✅ | bytes32 order id (0x + 64 hex), as in the contract's `InvoicePaid` event |
+| `merchant` | `addr` | ✅ | The merchant (signer) address. Always also filter `ownedBy(merchant)` |
+| `status` | `str` | ✅ | `paid` · `partially_refunded` · `refunded` · `reorged` |
+| `network` | `str` | ✅ | e.g. `Whitechain Sepolia` |
+| `chain_id` | `u64` | | `1874` (Whitechain Sepolia) |
+| `token` | `addr` | ✅ | ERC-20 paid in (USDT `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`) |
+| `amount` | `u256` | ✅ | Base units (USDT: 6 decimals) |
+| `paid_at` | `u64` | ✅ | Unix seconds (block time of the payment) |
+| `payer` | `addr` | | Who paid |
+| `payout` | `addr` | | Where the funds went |
+| `tx_hash` | `str` | | Whitechain transaction of the payment |
+| `refunded` | `u256` | | Total refunded so far, base units |
+| `private` | `bytes` | | Optional. Encrypted JSON `{ orderRef, description, items, customer }`, see below |
+
+## Entity: `sableye.refund.v1` (one per refund transaction)
+
+| Column | Type | Indexed | Meaning |
+|---|---|---|---|
+| `order_id` | `str` | ✅ | The refunded invoice |
+| `merchant` | `addr` | ✅ | |
+| `amount` | `u256` | | This refund, base units |
+| `total_refunded` | `u256` | | Running total after it |
+| `tx_hash` | `str` | | Whitechain transaction of the refund |
 | `created_at` | `u64` | ✅ | Unix seconds |
+| `private` | `bytes` | | Reserved (reason, notes) |
 
-## Privacy
+## Entity: `sableye.merchant.v1` (one per merchant)
 
-- **Public:** amounts, token, addresses and tx hashes. All of these are already public on Whitechain, so publishing them on Arkiv reveals nothing new.
-- **Encrypted:** `metadata` (order IDs, customer email, line items). Anything that exists only off-chain goes here.
+| Column | Type | Indexed | Meaning |
+|---|---|---|---|
+| `merchant` | `addr` | ✅ | |
+| `name` | `str` | | Display name (business name) |
+| `schema_version` | `str` | | `"1"` |
 
-### Encryption (so any app with the view key can decrypt)
+## The `private` column
 
 ```
-viewKey   = keccak256( personal_sign(merchantKey, "Sableye view key v1") )   // 32 bytes, hex
-metadata  = iv (12 bytes) || AES-256-GCM(viewKey, iv, utf8(JSON.stringify(metadataObject)))
+viewKey = keccak256( EIP-191 signature of the UTF-8 message "Sableye view key v1", by the merchant key )
+private = iv (12 random bytes) ‖ AES-256-GCM( key = viewKey (32 bytes), iv, plaintext = UTF-8 JSON )
 ```
 
-- `personal_sign` is EIP-191, which signs deterministically (RFC 6979). So the SDK (with the raw key) and the dashboard (with a browser wallet) derive the **same** key.
-- `viewKey()` in the SDK returns this key as hex. A merchant can give it to an accountant, and Books takes it as input.
+- Signatures are deterministic: secp256k1 with RFC 6979, which viem and wallets use. So the merchant's server (`npx sableye view-key`) and a browser wallet (`personal_sign`) derive the same key, and it is never stored.
+- GCM authenticates, so a wrong key or a modified blob fails to decrypt instead of returning garbage.
+- **Sharing:** the merchant gives the view key to an accountant or auditor, which reveals the private columns of all their records. Per-record and time-limited keys are a planned v2.
 
-## Example queries
+## Queries (anyone can run these)
 
 ```ts
 import { createPublicClient } from '@arkiv-network/sdk'
@@ -74,16 +80,11 @@ import { rabdi } from '@arkiv-network/sdk/chains'
 import { desc, eq } from '@arkiv-network/sdk/query'
 import { http } from 'viem'
 
-const arkiv = createPublicClient({ chain: rabdi({ accessKey: '' }), transport: http() })
-
-// All settled sales of a merchant, newest first
-await arkiv.select().from(PaymentIntent).where(eq('status', 'settled'))
-  .ownedBy(merchant).orderBy(desc('created_at')).limit(100).fetch()
-
-// One intent by id (what Checkout does)
-await arkiv.select().from(PaymentIntent).where(eq('id', 'pi_…')).ownedBy(merchant).fetch()
+const arkiv = createPublicClient({ chain: rabdi({ accessKey }), transport: http() })
+// Every paid invoice of one merchant, newest first:
+await arkiv.select().from(Invoices).ownedBy(merchant).orderBy(desc('paid_at')).limit(100).fetch()
+// Only fully refunded ones:
+await arkiv.select().from(Invoices).where(eq('status', 'refunded')).ownedBy(merchant).fetch()
 ```
 
-Here `PaymentIntent` is a `defineSchema('sableye.payment_intent.v1', {...})` built from the table above. Books defines its own copy from this file, which is the point: you need nothing from Sableye.
-
-The checkout link carries both values: `<checkout>?id=<pi_…>&m=<merchant>`. Checkout can then query by `id` **and** filter by owner, so a forged entity can't pose as the merchant's intent.
+`Invoices` is `defineSchema('sableye.invoice.v1', { … })`, with the columns above.
