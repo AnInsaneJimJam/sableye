@@ -1,6 +1,6 @@
 "use client";
 import { Checkout } from "@sableye/react";
-import { Fuel, Package, QrCode, Receipt, Shuffle } from "lucide-react";
+import { FileText, Fuel, Mail, Package, QrCode, Receipt, Shuffle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { Btn, ErrorNote, KV, OkNote, Panel, Pill, statusTone, TxLink } from "./bits";
@@ -8,7 +8,7 @@ import { type ApiError, post, short, useApi } from "./use-api";
 
 type Hex = `0x${string}`;
 type Invoice = {
-  orderRef: string; checkoutUrl: string; signature: Hex; chainId: number; processor: Hex; relayUrl?: string;
+  orderRef: string; checkoutUrl: string; signature: Hex; chainId: number; processor: Hex; relayUrl?: string; emailed?: boolean;
   invoice: { orderId: Hex; merchant: Hex; payout: Hex; token: Hex; amount: string; expiry: string; nonce: string };
 };
 type Verification = { status: string; paid: boolean; payer?: string; amountFormatted?: string; txHash?: string; paidAt?: string };
@@ -31,13 +31,17 @@ function useOrderStatus(orderRef?: string) {
 export function InvoicesDemo() {
   const [amount, setAmount] = useState("1.00");
   const [expiresIn, setExpiresIn] = useState(1800);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const { data: mail } = useApi<{ enabled: boolean }>("/api/sandbox/emails");
   const [inv, setInv] = useState<Invoice>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError>();
   const { data: status } = useOrderStatus(inv?.orderRef);
   const create = async () => {
     setBusy(true); setError(undefined);
-    try { setInv(await post<Invoice>("/api/sandbox/invoice", { amount, expiresIn })); } catch (e) { setError(e as ApiError); }
+    try { setInv(await post<Invoice>("/api/sandbox/invoice", { amount, expiresIn, email, name, description })); } catch (e) { setError(e as ApiError); }
     setBusy(false);
   };
   return (
@@ -50,8 +54,12 @@ export function InvoicesDemo() {
               <option value={300}>5 minutes</option><option value={1800}>30 minutes</option><option value={86400}>1 day</option>
             </select>
           </label>
+          <label>For (optional)<input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Masala chai x2" maxLength={200} /></label>
+          <label>Customer email (optional)<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
+          {email && <label>Customer name (optional)<input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></label>}
           <Btn busy={busy} onClick={create}>Sign invoice</Btn>
         </div>
+        {mail && !mail.enabled && <p className="sbx-hint">Email isn't configured on this server (SMTP_USER / SMTP_PASS), so no email will be sent; the PDFs still work.</p>}
         <ErrorNote error={error} />
       </Panel>
       {inv && (
@@ -68,6 +76,11 @@ export function InvoicesDemo() {
           <div className="sbx-row">
             <GlassButton size="sm" tone="accent" href={inv.checkoutUrl} target="_blank" rel="noreferrer"><Receipt size={15} /> Open the checkout link</GlassButton>
             <span className="sbx-muted">Status refreshes from the chain every few seconds.</span>
+          </div>
+          <div className="sbx-row">
+            <GlassButton size="sm" href={`/api/sandbox/pdf?kind=invoice&ref=${inv.orderRef}`} target="_blank" rel="noreferrer"><FileText size={15} /> Invoice PDF</GlassButton>
+            {status?.paid && <GlassButton size="sm" href={`/api/sandbox/pdf?kind=receipt&ref=${inv.orderRef}`} target="_blank" rel="noreferrer"><FileText size={15} /> Receipt PDF</GlassButton>}
+            {inv.emailed && <span className="sbx-muted"><Mail size={14} /> Invoice emailed{status?.paid ? "; the receipt follows once the payment is confirmed" : ""}.</span>}
           </div>
           {status?.paid && <OkNote>Paid by <code>{short(status.payer)}</code> · <TxLink hash={status.txHash} /></OkNote>}
           <p className="sbx-hint">Try it twice: once paid, the same link is refused. Change one character after <code>#</code> and the signature check fails.</p>

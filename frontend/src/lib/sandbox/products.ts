@@ -9,6 +9,7 @@ export type ProductSlug =
   | "events"
   | "reconcile"
   | "dashboard"
+  | "books"
   | "developers";
 
 export interface Product {
@@ -321,6 +322,42 @@ const { mrr, churnRate, failedChargeRate, active } =
       },
       stripe: { file: "n/a", code: `// Stripe: Dashboard → Home and Billing → Overview.
 // The API exposes the raw objects; analytics live in the UI.` },
+    },
+  },
+  {
+    slug: "books",
+    group: "Operate",
+    title: "Books on Arkiv",
+    tagline: "Your sales records, owned by your wallet. Readable without us.",
+    summary:
+      "Every paid invoice and refund is published to Arkiv, signed by your merchant key, so your wallet owns the records. Any app (your accountant's, a tax tool, a lender) can read them without our server or our permission. Amounts and tx hashes are public, because they already are on-chain; order references, items and customer details are encrypted with your view key.",
+    stripe: { name: "Sigma / Data Pipeline / CSV exports", how: "Your payment data lives in Stripe's database. You read it through Stripe's API, Sigma (paid) or exports, with Stripe's keys and permission." },
+    differences: [
+      "The records belong to the merchant's wallet, not to a vendor's database",
+      "This page reads them with no Sableye code: only the Arkiv SDK and viem",
+      "Each record is verified against its Whitechain transaction before it counts",
+      "Private columns are AES-GCM encrypted; share the view key only with your accountant",
+    ],
+    steps: ["Payment reaches Whitechain's safe head", "The merchant's server writes a sableye.invoice.v1 entity, owned by its wallet", "Any app queries ownedBy(merchant), checks each tx_hash on-chain", "With the view key, it decrypts order and customer details"],
+    code: {
+      sableye: {
+        file: "books.ts (any app; no Sableye import)",
+        code: `import { createPublicClient } from '@arkiv-network/sdk'
+import { rabdi } from '@arkiv-network/sdk/chains'
+import { desc } from '@arkiv-network/sdk/query'
+
+const arkiv = createPublicClient({ chain: rabdi(), transport: http() })
+const { entities } = await arkiv.select().from(Invoices) // schema: arkiv/schema.md
+  .ownedBy(merchant)            // only records the merchant's wallet wrote
+  .orderBy(desc('paid_at')).fetch()
+// then: check each tx_hash on Whitechain, decrypt the private column with the view key`,
+      },
+      stripe: {
+        file: "export.ts",
+        code: `// Needs the merchant's Stripe secret key (or Sigma, a paid add-on)
+const charges = await stripe.charges.list({ limit: 100 })
+// If the account is closed or the key is revoked, the data is gone.`,
+      },
     },
   },
   {

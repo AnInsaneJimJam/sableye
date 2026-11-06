@@ -3,6 +3,7 @@ import "server-only";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
+  fileOrderStore,
   fileStore,
   type Indexer,
   type Keeper,
@@ -25,6 +26,8 @@ type Merchant = {
   /** Subscription keeper; only on a persistent server (on Vercel, renewals run on demand). */
   keeper?: Keeper;
   limiter: RateLimiter;
+  /** Emails to an address the visitor typed: tighter, so the sandbox can't be used to spam people. */
+  mailLimiter: RateLimiter;
 };
 const g = globalThis as typeof globalThis & { __sableyeSandbox?: Merchant };
 
@@ -36,6 +39,19 @@ function boot(): Merchant {
     relayUrl: `${BASE_URL}/api/relay`,
     paymentLinkUrl: `${BASE_URL}/api/pay`,
     linkStore: fileLinkStore(),
+    business: { name: process.env.SABLEYE_BUSINESS_NAME || "Sableye Sandbox" },
+    // Email (SMTP_*) and Arkiv (ARKIV_ACCESS_KEY) switch on from .env. Their queues and order details persist
+    // to .sableye/ on a normal server; on Vercel they stay in memory (no writable disk).
+    ...(process.env.VERCEL !== "1" && {
+      orderStore: fileOrderStore(".sableye/orders.json"),
+      outbox: { path: ".sableye/outbox.json" },
+      ...(process.env.ARKIV_ACCESS_KEY && {
+        arkiv: {
+          accessKey: process.env.ARKIV_ACCESS_KEY,
+          statePath: ".sableye/arkiv.json",
+        },
+      }),
+    }),
   });
   let indexer: Indexer | undefined;
   let keeper: Keeper | undefined;
@@ -54,7 +70,7 @@ function boot(): Merchant {
     // Subscription keeper runs only on a persistent server; on Vercel, the Renewals action runs them on demand.
     keeper = sableye.subscriptions.keeper();
   }
-  // Public sandbox: actions that cost the merchant gas are rate-limited per visitor.
+  // Public sandbox: actions that cost the merchant gas (or send email) are rate-limited per visitor.
   return {
     sableye,
     get indexer() {
@@ -72,6 +88,7 @@ function boot(): Merchant {
     },
     keeper,
     limiter: new RateLimiter(20),
+    mailLimiter: new RateLimiter(5),
   };
 }
 
