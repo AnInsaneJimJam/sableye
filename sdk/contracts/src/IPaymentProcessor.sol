@@ -48,17 +48,24 @@ interface IPaymentProcessor {
     error InvalidSignature();
     error InvalidStatus(Status current);
     error RefundExceedsPaid();
+    error ZeroRefund();
     error FeeOnTransferNotSupported();
 
     /// @notice Pay an invoice. Caller is the payer and must have approved `amount` of `token` to this contract.
+    /// @param invoice the invoice exactly as the merchant signed it
+    /// @param merchantSig EIP-712 signature by `invoice.merchant` (65-byte ECDSA, or anything its ERC-1271 accepts)
     function pay(Invoice calldata invoice, bytes calldata merchantSig) external;
 
     /// @notice Pay in one transaction using an EIP-2612 permit instead of a separate approve. Caller is the payer.
+    /// @param deadline the permit deadline; `v`, `r`, `s` the payer's permit signature for exactly `invoice.amount`
     function payWithPermit(Invoice calldata invoice, bytes calldata merchantSig, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external;
 
     /// @notice Gasless payment: anyone (e.g. the merchant's relayer, paying gas) submits the payer's EIP-3009
     /// `ReceiveWithAuthorization` signature. Its nonce must equal `hashInvoice(invoice)`, binding it to this invoice.
+    /// @param payer the token holder who signed the authorization
+    /// @param validAfter authorization start (unix seconds); `validBefore` its end
+    /// @param v the authorization signature (with `r`, `s`), over to = this contract and value = invoice.amount
     function payWithAuthorization(
         Invoice calldata invoice,
         bytes calldata merchantSig,
@@ -72,6 +79,8 @@ interface IPaymentProcessor {
 
     /// @notice Refund part or all of a paid invoice. Caller must be the merchant; funds are pulled from the
     /// receipt's payout address (which must have approved this contract) back to the payer.
+    /// @param orderId the paid invoice's order id
+    /// @param amount token base units; > 0 and ≤ amount paid minus amount already refunded
     function refund(bytes32 orderId, uint256 amount) external;
 
     /// @notice Revoke one unpaid invoice / payment link. Caller must be the merchant.
@@ -80,8 +89,11 @@ interface IPaymentProcessor {
     /// @notice Revoke every outstanding invoice of the caller signed with a nonce lower than the new minimum.
     function bumpNonce() external returns (uint256 newMinNonce);
 
+    /// @notice Invoices signed with a lower nonce are revoked.
     function minNonce(address merchant) external view returns (uint256);
+    /// @notice On-chain receipt of an invoice (status `None` if never paid or cancelled).
     function getReceipt(address merchant, bytes32 orderId) external view returns (Receipt memory);
+    /// @notice EIP-712 digest the merchant signs; also the EIP-3009 nonce for gasless payment.
     function hashInvoice(Invoice calldata invoice) external view returns (bytes32);
 }
 

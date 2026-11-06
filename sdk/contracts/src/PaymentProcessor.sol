@@ -101,6 +101,7 @@ contract PaymentProcessor is IPaymentProcessor, EIP712, ReentrancyGuardTransient
     function refund(bytes32 orderId, uint256 amount) external nonReentrant {
         Receipt storage r = _receipts[msg.sender][orderId];
         if (r.status != Status.Paid && r.status != Status.PartiallyRefunded) revert InvalidStatus(r.status);
+        if (amount == 0) revert ZeroRefund(); // would flip Paid -> PartiallyRefunded with nothing refunded
         uint256 total = r.refunded + amount;
         if (total > r.amount) revert RefundExceedsPaid();
 

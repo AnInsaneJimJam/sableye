@@ -4,7 +4,23 @@
   "description": "Scaffold a working USDT store on Whitechain with Sableye",
   "license": "MIT",
   "type": "module",
-  "bin": { "create-whitechain-checkout": "./bin.mjs" },
-  "files": ["bin.mjs", "template"],
-  "scripts": { "test": "node --test test/*.test.mjs" }
+  "bin": {
+    "create-whitechain-checkout": "./bin.mjs"
+  },
+  "files": [
+    "bin.mjs",
+    "template"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnInsaneJimJam/sableye.git",
+    "directory": "sdk/packages/create-whitechain-checkout"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }

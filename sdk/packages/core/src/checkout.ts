@@ -180,7 +180,14 @@ export interface Checkout {
    * Run the whole flow: connect, switch chain, check balance, then try each {@link paymentPaths} step, falling back
    * automatically. Double calls join the running attempt. Call again after an `error` to retry.
    */
-  pay(options?: { provider?: WalletProvider }): Promise<CheckoutState>
+  pay(options?: {
+    provider?: WalletProvider
+    /**
+     * Show the wallet's account picker even if this site was already connected. Wallets like MetaMask otherwise
+     * silently reuse the account approved earlier, which may not be the one holding the funds.
+     */
+    chooseAccount?: boolean
+  }): Promise<CheckoutState>
 }
 
 /** The JSON body POSTed to `relayUrl`. Bigints are decimal strings; the relayer answers `200 { "txHash": "0x…" }`. */
@@ -303,8 +310,10 @@ export function createCheckout(options: CheckoutOptions & { invoice: SignedInvoi
     return loading
   }
 
-  const connect = async (provider: WalletProvider): Promise<Address> => {
+  const connect = async (provider: WalletProvider, chooseAccount = false): Promise<Address> => {
     set({ status: 'connecting' })
+    // EIP-2255: makes the wallet show its account picker again instead of reusing the last-approved account.
+    if (chooseAccount) await provider.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] })
     const [account] = (await provider.request({ method: 'eth_requestAccounts' })) as Address[]
     if (!account) throw new NoWalletError()
     set({ account })
@@ -402,8 +411,8 @@ export function createCheckout(options: CheckoutOptions & { invoice: SignedInvoi
     await confirm(s, await wallet.writeContract({ ...request, account: payer, chain: client!.chain }))
   }
 
-  const runLadder = async (s: SignedInvoice, chain: Chain, provider: WalletProvider) => {
-    const payer = await connect(provider)
+  const runLadder = async (s: SignedInvoice, chain: Chain, provider: WalletProvider, chooseAccount?: boolean) => {
+    const payer = await connect(provider, chooseAccount)
     await switchChain(provider, chain)
     set({ status: 'checking' })
     await assertPayable(s)
@@ -415,7 +424,7 @@ export function createCheckout(options: CheckoutOptions & { invoice: SignedInvoi
     const summary = state.summary!
     if (balance < s.invoice.amount) {
       const decimals = tokenConfig?.decimals ?? (await client!.readContract({ address: s.invoice.token, abi: erc20Abi, functionName: 'decimals' }))
-      throw new InsufficientBalanceError(summary.amountFormatted, formatAmount(balance, decimals), summary.symbol)
+      throw new InsufficientBalanceError(summary.amountFormatted, formatAmount(balance, decimals), summary.symbol, payer)
     }
 
     const wallet = createWalletClient({ chain, transport: custom(provider) })
@@ -451,7 +460,7 @@ export function createCheckout(options: CheckoutOptions & { invoice: SignedInvoi
         const chain = resolveChain(verified, opts)
         const provider = payOptions?.provider ?? opts.provider ?? (await discoverWallets())[0]?.provider
         if (!provider) throw new NoWalletError()
-        await runLadder(verified, chain, provider)
+        await runLadder(verified, chain, provider, payOptions?.chooseAccount)
         return state
       } catch (e) {
         return fail(e)

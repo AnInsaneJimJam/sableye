@@ -19,6 +19,14 @@ The merchant's server signs an invoice (no gas). The customer pays it in one on-
 
 ## Fastest start
 
+The packages aren't on npm yet. From a clone of the Sableye repo, after `pnpm install && pnpm build`:
+
+```sh
+node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk
+```
+
+Once they're published:
+
 ```sh
 npx create-whitechain-checkout --name my-store --framework next
 ```
