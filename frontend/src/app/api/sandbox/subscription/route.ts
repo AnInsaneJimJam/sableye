@@ -8,5 +8,5 @@ export const GET = (req: Request) =>
     await connection();
     const payer = new URL(req.url).searchParams.get("payer") as Address;
     const { sableye } = merchant();
-    return json(await sableye.subscriptions.get(await sableye.subscriptions.id("chai_club", payer)));
+    return json(await sableye.subscriptions.get(await sableye.subscriptions.id("pro_plan", payer)));
   });

@@ -118,7 +118,7 @@ export function Pay({ invoice }) {
     title: "Payment links",
     tagline: "One permanent link. Every visit is its own order.",
     summary:
-      "Create a link for a product and share it anywhere: a QR on the counter, a bio, a chat. Every visitor gets a fresh pay-once invoice, so refunds, webhooks and exports still work per order.",
+      "Create a link for a product and share it anywhere: an invoice email, a QR code, a chat. Every visitor gets a fresh pay-once invoice, so refunds, webhooks and exports still work per order.",
     stripe: { name: "Payment Links", how: "A permanent hosted URL for a product price; each visit creates a Checkout Session." },
     differences: ["The price lives inside the link, signed by your key: an edited link is rejected", "No vendor-hosted page: one route on your server", "Deactivate any time; already-opened invoices simply expire"],
     steps: ["Create the link (signed, nothing on-chain)", "Customer scans or opens it", "Your server mints a fresh invoice", "Customer pays; each visit is a separate order"],
@@ -127,7 +127,7 @@ export function Pay({ invoice }) {
         file: "app/api/pay/route.ts",
         code: `const link = await sableye.paymentLinks.create({
   amount: '1.00',
-  name: 'Masala chai',
+  name: 'Consulting hour',
 })
 // link.url → print as a QR code
 
@@ -140,7 +140,7 @@ await sableye.paymentLinks.deactivate(link.id)`,
         file: "server.ts",
         code: `const price = await stripe.prices.create({
   unit_amount: 100, currency: 'usd',
-  product_data: { name: 'Masala chai' },
+  product_data: { name: 'Consulting hour' },
 })
 const link = await stripe.paymentLinks.create({
   line_items: [{ price: price.id, quantity: 1 }],
@@ -165,7 +165,7 @@ await stripe.paymentLinks.update(link.id, { active: false })`,
         code: `const sableye = new Sableye({
   privateKey: process.env.MERCHANT_KEY,
   network: 'whitechain-sepolia',
-  relayUrl: 'https://shop.example/api/relay',
+  relayUrl: 'https://acme.example/api/relay',
 })
 
 // app/api/relay/route.ts
@@ -220,7 +220,7 @@ await stripe.invoices.voidInvoice('in_125')`,
       sableye: {
         file: "server.ts",
         code: `const offer = await sableye.subscriptions.createPlan({
-  planId: 'chai_club', amount: '1', interval: 2592000, // 30 days
+  planId: 'pro_plan', amount: '1', interval: 2592000, // 30 days
 })
 // browser: approve(cap) → SubscriptionManager.subscribe(plan, sig, cap)
 
@@ -232,7 +232,7 @@ await sableye.subscriptions.cancel(subId)`,
         code: `const price = await stripe.prices.create({
   unit_amount: 100, currency: 'usd',
   recurring: { interval: 'month' },
-  product_data: { name: 'Chai Club' },
+  product_data: { name: 'Pro plan' },
 })
 await stripe.subscriptions.create({
   customer: 'cus_123', items: [{ price: price.id }],
@@ -255,7 +255,7 @@ await stripe.subscriptions.create({
         file: "server.ts",
         code: `const indexer = sableye.indexer({
   store: fileStore('.sableye/state.json'),
-  webhooks: [{ url: 'https://shop.example/api/webhook', secret }],
+  webhooks: [{ url: 'https://acme.example/api/webhook', secret }],
 })
 await indexer.start()
 

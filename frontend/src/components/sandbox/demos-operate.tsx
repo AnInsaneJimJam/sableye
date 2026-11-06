@@ -2,9 +2,10 @@
 import { discoverWallets, formatAmount, networks, subscriptionManagerAbi, type WalletProvider } from "@sableye/core";
 import { CheckCircle2, CircleAlert, Download, Play, RefreshCw, ShieldCheck, Stethoscope, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { createPublicClient, createWalletClient, custom, erc20Abi, http, numberToHex, type Address, type Hex } from "viem";
-import { WalletHint, useNow } from "./demos-accept";
+import { type Address, createPublicClient, createWalletClient, custom, erc20Abi, type Hex, http, numberToHex } from "viem";
+import { GlassButton } from "@/components/ui/glass-button";
 import { Btn, ErrorNote, KV, OkNote, Panel, Pill, statusTone, TxLink } from "./bits";
+import { useNow, WalletHint } from "./demos-accept";
 import { type ApiError, post, short, usdt, useApi } from "./use-api";
 
 type Indexed = { orderId: string; orderRef?: string; status: string; confirmation?: string; amount?: string; refunded: string; payer?: string; paidTx?: string; paidBlock?: number; paidAt?: string };
@@ -59,7 +60,7 @@ export function RefundsDemo() {
       <Panel title="Cancel an unpaid invoice" hint="Revoked on-chain: the link stops working for everyone, immediately.">
         <div className="sbx-row">
           <Btn variant="ghost" busy={busy === "mk"} onClick={() => run("mk", async () => { const r = await post<{ orderRef: string; checkoutUrl: string }>("/api/sandbox/invoice", { amount: "1.00" }); setUnpaid(r); return { text: `Created ${r.orderRef}. Open it, then cancel it.` }; })}>1. Create an invoice</Btn>
-          {unpaid && <a className="sbx-btn sbx-btn-ghost" href={unpaid.checkoutUrl} target="_blank" rel="noreferrer">2. Open its checkout</a>}
+          {unpaid && <GlassButton size="sm" tone="clear" href={unpaid.checkoutUrl} target="_blank" rel="noreferrer">2. Open its checkout</GlassButton>}
           {unpaid && !unpaid.cancelled && <Btn busy={busy === "cancel"} onClick={() => run("cancel", async () => { const r = await post<{ txHash: string }>("/api/sandbox/cancel", { orderId: unpaid.orderRef }); setUnpaid({ ...unpaid, cancelled: true }); return { text: "Cancelled. Reload the checkout tab: it now refuses the payment.", tx: r.txHash }; })}>3. Cancel it</Btn>}
         </div>
       </Panel>
@@ -120,7 +121,7 @@ export function SubscriptionsDemo() {
     setBusy(undefined);
   };
 
-  if (!offer) return <Panel title="Chai Club" hint="Loading the signed plan…"><span /></Panel>;
+  if (!offer) return <Panel title="Pro plan" hint="Loading the signed plan…"><span /></Panel>;
   const plan = { ...offer.plan, amount: BigInt(offer.plan.amount), interval: BigInt(offer.plan.interval), expiry: BigInt(offer.plan.expiry) };
   const cap = plan.amount * BigInt(cycles);
   const live = sub && (sub.status === "active" || sub.status === "past_due");
@@ -132,7 +133,7 @@ export function SubscriptionsDemo() {
   };
   return (
     <div className="sbx-stack">
-      <Panel title="Chai Club" hint={`${formatAmount(plan.amount, 6)} USDT every ${Number(plan.interval) / 60} minutes. A demo interval so you can watch renewals.`}>
+      <Panel title="Pro plan" hint={`${formatAmount(plan.amount, 6)} USDT every ${Number(plan.interval) / 60} minutes. A demo interval so you can watch renewals.`}>
         {!account ? (
           <Btn onClick={() => void connect()}>Connect wallet</Btn>
         ) : (
@@ -248,7 +249,7 @@ export function ReconcileDemo() {
           ? <OkNote>Books match the chain: {res.checked} payments checked in {res.ms} ms, 0 differences.</OkNote>
           : <div className="sbx-note sbx-note-bad"><CircleAlert size={16} /><div>{res.mismatches.length} difference(s): {res.mismatches.map((m) => `${short(m.orderId)} ${m.field}`).join(", ")}</div></div>)}
       </Panel>
-      <Panel title="Accountant export" hint="Every row links to its transaction." action={<a className="sbx-btn sbx-btn-primary" href="/api/sandbox/csv"><Download size={15} /> Download CSV</a>}>
+      <Panel title="Accountant export" hint="Every row links to its transaction." action={<GlassButton size="sm" tone="accent" href="/api/sandbox/csv"><Download size={15} /> Download CSV</GlassButton>}>
         {rows && rows.length > 1 ? (
           <div className="sbx-scroll">
             <table className="sbx-table">
