@@ -10,6 +10,7 @@ import {
 } from '@sableye/core'
 import { createPublicClient, http, isHex, zeroAddress, type Address, type Chain, type Hex, type PublicClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+import { smtpServerFor, smtpTransport, type EmailConfig } from './email.js'
 
 /** One doctor check. `warn` doesn't fail the run. */
 export interface DoctorCheck {
@@ -29,6 +30,8 @@ export interface DoctorOptions {
   rpcUrl?: string
   processor?: Address
   chain?: Chain
+  /** Also log in to this SMTP account (no email is sent). */
+  email?: EmailConfig
 }
 
 /** Below this much gas token, refunds, cancels and gasless relaying will soon fail. */
@@ -40,6 +43,27 @@ const LOW_GAS = 10n ** 16n // 0.01 WBT
  * const checks = await doctor({ network: 'whitechain-sepolia', privateKey: process.env.MERCHANT_KEY })
  */
 export async function doctor(opts: DoctorOptions): Promise<DoctorCheck[]> {
+  const checks = await chainChecks(opts)
+  if (opts.email) checks.push(await smtpCheck(opts.email))
+  return checks
+}
+
+async function smtpCheck(cfg: EmailConfig): Promise<DoctorCheck> {
+  const server = cfg.host ?? smtpServerFor(cfg.user)?.host
+  try {
+    await smtpTransport(cfg).verify()
+    return { name: 'email', status: 'ok', detail: `SMTP login works for ${cfg.user} (${server})` }
+  } catch (e) {
+    return {
+      name: 'email', status: 'fail', detail: `SMTP login failed for ${cfg.user}${server ? ` (${server})` : ''}: ${(e as Error).message}`,
+      remedy: /gmail/i.test(cfg.user)
+        ? 'Use a Gmail app password (myaccount.google.com/apppasswords, needs 2-step verification), not your normal password. Re-run `npx sableye init --email`.'
+        : 'Check SMTP_USER / SMTP_PASS (and SMTP_HOST / SMTP_PORT), or re-run `npx sableye init --email`.',
+    }
+  }
+}
+
+async function chainChecks(opts: DoctorOptions): Promise<DoctorCheck[]> {
   const checks: DoctorCheck[] = []
   const add = (c: DoctorCheck) => checks.push(c)
 
