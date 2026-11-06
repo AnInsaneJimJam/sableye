@@ -24,8 +24,8 @@ const { paid } = await sableye.verifyPayment('order_123') // fulfil only after t
 pnpm install && pnpm build
 node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk
 cd my-store && npm install
-cp .env.example .env     # set MERCHANT_KEY to a fresh testnet key
-npx sableye doctor       # every check should pass before you sell anything
+npx sableye init         # merchant key, business name, email (SMTP), Arkiv → .env
+npx sableye doctor       # every check should pass before you sell anything (init runs it too)
 npm run dev
 ```
 

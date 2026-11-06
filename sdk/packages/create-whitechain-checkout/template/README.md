@@ -4,7 +4,7 @@ A USDT store on Whitechain Sepolia, scaffolded by `create-whitechain-checkout`.
 
 ```sh
 npm install
-cp .env.example .env    # set MERCHANT_KEY to a fresh testnet key
+npx sableye init        # sets up .env: merchant key, business name, email, Arkiv
 npx sableye doctor      # every check should be ✓ before you sell anything
 npm run dev             # http://localhost:3000
 ```
