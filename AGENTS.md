@@ -144,6 +144,12 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 <Checkout invoice={signedInvoice} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />
 ```
 
+**Pay with a phone wallet:** `<Checkout/>` shows a small **QR icon** next to Pay. Clicking it reveals a QR that deep-links the hosted checkout (`?i=<invoice>`) into **MetaMask, Trust Wallet or Coinbase Wallet**. Whitechain's **Whitewallet** is listed too, but it publishes no deep link (it connects through WalletConnect), so it shows a note instead of a QR. The desktop widget polls the chain and turns to "Paid" when the phone pays. On a phone with no wallet extension, the widget shows "Open in MetaMask / Trust / Coinbase" buttons.
+- Props: `qr={false}` hides the icon. `payUrl="https://shop.example/pay"` sets the page the phone opens; it defaults to the invoice's `checkoutUrl`.
+- Hosted pages must read the invoice with `invoiceFromLocation(location)` (accepts `?i=` or `#`).
+- Core helpers: `walletDeepLink`, `hostedPayUrl`, `invoiceFromLocation`, `isLocalUrl`, `mobileWallets`.
+- A phone can't reach `localhost`, so the QR shows a warning until the site is on a public URL.
+
 **Errors:** every error is a `SableyeError` with a stable `code` and a `remedy`. Codes:
 - `wrong_chain`, `unknown_network`, `unknown_token`, `invalid_amount`;
 - `processor_not_deployed`, `secret_in_client`, `invalid_payment_link`, `rpc_unreachable`.

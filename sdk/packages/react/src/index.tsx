@@ -1,10 +1,12 @@
 'use client'
 // @sableye/react: <Checkout/> and useCheckout. All payment logic lives in the headless engine in @sableye/core.
 import {
-  createCheckout, discoverWallets, type CheckoutOptions, type CheckoutState, type CheckoutStatus, type DiscoveredWallet,
+  createCheckout, discoverWallets, hostedPayUrl, isMobileBrowser, normalizeSignedInvoice,
+  type CheckoutOptions, type CheckoutState, type CheckoutStatus, type DiscoveredWallet,
   type SableyeError, type SerializedSignedInvoice, type SignedInvoice, type WalletProvider,
 } from '@sableye/core'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { OpenInWallet, PhonePay, QrToggle } from './phone-pay.js'
 import type { Hex } from 'viem'
 
 /** A signed invoice in any form it reaches the browser in: the object, its JSON form, or an encoded link payload. */
@@ -15,6 +17,8 @@ export interface UseCheckoutResult {
   state: CheckoutState
   /** Installed wallets. Empty until discovery finishes, or if none is installed. */
   wallets: DiscoveredWallet[]
+  /** Re-read the invoice's on-chain status (e.g. after it was paid from another device). Safe to call repeatedly. */
+  refresh: () => void
   /** Start, or retry, the payment. `chooseAccount` re-opens the wallet's account picker. */
   pay: (provider?: WalletProvider, options?: { chooseAccount?: boolean }) => void
 }
@@ -51,7 +55,11 @@ export function useCheckout(invoice: CheckoutInvoice, options: CheckoutOptions =
     }
   }, [])
 
-  return { state, wallets, pay: (provider, o) => void checkout.pay({ ...(provider ? { provider } : {}), ...o }) }
+  return {
+    state, wallets,
+    refresh: () => void checkout.load(),
+    pay: (provider, o) => void checkout.pay({ ...(provider ? { provider } : {}), ...o }),
+  }
 }
 
 /** Props of {@link Checkout}. */
@@ -64,6 +72,15 @@ export interface CheckoutProps extends CheckoutOptions {
   onError?: (error: SableyeError) => void
   /** Class for the root element. Style it through this and the `data-sableye-*` attributes. */
   className?: string
+  /**
+   * Offer "Pay with a phone wallet" behind a small QR icon (hidden until clicked). Default `true`; `false` removes it.
+   */
+  qr?: boolean
+  /**
+   * Your hosted checkout page (e.g. `https://shop.example/pay`), which the phone opens. Defaults to the invoice's
+   * `checkoutUrl`, or this page when the invoice came from the URL. Without one, no QR icon is shown.
+   */
+  payUrl?: string
 }
 
 const PROGRESS: Partial<Record<CheckoutStatus, string>> = {
@@ -86,8 +103,10 @@ const FINAL_ERRORS = new Set(['invoice_expired', 'invoice_revoked', 'invalid_sig
  * @example
  * <Checkout invoice={inv} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />
  */
-export function Checkout({ invoice, onSuccess, onError, className, ...options }: CheckoutProps) {
-  const { state, wallets, pay } = useCheckout(invoice, options)
+export function Checkout({ invoice, onSuccess, onError, className, qr = true, payUrl, ...options }: CheckoutProps) {
+  const { state, wallets, pay, refresh } = useCheckout(invoice, options)
+  const [showQr, setShowQr] = useState(false)
+  const phoneUrl = usePhoneUrl(invoice, payUrl)
   // Remember which wallet the customer picked, so "Use a different account" reopens the same one.
   const lastProvider = useRef<WalletProvider | undefined>(undefined)
   const { status, summary, error, txHash, explorerUrl } = state
@@ -105,6 +124,8 @@ export function Checkout({ invoice, onSuccess, onError, className, ...options }:
   // With several wallets the customer picks one. With zero, pay() still runs and reports `no_wallet` with its remedy.
   const choices = !options.provider && wallets.length > 1 ? wallets : undefined
   const label = summary ? `${summary.amountFormatted} ${summary.symbol}` : ''
+  const offerPhone = qr && !!phoneUrl && payable
+  const mobileNoWallet = !!phoneUrl && error?.code === 'no_wallet' && isMobileBrowser()
 
   return (
     <div data-sableye-checkout data-sableye-status={status} className={className}>
@@ -133,14 +154,38 @@ export function Checkout({ invoice, onSuccess, onError, className, ...options }:
       {error && status === 'error' && (
         <p data-sableye-error data-sableye-code={error.code} role="alert">{error.message}</p>
       )}
-      {payable &&
-        (choices ? (
-          choices.map((w) => (
-            <button key={w.name} type="button" data-sableye-pay onClick={() => { lastProvider.current = w.provider; pay(w.provider) }}>Pay {label} with {w.name}</button>
-          ))
-        ) : (
-          <button type="button" data-sableye-pay onClick={() => pay()}>{status === 'error' ? 'Try again' : `Pay ${label}`}</button>
-        ))}
+      {mobileNoWallet && <OpenInWallet payUrl={phoneUrl} />}
+      {payable && (
+        <div data-sableye-actions>
+          {choices ? (
+            choices.map((w) => (
+              <button key={w.name} type="button" data-sableye-pay onClick={() => { lastProvider.current = w.provider; pay(w.provider) }}>Pay {label} with {w.name}</button>
+            ))
+          ) : (
+            <button type="button" data-sableye-pay onClick={() => pay()}>{status === 'error' ? 'Try again' : `Pay ${label}`}</button>
+          )}
+          {offerPhone && <QrToggle open={showQr} onClick={() => setShowQr(!showQr)} />}
+        </div>
+      )}
+      {offerPhone && showQr && <PhonePay payUrl={phoneUrl} onPoll={refresh} />}
     </div>
   )
+}
+
+/** The hosted-checkout URL a phone should open for this invoice, or undefined if there's nowhere to send it. */
+function usePhoneUrl(invoice: CheckoutInvoice, payUrl?: string): string | undefined {
+  const [here, setHere] = useState<string>()
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location) setHere(window.location.origin + window.location.pathname)
+  }, [])
+  return useMemo(() => {
+    const fromInvoice = typeof invoice === 'object' && 'checkoutUrl' in invoice ? String((invoice as { checkoutUrl?: string }).checkoutUrl ?? '') : ''
+    const base = payUrl || fromInvoice.split('#')[0] || (typeof invoice === 'string' ? here : undefined)
+    if (!base) return undefined
+    try {
+      return hostedPayUrl(base, typeof invoice === 'string' ? invoice : normalizeSignedInvoice(invoice))
+    } catch {
+      return undefined
+    }
+  }, [invoice, payUrl, here])
 }

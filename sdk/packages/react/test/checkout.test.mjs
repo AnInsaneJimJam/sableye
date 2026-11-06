@@ -149,8 +149,8 @@ test('several EIP-6963 wallets get one button each', async () => {
   window.addEventListener('eip6963:requestProvider', announce)
   const inv = await sableye.invoices.create({ amount: '1.00', orderId: `o${++order}` })
   const { host, root } = await mount({ invoice: inv })
-  await until(() => host.querySelectorAll('button').length === 2)
-  assert.deepEqual([...host.querySelectorAll('button')].map((b) => b.textContent.trim()), ['Pay 1 USDT with WalletA', 'Pay 1 USDT with WalletB'])
+  await until(() => host.querySelectorAll('[data-sableye-pay]').length === 2)
+  assert.deepEqual([...host.querySelectorAll('[data-sableye-pay]')].map((b) => b.textContent.trim()), ['Pay 1 USDT with WalletA', 'Pay 1 USDT with WalletB'])
   window.removeEventListener('eip6963:requestProvider', announce)
   await act(async () => root.unmount())
 })
@@ -158,4 +158,65 @@ test('several EIP-6963 wallets get one button each', async () => {
 test('renders on the server with no side effects', () => {
   const html = renderToString(createElement(Checkout, { invoice: 'not-a-real-link' }))
   assert.match(html, /data-sableye-status="loading"/)
+})
+
+test('phone wallet QR: hidden behind an icon, deep-links the hosted checkout, and the widget sees the phone pay', async () => {
+  const inv = await sableye.invoices.create({ amount: '1.00', orderId: `o${++order}` })
+  const { status, host, root } = await mount({ invoice: JSON.parse(JSON.stringify(inv)) })
+  await until(() => status() === 'ready')
+
+  // Not visible up front: only the small icon.
+  assert.equal(host.querySelector('[data-sableye-qr-code]'), null)
+  const toggle = host.querySelector('[data-sableye-qr-toggle]')
+  assert.ok(toggle)
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  await act(async () => toggle.click())
+  assert.ok(host.querySelector('[data-sableye-qr-code] path'), 'QR revealed on click')
+  assert.equal(host.querySelector('[data-sableye-qr-toggle]').getAttribute('aria-expanded'), 'true')
+  assert.ok(host.querySelector('[data-sableye-phone-warning]'), 'warns that a phone cannot reach localhost')
+
+  // Whitechain's Whitewallet is offered, honestly: no documented deep link, so no QR for it.
+  const whitewallet = [...host.querySelectorAll('[data-sableye-wallet-picker] button')].find((b) => b.textContent === 'Whitewallet')
+  assert.ok(whitewallet)
+  await act(async () => whitewallet.click())
+  assert.equal(host.querySelector('[data-sableye-qr-code]'), null)
+  assert.match(host.querySelector('[data-sableye-phone-hint]').textContent, /WalletConnect/)
+
+  // The customer pays "from their phone" (another wallet, straight to the contract)...
+  const { paymentProcessorAbi } = await import('@sableye/core')
+  const phone = privateKeyToAccount(generatePrivateKey())
+  const pw = createWalletClient({ account: phone, chain, transport: http() })
+  await client.waitForTransactionReceipt({ hash: await deployer.sendTransaction({ to: phone.address, value: 10n ** 18n }) })
+  await client.waitForTransactionReceipt({ hash: await deployer.writeContract({ address: usdt, abi: usdtAbi, functionName: 'mint', args: [phone.address, 5_000_000n] }) })
+  await client.waitForTransactionReceipt({ hash: await pw.writeContract({ address: usdt, abi: usdtAbi, functionName: 'approve', args: [processor, 5_000_000n] }) })
+  await client.waitForTransactionReceipt({ hash: await pw.writeContract({ address: processor, abi: paymentProcessorAbi, functionName: 'pay', args: [inv.invoice, inv.signature] }) })
+  // ...and the open desktop checkout notices on its next poll, with no click.
+  for (let i = 0; i < 60 && status() !== 'success'; i++) await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+  assert.equal(status(), 'success')
+  assert.equal(host.querySelector('[data-sableye-phone-pay]'), null, 'QR closes once paid')
+  await act(async () => root.unmount())
+})
+
+test('qr={false} removes the phone option entirely', async () => {
+  const inv = await sableye.invoices.create({ amount: '1.00', orderId: `o${++order}` })
+  const { status, host, root } = await mount({ invoice: JSON.parse(JSON.stringify(inv)), qr: false })
+  await until(() => status() === 'ready')
+  assert.equal(host.querySelector('[data-sableye-qr-toggle]'), null)
+  await act(async () => root.unmount())
+})
+
+test('deep links and hosted URLs', async () => {
+  const { walletDeepLink, hostedPayUrl, invoiceFromLocation, isLocalUrl, encodeSignedInvoice } = await import('@sableye/core')
+  const inv = await sableye.invoices.create({ amount: '1.00', orderId: `o${++order}` })
+  const url = hostedPayUrl('https://shop.example/pay#old', inv)
+  assert.equal(new URL(url).hash, '', 'fragment dropped: deep-link redirects can lose it')
+  const i = new URL(url).searchParams.get('i')
+  assert.equal(i, encodeSignedInvoice(inv))
+  assert.equal(invoiceFromLocation({ search: `?i=${i}`, hash: '' }), i)
+  assert.equal(invoiceFromLocation({ search: '', hash: `#${i}` }), i)
+  assert.equal(walletDeepLink('metamask', 'https://shop.example/pay?i=x'), 'https://metamask.app.link/dapp/shop.example/pay?i=x')
+  assert.equal(walletDeepLink('trust', 'https://shop.example/pay?i=x'), 'https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Fshop.example%2Fpay%3Fi%3Dx')
+  assert.equal(walletDeepLink('coinbase', 'https://shop.example/pay?i=x'), 'https://go.cb-w.com/dapp?cb_url=https%3A%2F%2Fshop.example%2Fpay%3Fi%3Dx')
+  assert.equal(isLocalUrl('http://localhost:3000/pay'), true)
+  assert.equal(isLocalUrl('https://shop.example/pay'), false)
 })

@@ -1,5 +1,6 @@
 // Static checkout for payment links (`/pay#<signed invoice>`). No server: the invoice comes from the URL fragment,
 // which browsers never send to any host. <Checkout/> verifies the signature, expiry and processor before any wallet prompt.
+import { invoiceFromLocation } from '@sableye/core'
 import { Checkout } from '@sableye/react'
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -12,7 +13,8 @@ const rpcUrl = import.meta.env.VITE_SABLEYE_RPC_URL || undefined
 const root = createRoot(document.querySelector('#app')!)
 
 function render() {
-  const invoice = location.hash.slice(1)
+  // `?i=` (opened from a phone-wallet deep link) or `#…` (a payment link)
+  const invoice = invoiceFromLocation(location)
   root.render(
     invoice
       ? createElement(Checkout, { key: invoice, invoice, processor, rpcUrl })
