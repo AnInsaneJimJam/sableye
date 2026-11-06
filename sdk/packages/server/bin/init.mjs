@@ -126,7 +126,10 @@ export async function agentStep(p, { project, pkgDir, envFile }) {
     for (const f of installAgentFiles({ dir: '.', pkgDir })) ok(f)
     if (!project.installed) note('The docs it points to appear in node_modules/sableye/docs once `sableye` is installed.')
   }
-  const sells = await p.ask('  What will customers pay for? (Enter = let the agent work it out from your app; or e.g. "Pro plan, 9.99 USDT, Buy button on /pricing")')
+  note('Describe what customers pay for, e.g. "Pro plan, 9.99 USDT, Buy button on /pricing".')
+  note('Or press Enter and the agent works it out from your app.')
+  let sells = await p.ask('  What will customers pay for?')
+  if (/^(let the agent|the agent|work it out|enter|skip|-)/i.test(sells)) sells = '' // the hint, typed back
   return agentPrompt({ framework: project.framework, ts: project.ts, sells, envFile })
 }
 

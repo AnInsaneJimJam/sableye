@@ -102,23 +102,6 @@ export function agentPrompt({ framework, ts, sells, envFile = '.env' }) {
   ].join('\n')
 }
 
-/** Draw `text` in a box. */
-export function boxed(text, width = Math.min(process.stdout.columns || 80, 100) - 2) {
-  const inner = width - 4
-  const lines = text.split('\n').flatMap((l) => {
-    if (!l) return ['']
-    const out = []
-    let cur = ''
-    for (const word of l.split(' ')) {
-      if (cur && (cur + ' ' + word).length > inner) { out.push(cur); cur = l.startsWith('- ') ? '  ' + word : word }
-      else cur = cur ? cur + ' ' + word : word
-    }
-    return [...out, cur]
-  })
-  const bar = '─'.repeat(width - 2)
-  return [`┌${bar}┐`, ...lines.map((l) => `│ ${l.padEnd(inner)} │`), `└${bar}┘`].join('\n')
-}
-
 /** Best-effort copy to the system clipboard. Returns true if it worked. */
 export function copyToClipboard(text) {
   const tries = process.platform === 'darwin' ? [['pbcopy']]

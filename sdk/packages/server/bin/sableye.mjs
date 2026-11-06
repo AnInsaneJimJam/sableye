@@ -9,7 +9,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import * as sdk from '../dist/index.js'
-import { boxed, copyToClipboard, detectProject } from './agents.mjs'
+import { copyToClipboard, detectProject } from './agents.mjs'
 import { banner } from './banner.mjs'
 import { agentStep, runInit } from './init.mjs'
 
@@ -19,11 +19,12 @@ const version = JSON.parse(readFileSync(new URL('../package.json', import.meta.u
 const loadEnv = () => {
   for (const f of ['.env.local', '.env']) if (existsSync(f)) process.loadEnvFile(f)
 }
-/** Print the agent prompt last, boxed, and copy it. */
+/** Print the agent prompt last, as plain lines between two rules (no borders, so it copies cleanly), and copy it. */
 const printPrompt = (prompt) => {
   const copied = copyToClipboard(prompt)
-  console.log(`\n\x1b[1mNext: paste this into your coding agent${copied ? ' (copied to your clipboard)' : ''}:\x1b[0m\n`)
-  console.log(boxed(prompt))
+  const rule = `\x1b[2m${'─'.repeat(Math.min(process.stdout.columns || 80, 100))}\x1b[0m`
+  console.log(`\n\x1b[1mNext: paste this into your coding agent${copied ? ' (already copied to your clipboard)' : ' (select the text between the lines)'}:\x1b[0m`)
+  console.log(`${rule}\n${prompt}\n${rule}`)
   console.log('\nThen run your app and pay a test invoice. Reprint this any time: npx sableye agents\n')
 }
 
