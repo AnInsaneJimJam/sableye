@@ -2,13 +2,18 @@
   "name": "sableye-frontend",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.24.0",
   "scripts": {
+    "predev": "pnpm run build:sdk",
     "dev": "next dev",
+    "prebuild": "pnpm run build:sdk",
+    "build:sdk": "pnpm --filter sableye-frontend^... run build",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
     "check:render": "node scripts/check-render.mjs",
+    "check:serverless-invoice": "node --conditions=react-server --test scripts/check-serverless-invoice.mjs",
     "dev:clean": "pkill -f \"next dev\" || true; rm -rf .next; next dev",
     "check:navbar": "node scripts/check-navbar.mjs"
   },
