@@ -1,5 +1,5 @@
 import type { Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -7,14 +7,17 @@ import { createMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
-const fontSans = Geist({
-  subsets: ["latin"],
+// Bundle fonts so first-time compilation does not wait for Google Fonts.
+const fontSans = localFont({
+  src: "./fonts/geist-latin.woff2",
+  weight: "100 900",
   variable: "--font-sans",
   display: "swap",
 });
 
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
+const fontMono = localFont({
+  src: "./fonts/geist-mono-latin.woff2",
+  weight: "100 900",
   variable: "--font-mono",
   display: "swap",
 });
