@@ -127,6 +127,11 @@ The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye-navy
 2. Swap WBT for USDT on <https://testnet.yetitrade.fi>.
 3. Pay with USDT `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`.
 
+## Hosting the sandbox
+
+- **Full sandbox** (indexer, receipts, Dashboard, Events, Reconcile, subscription keeper, Arkiv publishing): Railway, one always-on Node server with a volume at `frontend/.sableye/`. Config: `railway.json` and `.railwayignore`. Deploy with `railway up`; set `MERCHANT_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_REOWN_PROJECT_ID`, and optionally `SMTP_*` / `ARKIV_ACCESS_KEY` as service variables.
+- **Static parts** (landing page, docs, Books, invoices, checkout): Vercel works too, but features that need the indexer return `503 persistent_storage_required` there.
+
 ## Deployments
 
 | Network | PaymentProcessor | Explorer |

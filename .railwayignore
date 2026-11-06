@@ -1,0 +1,8 @@
+# Not needed to build or run the sandbox (and large): Foundry libs, build output, local state.
+sdk/contracts/lib/
+sdk/contracts/out/
+sdk/contracts/cache/
+**/.sableye/
+specs/_apalache-out/
+**/node_modules/
+**/.next/
