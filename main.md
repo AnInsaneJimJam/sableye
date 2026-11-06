@@ -27,7 +27,7 @@ Gasless means the merchant's relayer pays the gas fee. Funds pass through the pr
 | `demo/store/` | Working chai/coffee/samosa shop demonstrating the SDK and merchant dashboard. |
 | `demo/books/` | Placeholder for a future independent accounting app reading Arkiv records. |
 | `arkiv/` | Future-phase research/schema notes, including older design references; not the active implementation. |
-| `docs/` | Independent Next.js documentation site at `/docs`, plus project setup, testing, security, and pitch Markdown. |
+| `project-docs/` | Project verification, security, audit, and pitch Markdown. The website lives in `frontend/src/app/docs/`. |
 | `scripts/` | ABI generation, SDK line-count checks, and AI integration evaluations. |
 | `skills/whitechain-pay/` | Instructions teaching coding agents how to integrate Sableye. |
 

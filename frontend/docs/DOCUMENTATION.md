@@ -1,0 +1,22 @@
+# Documentation website
+
+The documentation is served by the main Next.js app at `/docs`; guides use `/docs/<slug>`. Deploy the frontend once. No separate docs server, basePath, rewrite, or hosting project is needed.
+
+## Run
+
+From the repository root: `pnpm --filter sableye-frontend dev`. Open http://localhost:3000/docs. Run `bun run dev` inside `frontend/` to start the same app.
+
+## Edit
+
+- Pages and route metadata: `src/app/docs/`.
+- Shell, search, navigation, syntax highlighting and copy actions: `src/components/docs/`.
+- Guide data: `src/lib/docs/content.ts` and `src/lib/docs/content/details.ts`.
+- Scoped styles: `src/app/docs/docs.css` under `.docs-root`.
+- Artwork and logo: `public/docs/` (URLs begin `/docs/illustrations/` and `/docs/logo.svg`).
+- Fonts and the document root are shared with the frontend. Theme changes stay on the docs wrapper and do not change the homepage theme.
+
+Use DocsLink for internal documentation links; it adds `/docs` exactly once. Add guide records and sidebar entries together. Routes, search, Markdown copies and pagination use the content data. Prism parses syntax on the server, while copy actions preserve original source text.
+
+The source audit remains in `project-docs/SDK_AUDIT.md`; references there to `docs-site/` describe its historical location before consolidation.
+
+Run `pnpm --filter sableye-frontend build` to validate the unified site. Existing artwork attribution remains at `public/docs/illustrations/SOURCES.md`.

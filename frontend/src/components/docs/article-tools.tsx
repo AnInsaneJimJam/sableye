@@ -1,5 +1,7 @@
 "use client";
 
+import { GlassButton } from "@/components/ui/glass-button";
+
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Check,
@@ -39,7 +41,11 @@ export function PageActions({
   const menu = useRef<HTMLDetailsElement>(null);
   return (
     <div className="page-actions">
-      <button className="copy-page" onClick={() => copy(markdown)}>
+      <GlassButton
+        size="sm"
+        className="copy-page"
+        onClick={() => copy(markdown)}
+      >
         {status === "copied" ? <Check size={15} /> : <Copy size={15} />}
         <span aria-live="polite">
           {status === "copied"
@@ -48,13 +54,14 @@ export function PageActions({
               ? "Copy failed"
               : "Copy page"}
         </span>
-      </button>
+      </GlassButton>
       <details ref={menu} className="copy-menu">
         <summary aria-label="More page actions">
           <ChevronDown size={14} />
         </summary>
         <div>
-          <button
+          <GlassButton
+            size="sm"
             onClick={() => {
               copy(window.location.href);
               if (menu.current) menu.current.open = false;
@@ -62,8 +69,9 @@ export function PageActions({
           >
             <LinkIcon size={14} />
             Copy page link
-          </button>
-          <button
+          </GlassButton>
+          <GlassButton
+            size="sm"
             onClick={() => {
               const url = URL.createObjectURL(
                 new Blob([markdown], { type: "text/markdown" }),
@@ -78,7 +86,7 @@ export function PageActions({
           >
             <Download size={14} />
             Download Markdown
-          </button>
+          </GlassButton>
         </div>
       </details>
     </div>
@@ -100,13 +108,14 @@ export function CodeBlock({
     <div className="code-block">
       <div className="code-header">
         <span>{language}</span>
-        <button
+        <GlassButton
+          size="sm"
           className="icon-button"
           aria-label={status === "copied" ? "Code copied" : "Copy code"}
           onClick={() => copy(code)}
         >
           {status === "copied" ? <Check size={14} /> : <Copy size={14} />}
-        </button>
+        </GlassButton>
       </div>
       <pre>{children ?? <code>{code}</code>}</pre>
       {status === "failed" && (

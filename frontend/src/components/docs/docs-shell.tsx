@@ -1,6 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { GlassButton } from "@/components/ui/glass-button";
+
+import Link from "@/components/docs/docs-link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -15,12 +17,18 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import { navigation, pages, type NavItem } from "@/lib/content";
+import { navigation, pages, type NavItem } from "@/lib/docs/content";
 
 function Brand() {
   return (
     <Link href="/" className="brand" aria-label="Sableye documentation home">
-      <img src="/docs/logo.svg" width={25} height={28} alt="" aria-hidden="true" />
+      <img
+        src="/docs/logo.svg"
+        width={25}
+        height={28}
+        alt=""
+        aria-hidden="true"
+      />
       <span>sableye</span>
     </Link>
   );
@@ -43,14 +51,15 @@ function SidebarItem({
   if (item.children)
     return (
       <div className="nav-branch">
-        <button
+        <GlassButton
+          size="sm"
           className={`nav-item nav-parent ${activeChild ? "active" : ""}`}
           onClick={() => setOpen(!open)}
           aria-expanded={open}
         >
           {item.title}
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        </button>
+        </GlassButton>
         {open && (
           <div className="nav-children">
             {item.children.map((child) => (
@@ -144,10 +153,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = light ? "light" : "dark";
-  }, [light]);
-
-  useEffect(() => {
     if (!mobile) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -177,13 +182,14 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   }, [mobile]);
 
   return (
-    <>
+    <div className="docs-root" data-theme={light ? "light" : "dark"}>
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
       <header className="topbar">
         <div className="brand-area">
-          <button
+          <GlassButton
+            size="sm"
             ref={menuTrigger}
             className="icon-button mobile-menu"
             aria-label="Open navigation"
@@ -192,7 +198,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMobile(!mobile)}
           >
             <Menu size={20} />
-          </button>
+          </GlassButton>
           <Brand />
           <span className="language">English</span>
         </div>
@@ -236,7 +242,8 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           </details>
         </nav>
         <div className="header-actions">
-          <button
+          <GlassButton
+            size="sm"
             ref={searchTrigger}
             className="search-trigger"
             onClick={openSearch}
@@ -247,7 +254,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             <kbd>
               <Command size={10} /> K
             </kbd>
-          </button>
+          </GlassButton>
           <Link
             className="outline-button header-reference"
             href="/configuration"
@@ -257,7 +264,8 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           <Link className="primary-button" href="/quickstart">
             Get started
           </Link>
-          <button
+          <GlassButton
+            size="sm"
             className="icon-button theme-toggle"
             aria-label={
               light ? "Switch to dark theme" : "Switch to light theme"
@@ -275,11 +283,12 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             }}
           >
             {light ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          </GlassButton>
         </div>
       </header>
       {mobile && (
-        <button
+        <GlassButton
+          size="sm"
           className="sidebar-backdrop"
           aria-label="Close navigation"
           onClick={() => setMobile(false)}
@@ -291,13 +300,14 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
         className={`sidebar ${mobile ? "is-open" : ""}`}
         aria-label="Documentation navigation"
       >
-        <button
+        <GlassButton
+          size="sm"
           className="mobile-close icon-button"
           aria-label="Close navigation"
           onClick={() => setMobile(false)}
         >
           <X size={20} />
-        </button>
+        </GlassButton>
         <nav>
           {navigation.map((group) => (
             <div className="nav-group" key={group.title}>
@@ -364,12 +374,13 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
                 }
               }}
             />
-            <button
+            <GlassButton
+              size="sm"
               className="key-button"
               onClick={() => dialog.current?.close()}
             >
               Esc
-            </button>
+            </GlassButton>
           </div>
           <div className="search-results">
             <p className="search-caption" aria-live="polite">
@@ -410,6 +421,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </dialog>
-    </>
+    </div>
   );
 }
