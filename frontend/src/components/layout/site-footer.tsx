@@ -7,10 +7,14 @@ export function SiteFooter() {
     <footer className="site-footer page-width">
       <div className="footer-top">
         <a className="wordmark" href="#home">
-          <span className="brand-symbol" aria-hidden="true">
-            s
-          </span>
-          Sableye<span className="brand-period">.</span>
+          <img
+            src="/logo.svg"
+            width={27}
+            height={29}
+            alt=""
+            aria-hidden="true"
+          />
+          Sableye
         </a>
         <div>
           <a href={`${siteConfig.links.github}#quickstart`}>
@@ -23,7 +27,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="footer-bottom">
-        <p>Built for businesses. Built on Whitechain.</p>
+        <p>Built for businesses.</p>
         <span>
           ETHGlobal Mumbai 2026 <span className="footer-separator">/</span>{" "}
           Testnet

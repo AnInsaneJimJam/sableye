@@ -7,9 +7,6 @@ export function Hero() {
   return (
     <section id="home" className="hero page-width">
       <div className="hero-copy">
-        <span className="launch-note">
-          <span className="status-light" /> Built on Whitechain{" "}
-        </span>
         <h1>
           Payments,
           <br />
