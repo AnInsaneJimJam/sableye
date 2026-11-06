@@ -1,7 +1,5 @@
 import type { Viewport } from "next";
 import localFont from "next/font/local";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -12,6 +10,15 @@ const fontSans = localFont({
   src: "./fonts/geist-latin.woff2",
   weight: "100 900",
   variable: "--font-sans",
+  display: "swap",
+});
+
+// Satoshi carries the wordmark and the line under it. Self-hosted, so the
+// build and the first paint never wait on a font CDN.
+const fontDisplay = localFont({
+  src: "./fonts/satoshi-variable.woff2",
+  weight: "300 900",
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -26,8 +33,8 @@ export const metadata = createMetadata();
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "oklch(1 0 0)" },
-    { media: "(prefers-color-scheme: dark)", color: "oklch(0.145 0 0)" },
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#080f1f" },
   ],
 };
 
@@ -36,15 +43,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn(fontSans.variable, fontMono.variable)}
+      className={cn(fontSans.variable, fontDisplay.variable, fontMono.variable)}
     >
       <body className="min-h-dvh bg-background text-foreground antialiased">
         <ThemeProvider>
-          <div className="flex min-h-dvh flex-col">
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
-          </div>
+          <main>{children}</main>
         </ThemeProvider>
       </body>
     </html>

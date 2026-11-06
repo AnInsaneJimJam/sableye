@@ -1,6 +1,6 @@
-# Ethglobal
+# Sableye frontend
 
-Frontend foundation for an AI SaaS marketing site.
+The Sableye marketing site. Sableye is a USDT checkout for real businesses on Whitechain.
 
 ## Stack
 

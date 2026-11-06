@@ -1,5 +1,5 @@
 {
-  "name": "ethglobal",
+  "name": "sableye-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "check:render": "node scripts/check-render.mjs",
+    "dev:clean": "pkill -f \"next dev\" || true; rm -rf .next; next dev"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
