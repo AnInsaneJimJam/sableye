@@ -42,9 +42,9 @@ export default function IntroductionPage() {
         <div className="home-heading">
           <h1>Documentation</h1>
           <p>
-            USDT payments, built for your business. Non-custodial,
-            <br className="desktop-break" /> effortless to integrate, and
-            powered by Whitechain.
+            Build USDT payments with the Sableye SDK.
+            <br className="desktop-break" /> Server-signed invoices, browser
+            checkout, and on-chain verification.
           </p>
         </div>
         <div className="feature-grid">
