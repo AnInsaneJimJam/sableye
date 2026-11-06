@@ -4,7 +4,7 @@
 // The open format is documented in arkiv/schema.md; this file is its reference writer.
 import { createPublicClient, createWalletClient, ExpirationTime } from '@arkiv-network/sdk'
 import { rabdi } from '@arkiv-network/sdk/chains'
-import { desc } from '@arkiv-network/sdk/query'
+import { desc, eq } from '@arkiv-network/sdk/query'
 import { addr, bytes, defineSchema, str, u256, u64 } from '@arkiv-network/sdk/schema'
 import { decryptPrivate, encryptPrivate, VIEW_KEY_MESSAGE, viewKeyFromSignature } from '@sableye/core'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
@@ -70,6 +70,11 @@ export interface ArkivConfig {
   writer?: ArkivWriter
   /** How often to extend records near expiry. Default 6 h. 0: never (tests). */
   renewEveryMs?: number
+  /**
+   * Look up a record this merchant already published (so a server with lost or fresh local state never publishes
+   * twice). Default: queries Arkiv; with an injected `writer` and no finder, nothing is found.
+   */
+  finder?: (kind: 'invoice' | 'refund' | 'profile', orderId?: Hex, txHash?: Hex) => Promise<Hex | undefined>
 }
 
 export function arkivConfigFromEnv(env: NodeJS.ProcessEnv = process.env): ArkivConfig | undefined {
@@ -164,12 +169,26 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
     return Object.keys(details).length && deps.account ? bytes(await encryptPrivate(await getViewKey(), details)) : undefined
   }
   const expiresAt = () => Date.now() + RECORD_DAYS * DAY
+  const same = (a?: unknown, b?: string) => !!b && String(a).toLowerCase() === b.toLowerCase()
+  const find = cfg?.finder ?? (cfg?.writer ? async () => undefined : async (kind: 'invoice' | 'refund' | 'profile', orderId?: Hex, txHash?: Hex) => {
+    const r = reader()
+    const rows = (kind === 'profile'
+      ? await r.select({ $key: true }).from(ArkivMerchant).where(eq('merchant', addr(deps.merchant))).ownedBy(deps.merchant).limit(1).fetch()
+      : await r.select({ $key: true, tx_hash: true }).from(kind === 'invoice' ? ArkivInvoice : ArkivRefund).where(eq('order_id', str(orderId!))).ownedBy(deps.merchant).limit(20).fetch()
+    ).entities as unknown as { $key: Hex; tx_hash?: { value: string } }[]
+    return (kind === 'profile' || !txHash ? rows[0] : rows.find((e) => same(e.tx_hash?.value, txHash)))?.$key
+  })
 
   const run = async (payload: unknown) => {
     const job = payload as ArkivJob
     const w = getWriter()
     if (job.kind === 'profile') {
       if (state.merchantProfile) return
+      const found = await find('profile')
+      if (found) {
+        state.merchantProfile = { entityKey: found, expiresAt: Date.now() } // renewed on the next renewal pass
+        return save()
+      }
       const r = await w.createEntity(ArkivMerchant, { merchant: addr(deps.merchant), name: str(deps.businessName), schema_version: str('1') }, { expiration: ExpirationTime.fromDays(RECORD_DAYS) })
       state.merchantProfile = { entityKey: r.entityKey, expiresAt: expiresAt() }
       return save()
@@ -182,8 +201,11 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
       const fields = {
         status: str(rc.status), refunded: u256(rc.refunded ?? 0n),
       }
+      const found = state.invoices[id] ? undefined : await find('invoice', job.orderId, job.txHash ?? rc.txHash)
+      if (found) state.invoices[id] = { entityKey: found, txHash: job.txHash ?? rc.txHash ?? '0x', expiresAt: Date.now() }
       const existing = state.invoices[id]
       if (existing) {
+        if (found) save()
         await w.patchEntity(ArkivInvoice, existing.entityKey, { set: fields })
         return
       }
@@ -199,6 +221,11 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
     }
     if (job.kind === 'refund') {
       const key = job.txHash!.toLowerCase()
+      const foundRefund = state.refunds[key] ? undefined : await find('refund', job.orderId, job.txHash)
+      if (foundRefund) {
+        state.refunds[key] = { entityKey: foundRefund, expiresAt: Date.now() }
+        save()
+      }
       if (!state.refunds[key]) {
         const r = await w.createEntity(ArkivRefund, {
           order_id: str(job.orderId!), merchant: addr(deps.merchant), amount: u256(BigInt(job.amount ?? '0')),

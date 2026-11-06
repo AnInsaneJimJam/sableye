@@ -110,3 +110,19 @@ test('renewal extends records within 30 days of expiry, and only those', async (
   }
   assert.equal(calls.filter((c) => c.op === 'extend').length, 2) // invoice + merchant profile
 })
+
+test('a server with fresh local state adopts records already on Arkiv instead of publishing them again', async () => {
+  const { calls, writer } = fakeWriter()
+  const outbox = createOutbox({ pollMs: 0, retryDelays: [0] })
+  const onArkiv = { invoice: '0xexistinginvoice', profile: '0xexistingprofile' }
+  const sink = attachArkiv({ writer, renewEveryMs: 0, finder: async (kind, orderId, txHash) => (kind === 'invoice' && txHash === TX ? onArkiv.invoice : kind === 'profile' ? onArkiv.profile : undefined) }, outbox, {
+    merchant: account.address, account, network: 'whitechain-sepolia', chainId: 1874, businessName: 'Chai Stall', getOrder: async () => undefined,
+    receipt: async () => ({ status: 'paid', payer: account.address, payout: account.address, token: account.address, amount: 1n, refunded: 0n, paidAt: new Date(), txHash: TX }),
+  })
+  sink.onEvent(ev('invoice.safe'))
+  await outbox.drain()
+  assert.equal(calls.filter((c) => c.op === 'create').length, 0) // nothing duplicated
+  assert.deepEqual(calls.map((c) => [c.op, c.entityKey]), [['patch', '0xexistinginvoice']]) // brought up to date instead
+  await sink.renew()
+  assert.deepEqual(calls.filter((c) => c.op === 'extend').map((c) => c.entityKey).sort(), ['0xexistinginvoice', '0xexistingprofile'])
+})
