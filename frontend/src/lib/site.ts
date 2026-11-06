@@ -1,13 +1,13 @@
 export const siteConfig = {
-  name: "Ethglobal",
-  title: "Ethglobal",
+  name: "Sableye",
+  title: "Sableye",
   description:
-    "Replace this sentence with the one line promise of your product. Search engines and social cards both read it.",
+    "Stripe-grade USDT checkout for real businesses, on Whitechain. Twenty lines to integrate, non-custodial, and gasless for your customer.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   locale: "en_US",
-  twitter: "@ethglobal",
+  twitter: "",
   links: {
-    github: "",
+    github: "https://github.com/AnInsaneJimJam/sableye",
     x: "",
   },
 } as const;
