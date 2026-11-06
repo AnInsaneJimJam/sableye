@@ -13,10 +13,13 @@ export interface Job {
   nextAt: number
   createdAt: number
   status: 'pending' | 'done' | 'failed'
+  /** The handler decided there was nothing to do (e.g. no recipient). */
+  skipped?: boolean
   error?: string
 }
 
-export type JobHandler = (payload: unknown, job: Job) => Promise<void>
+/** Return 'skipped' when there was nothing to do; throw to retry. */
+export type JobHandler = (payload: unknown, job: Job) => Promise<void | 'skipped'>
 
 /** Seconds between attempts: 5 s … 6 h, then give up. */
 export const OUTBOX_RETRY_DELAYS = [5, 30, 120, 600, 1800, 3600, 10_800, 21_600]
@@ -75,7 +78,7 @@ export function createOutbox(opts: OutboxOptions = {}): Outbox {
       if (!handler) continue
       job.attempts++
       try {
-        await handler(job.payload, job)
+        if ((await handler(job.payload, job)) === 'skipped') job.skipped = true
         job.status = 'done'
         job.error = undefined
       } catch (e) {

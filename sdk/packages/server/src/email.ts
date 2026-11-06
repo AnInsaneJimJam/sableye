@@ -79,7 +79,7 @@ export interface EmailLogEntry {
   kind: EmailKind
   to?: string
   orderId?: Hex
-  status: 'pending' | 'sent' | 'failed'
+  status: 'pending' | 'sent' | 'skipped' | 'failed'
   attempts: number
   error?: string
   at: Date
@@ -148,7 +148,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
     const token = order?.token ?? 'USDT'
 
     if (job.kind === 'invoice') {
-      if (!order?.customer?.email) return
+      if (!order?.customer?.email) return 'skipped' as const
       const lines = [
         greeting(order), '',
         `${deps.businessName} sent you an invoice.`, '',
@@ -166,9 +166,9 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
 
     if (job.kind === 'receipt' || job.kind === 'merchant_notice') {
       const payment = await deps.verify(job.orderId!) // trust the chain, not the event
-      if (!payment.paid) return
+      if (!payment.paid) return 'skipped' as const
       if (job.kind === 'receipt') {
-        if (!order?.customer?.email) return
+        if (!order?.customer?.email) return 'skipped' as const
         const lines = [
           greeting(order), '',
           `We received your payment of ${payment.amountFormatted} ${token}${what(order) ? ` for ${what(order)}` : ''}. Thank you!`, '',
@@ -180,9 +180,9 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
           pdf ? { filename: `receipt-${ref}.pdf`, bytes: pdf } : undefined)
       }
       const to = notifyTo()
-      if (!to) return
+      if (!to) return 'skipped' as const
       // A fresh indexer replays old payments: only announce orders we created, or payments from the last hour.
-      if (!job.ours && (!payment.paidAt || Date.now() - payment.paidAt.getTime() > RECENT_MS)) return
+      if (!job.ours && (!payment.paidAt || Date.now() - payment.paidAt.getTime() > RECENT_MS)) return 'skipped' as const
       const lines = [
         `${payment.amountFormatted} ${token} is in your wallet ${deps.merchant}.`, '',
         `Order: ${ref}`,
@@ -195,7 +195,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
     }
 
     if (job.kind === 'refund') {
-      if (!order?.customer?.email) return
+      if (!order?.customer?.email) return 'skipped' as const
       const amount = job.amount ? deps.format(job.amount) : ''
       const tx = job.txHash ? deps.explorerTx(job.txHash) : undefined
       const lines = [
@@ -224,7 +224,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
     log: () =>
       outbox.jobs('email').map((j) => {
         const p = j.payload as EmailJob
-        return { kind: p.kind, to: p.to, orderId: p.orderId, status: j.status === 'done' ? 'sent' : j.status, attempts: j.attempts, error: j.error, at: new Date(j.createdAt) }
+        return { kind: p.kind, to: p.to, orderId: p.orderId, status: j.status === 'done' ? (j.skipped ? 'skipped' : 'sent') : j.status, attempts: j.attempts, error: j.error, at: new Date(j.createdAt) }
       }),
   }
 
