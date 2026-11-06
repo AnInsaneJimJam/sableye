@@ -1,6 +1,6 @@
 {
   "name": "@sableye/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sableye shared config, ABI, EIP-712 invoice types and typed errors",
   "license": "MIT",
   "type": "module",

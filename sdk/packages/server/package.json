@@ -1,6 +1,6 @@
 {
   "name": "@sableye/server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sableye server SDK: sign EIP-712 invoices and verify USDT payments on Whitechain",
   "license": "MIT",
   "type": "module",
