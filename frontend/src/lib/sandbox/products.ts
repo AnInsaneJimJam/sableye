@@ -185,13 +185,12 @@ export const OPTIONS = POST
     summary:
       "Refund all or part of an order back to the customer's wallet, in one call. The contract caps refunds at the amount paid. Cancel an unpaid invoice, or revoke every outstanding one at once.",
     stripe: { name: "Refunds / void invoice", how: "Refund a charge in full or part; void an open invoice; deactivate a link. Customers can also file chargebacks." },
-    differences: ["No chargebacks: only the merchant can refund", "Refund ≤ paid is enforced by the contract", "One-time approval lets the processor pull refunds from your payout wallet"],
-    steps: ["One-time: enable refunds (an approval)", "Refund all or part of a paid order", "USDT returns to the payer's wallet", "Unpaid invoices can be cancelled on-chain"],
+    differences: ["No chargebacks: only the merchant can refund", "Refund ≤ paid is enforced by the contract", "No setup step: missing allowance is approved for the exact refund amount; existing approvals are reused"],
+    steps: ["Refund all or part of a paid order, in one call", "SDK approves exactly that amount (if needed), then refunds", "USDT returns to the payer's wallet", "Unpaid invoices can be cancelled on-chain"],
     code: {
       sableye: {
         file: "server.ts",
-        code: `await sableye.refunds.enable() // once
-
+        code: `// No setup step: create() approves exactly what it needs.
 await sableye.refunds.create({ orderId: 'order_123' })        // full
 await sableye.refunds.create({ orderId: 'order_124', amount: '2.00' }) // partial
 
@@ -213,7 +212,7 @@ await stripe.invoices.voidInvoice('in_125')`,
     title: "Subscriptions",
     tagline: "Recurring USDT, with a cap the customer sets.",
     summary:
-      "The customer subscribes once and sets a spending cap. The plan charges once per interval, never more often and never above the cap. A failed charge goes past-due and retries; three in a row cancels. Anyone can cancel on-chain.",
+      "The customer subscribes once and sets a spending cap. The plan charges once per interval, never more often and never above the cap. A failed charge goes past-due and retries; three in a row cancels. The payer or merchant can cancel on-chain.",
     stripe: { name: "Billing subscriptions", how: "Prices with a recurring interval; Smart Retries and dunning for failed payments; test clocks to simulate time." },
     differences: ["The customer, not the merchant, sets the maximum total", "One charge per interval is enforced by the contract", "This demo plan renews every 2 minutes so you can watch it"],
     steps: ["Merchant signs a plan", "Customer approves a cap and subscribes (first cycle paid)", "A keeper charges each interval", "Failed → past-due → retry; cancel stops everything"],
@@ -225,7 +224,7 @@ await stripe.invoices.voidInvoice('in_125')`,
 })
 // browser: approve(cap) → SubscriptionManager.subscribe(plan, sig, cap)
 
-setInterval(() => sableye.subscriptions.runDue(), 30_000) // keeper
+sableye.subscriptions.keeper() // schedules renewals; retries failures after 1 hour
 await sableye.subscriptions.cancel(subId)`,
       },
       stripe: {

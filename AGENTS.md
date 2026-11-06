@@ -129,7 +129,8 @@ const event = verifyWebhook(rawBody, req.headers.get('sableye-signature'), secre
 ```ts
 const offer = await sableye.subscriptions.createPlan({ planId: 'pro', amount: '5', interval: 2592000 }) // signed, no gas
 // browser: approve(cap) then SubscriptionManager.subscribe(offer.plan, offer.signature, cap); first cycle is charged now
-await sableye.subscriptions.runDue()      // keeper: charge every due sub once (chain time); call on a timer
+const keeper = sableye.subscriptions.keeper() // schedules renewals; retries failures after 1 hour
+await keeper.tick()                      // optional manual pass; respects the same retry backoff
 await sableye.subscriptions.get(subId)    // status: active | past_due | cancelled, charged, cap, nextChargeAt
 await sableye.subscriptions.cancel(subId) // merchant; the payer can also cancel on-chain
 ```

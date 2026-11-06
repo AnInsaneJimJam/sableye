@@ -52,18 +52,35 @@ const { paid } = await sableye.verifyPayment('order_123')
 if (paid) fulfil()
 ```
 
+### sableye.refunds.create({ orderId, amount? })
+Refunds all remaining funds by default, or the decimal-string `amount`. When payout is the merchant wallet and allowance is insufficient, it approves exactly that amount before refunding. Existing sufficient allowances are reused. A different payout wallet must approve the processor itself. Returns `{ txHash, amount, approvalTxHash? }`.
+`refunds.prepare()` sends nothing: it returns a summary and unsigned `transactions` in execution order. Agents must leave signing to the merchant. `refunds.enable()` remains an optional unlimited pre-approval.
+
+### sableye.subscriptions.keeper(options?)
+Start once in a long-running server after creating signed plans with `subscriptions.createPlan({ planId, amount, interval })`. The customer approves a cap and calls `SubscriptionManager.subscribe(plan, signature, cap)`; the first cycle charges immediately.
+
+```ts
+const keeper = sableye.subscriptions.keeper()
+await keeper.track(subId) // immediately watch a newly created subscription
+await keeper.tick()       // optional manual pass, respecting retry backoff
+keeper.stop()             // server shutdown
+```
+
+Renewals follow chain time. Defaults: retry failed charges after 3600 seconds; discover subscriptions from new blocks every 60 seconds. `retryAfterSeconds`, `discoverEverySeconds`, `maxSleepSeconds` and `onResult` configure the keeper. Discovery still polls, but no longer rescans all history each pass. Retry state is in memory and resets on restart; third-party callers of the permissionless contract are not bound by this backoff. `subscriptions.runDue()` remains available for cron jobs and bypasses keeper backoff.
+
 ## @sableye/react
 
-### <Checkout invoice onSuccess? onError? className? processor? chain? rpcUrl? token? provider? fetch? />
+### <Checkout invoice onSuccess? onError? className? processor? chain? rpcUrl? token? provider? fetch? qr? payUrl? />
 The full flow: connect wallet, switch or add chain, check balance, pay, show the result. Unstyled; style it through `className` and `data-sableye-*` attributes (`data-sableye-status` holds the current status).
 `invoice` can be the object, its JSON form, or an encoded link payload.
+The QR icon offers phone-wallet links; `qr={false}` hides it. `payUrl` overrides the hosted checkout URL, which must be reachable from the phone. Whitewallet is listed with an unsupported-connection note; WalletConnect is not implemented.
 
 ```tsx
 <Checkout invoice={inv} onSuccess={({ txHash }) => confirm(txHash)} onError={(e) => console.log(e.remedy)} />
 ```
 
 ### useCheckout(invoice, options?)
-For your own UI. Returns `{ state, wallets, pay }`.
+For your own UI. Returns `{ state, wallets, pay, refresh }`; `refresh()` reloads on-chain status without prompting the wallet.
 
 ```tsx
 const { state, pay } = useCheckout(inv)

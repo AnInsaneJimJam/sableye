@@ -8,7 +8,7 @@ Whitechain Sepolia; nothing is mocked.
 - [ ] `.env` set up as in [DEMO.md](DEMO.md), including `ADMIN_PASSWORD`, `SMTP_USER`, `SMTP_PASS` and the tunnel's `PUBLIC_URL`.
 - [ ] `pnpm --filter store dev` and the tunnel running; tabs open: **Shop** (`/`), **Merchant dashboard** (`/admin`, signed in), **customer inbox**, **Blockscout** (merchant address).
 - [ ] MetaMask on Whitechain Sepolia, **buyer account selected** (`0x3Cf8…897a`), holding ≥ 3 USDT and a little WBT.
-- [ ] Refunds already enabled on `/admin` (so the refund click is one transaction).
+- [ ] Merchant wallet has USDT for the refund and WBT for approval/refund gas; no Enable refunds step is needed.
 - [ ] A payment link + QR already created on `/admin` ("Masala chai, 1.00").
 - [ ] Phone with MetaMask mobile (optional, for the QR moment). Scan from inside MetaMask's browser, not the camera app.
 - [ ] Fallback: a screen recording of the full flow, in case the venue Wi-Fi drops.

@@ -2,7 +2,7 @@
 import "server-only";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { fileStore, RateLimiter, Sableye, type Indexer } from "@sableye/server";
+import { fileStore, RateLimiter, Sableye, type Indexer, type Keeper } from "@sableye/server";
 import { fileLinkStore, webhookSecret } from "./store";
 
 const rootEnv = join(process.cwd(), "../.env");
@@ -10,7 +10,7 @@ if (!process.env.MERCHANT_KEY && existsSync(rootEnv)) process.loadEnvFile(rootEn
 
 export const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-type Merchant = { sableye: Sableye; indexer: Indexer; limiter: RateLimiter };
+type Merchant = { sableye: Sableye; indexer: Indexer; keeper: Keeper; limiter: RateLimiter };
 const g = globalThis as typeof globalThis & { __sableyeSandbox?: Merchant };
 
 function boot(): Merchant {
@@ -27,10 +27,9 @@ function boot(): Merchant {
     webhooks: [{ url: `${BASE_URL}/api/webhook`, secret: webhookSecret() }],
   });
   void indexer.start();
-  // Subscription keeper: charges every due Chai Club renewal.
-  setInterval(() => void sableye.subscriptions.runDue().catch(() => {}), 30_000);
+  const keeper = sableye.subscriptions.keeper();
   // Public sandbox: actions that cost the merchant gas are rate-limited per visitor.
-  return { sableye, indexer, limiter: new RateLimiter(20) };
+  return { sableye, indexer, keeper, limiter: new RateLimiter(20) };
 }
 
 export const merchant = (): Merchant => (g.__sableyeSandbox ??= boot());

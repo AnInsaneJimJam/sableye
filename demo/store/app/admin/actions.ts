@@ -98,7 +98,7 @@ export async function runRenewals() {
   await requireAdmin()
   await attempt('Renewals', async () => {
     // <sableye:extra>
-    const results = await merchant().sableye.subscriptions.runDue()
+    const results = await merchant().keeper.tick()
     // </sableye:extra>
     return results.length ? results.map((r) => `${r.subId.slice(0, 10)}… ${r.result}`).join(', ') : 'Nothing due right now'
   })

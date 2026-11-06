@@ -1,6 +1,6 @@
 "use client";
-// Hosted checkout for payment links: the signed invoice rides in the URL fragment (#…), which never reaches a server.
-import { decodeSignedInvoice } from "@sableye/core";
+// Hosted checkout accepts fragment payment links and ?i= phone-wallet links.
+import { decodeSignedInvoice, invoiceFromLocation } from "@sableye/core";
 import { Checkout } from "@sableye/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -10,7 +10,7 @@ export default function PayPage() {
   const [hash, setHash] = useState<string | null>(null);
   const [tx, setTx] = useState<string>();
   useEffect(() => {
-    const read = () => setHash(location.hash.slice(1));
+    const read = () => setHash(invoiceFromLocation(location));
     read();
     addEventListener("hashchange", read);
     return () => removeEventListener("hashchange", read);
