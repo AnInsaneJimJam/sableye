@@ -57,6 +57,16 @@ Metadata, canonical URLs, `sitemap.xml` and `robots.txt` all read it.
 
 Edit `src/lib/site.ts` to set the product name, title and description.
 
+## Fonts and development startup
+
+Geist and Geist Mono are bundled in `src/app/fonts` with their SIL Open Font
+Licenses and loaded through `next/font/local`. Development and production builds
+do not need to contact Google Fonts. Keep these files in source control.
+
+Run `bun run dev` from this directory and open the Local URL printed by Next.js.
+If port 3000 is occupied, Next.js may choose another port. Stop the previous dev
+server before launching another instance for this directory.
+
 ## Adding components
 
 ```bash
