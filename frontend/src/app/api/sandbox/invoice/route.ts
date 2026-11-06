@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { handle, json } from "@/lib/sandbox/http";
 import { clientKey, merchant, newOrderRef } from "@/lib/sandbox/merchant";
 
@@ -56,6 +57,8 @@ export const POST = (req: Request) =>
       }),
       ...(coupon && { coupon }),
     });
+    // The invoice email is queued; on Vercel the function freezes after the response, so finish sending first.
+    if (email) after(() => sableye.emails.flush());
     return json({
       ...JSON.parse(JSON.stringify(invoice)),
       emailed: !!email && sableye.emails.enabled,
