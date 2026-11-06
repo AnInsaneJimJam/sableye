@@ -63,7 +63,7 @@ These are the Stripe features from the Tier 1 list that fit Sableye without a co
 
 **Shipped:** `7fdcc5c`.
 **Open:**
-- add `sableye.up.railway.app` and `localhost` to the Reown project's allowed domains;
+- add `sableye.xyz`, `sableye.up.railway.app` and `localhost` to the Reown project's allowed domains;
 - set `NEXT_PUBLIC_REOWN_PROJECT_ID` in Vercel;
 - scan with Whitewallet on a phone and pay. This is the one step that can't be automated.
 
