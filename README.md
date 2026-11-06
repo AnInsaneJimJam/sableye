@@ -62,6 +62,8 @@ export default function Page() {
 }
 ```
 
+**After payment:** the checkout page is yours (`checkoutUrl` points at it), so there's no `returnUrl` setting. Send the customer wherever you like from `onSuccess`, e.g. `` <Checkout invoice={invoice} onSuccess={({ txHash }) => location.assign(`/thanks?tx=${txHash}`)} /> ``, and fulfil only after `/api/verify` says `paid`.
+
 For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skills/whitechain-pay`](skills/whitechain-pay/SKILL.md) is an installable Agent Skill.
 
 ## Why this flow needs onchain stablecoin settlement

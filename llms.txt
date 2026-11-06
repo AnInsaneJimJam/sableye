@@ -129,6 +129,12 @@ The QR icon offers phone-wallet links; `qr={false}` hides it. `payUrl` overrides
 
 `walletConnectProjectId` (free from cloud.reown.com, public) adds a WalletConnect option: the customer scans a QR code with Whitewallet or any WalletConnect wallet and pays from it. It needs `@walletconnect/universal-provider` installed (an optional peer dependency, loaded only when used). With it, Whitewallet also works from the phone-wallet QR panel. `connectWalletConnect({ projectId, chainId, rpcUrl, onUri })` returns the same EIP-1193 provider for custom UIs.
 
+**After payment (Stripe's `success_url`):** there is no `returnUrl` option because the checkout page is yours: `checkoutUrl` points at your own page that renders `<Checkout>`. Redirect in `onSuccess`, and fulfil only after your server's `verifyPayment(orderId)` says `paid` (the redirect is UX, not proof):
+
+```tsx
+<Checkout invoice={inv} onSuccess={({ txHash }) => location.assign(`/thanks?order=${inv.invoice.orderId}&tx=${txHash}`)} />
+```
+
 ### useCheckout(invoice, options?)
 For your own UI. Returns `{ state, wallets, pay, refresh }`; `refresh()` reloads on-chain status without prompting the wallet.
 
