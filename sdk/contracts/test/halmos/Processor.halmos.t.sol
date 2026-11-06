@@ -18,6 +18,49 @@ contract HToken is ERC20("Tether USD", "USDT") {
     }
 }
 
+/// EIP-3009 + permit token for proofs. Accepts any signature (ECDSA is out of scope, as with AcceptAllSigner) but
+/// keeps the rules that matter: only `to` may redeem a receive-authorization, each nonce once. Records the nonce
+/// so a proof can check what it was bound to. `fee` > 0 turns it into a fee-on-transfer token.
+contract HToken3009 is ERC20("Tether USD", "USDT") {
+    uint256 public fee;
+    bool public permitReverts;
+    bytes32 public lastNonce;
+    mapping(bytes32 => bool) public usedNonce;
+
+    function mint(address to, uint256 amt) external {
+        _mint(to, amt);
+    }
+
+    function setFee(uint256 f) external {
+        fee = f;
+    }
+
+    function setPermitReverts(bool r) external {
+        permitReverts = r;
+    }
+
+    function permit(address owner, address spender, uint256 value, uint256, uint8, bytes32, bytes32) external {
+        require(!permitReverts, "permit used");
+        _approve(owner, spender, value);
+    }
+
+    function receiveWithAuthorization(address from, address to, uint256 value, uint256, uint256, bytes32 nonce, uint8, bytes32, bytes32)
+        external
+    {
+        require(msg.sender == to, "caller must be payee");
+        require(!usedNonce[nonce], "nonce used");
+        usedNonce[nonce] = true;
+        lastNonce = nonce;
+        _transfer(from, to, value);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (fee == 0 || from == address(0) || to == address(0)) return super._update(from, to, value);
+        super._update(from, to, value - fee);
+        super._update(from, address(0xFEE), fee);
+    }
+}
+
 contract AcceptAllSigner is IERC1271 {
     function isValidSignature(bytes32, bytes calldata) external pure returns (bytes4) {
         return IERC1271.isValidSignature.selector;
@@ -90,7 +133,7 @@ contract ProcessorHalmos is Test {
 
         vm.prank(merchant);
         (bool ok1,) = address(pp).call(abi.encodeCall(pp.refund, (orderId, r1)));
-        if (r1 <= amount) assert(ok1);
+        if (r1 > 0 && r1 <= amount) assert(ok1); // a zero refund reverts (ZeroRefund) by design
         vm.prank(merchant);
         (bool ok2,) = address(pp).call(abi.encodeCall(pp.refund, (orderId, r2)));
 
@@ -160,11 +203,86 @@ contract ProcessorHalmos is Test {
     }
 }
 
+/// The gasless (EIP-3009) and permit pay paths, and fee-on-transfer tokens on every path.
+contract ProcessorPathsHalmos is Test {
+    PaymentProcessor pp;
+    HToken3009 token;
+    address merchant;
+    address payout = address(0xBEEF);
+    address payer = address(0xCAFE);
+
+    function setUp() public {
+        pp = new PaymentProcessor();
+        token = new HToken3009();
+        merchant = address(new AcceptAllSigner());
+    }
+
+    function _inv(bytes32 orderId, uint256 amount) internal view returns (IPaymentProcessor.Invoice memory) {
+        return IPaymentProcessor.Invoice(orderId, merchant, payout, address(token), amount, uint64(block.timestamp), 0);
+    }
+
+    function _callPath(uint8 path, IPaymentProcessor.Invoice memory inv, address relayer) internal returns (bool ok) {
+        if (path % 3 == 0) {
+            vm.prank(payer);
+            (ok,) = address(pp).call(abi.encodeCall(pp.pay, (inv, "")));
+        } else if (path % 3 == 1) {
+            vm.prank(payer);
+            (ok,) = address(pp).call(abi.encodeCall(pp.payWithPermit, (inv, "", type(uint256).max, 0, 0, 0)));
+        } else {
+            vm.prank(relayer);
+            (ok,) = address(pp).call(abi.encodeCall(pp.payWithAuthorization, (inv, "", payer, 0, type(uint256).max, 0, 0, 0)));
+        }
+    }
+
+    /// Gasless: any relayer can submit, the payment always succeeds for a funded payer, the processor ends with 0,
+    /// the payout gains exactly `amount`, and the authorization's nonce is this invoice's digest (so it can't be
+    /// paired with any other invoice).
+    function check_payWithAuthorization_noCustody_boundNonce(bytes32 orderId, uint256 amount, address relayer) public {
+        vm.assume(relayer != address(pp));
+        token.mint(payer, amount);
+        IPaymentProcessor.Invoice memory inv = _inv(orderId, amount);
+        uint256 before = token.balanceOf(payout);
+        assert(_callPath(2, inv, relayer));
+        assert(token.balanceOf(address(pp)) == 0);
+        assert(token.balanceOf(payout) == before + amount);
+        assert(token.lastNonce() == pp.hashInvoice(inv));
+        // The same invoice can't be paid twice through this path either.
+        token.mint(payer, amount);
+        assert(!_callPath(2, inv, relayer));
+    }
+
+    /// Permit: succeeds and keeps no custody whether or not the permit was front-run (allowance already set).
+    function check_payWithPermit_noCustody(bytes32 orderId, uint256 amount, bool frontRun) public {
+        token.mint(payer, amount);
+        if (frontRun) {
+            vm.prank(payer);
+            token.approve(address(pp), amount);
+            token.setPermitReverts(true);
+        }
+        uint256 before = token.balanceOf(payout);
+        assert(_callPath(1, _inv(orderId, amount), address(0)));
+        assert(token.balanceOf(address(pp)) == 0);
+        assert(token.balanceOf(payout) == before + amount);
+    }
+
+    /// A fee-on-transfer token can never settle an invoice, on any of the three paths, for any fee and amount.
+    function check_feeOnTransfer_alwaysReverts(bytes32 orderId, uint256 amount, uint256 fee, uint8 path, address relayer) public {
+        vm.assume(fee > 0 && relayer != address(pp));
+        token.mint(payer, amount);
+        vm.prank(payer);
+        token.approve(address(pp), amount);
+        token.setFee(fee);
+        assert(!_callPath(path, _inv(orderId, amount), relayer));
+        assert(pp.getReceipt(merchant, orderId).status == IPaymentProcessor.Status.None);
+    }
+}
+
 contract SubscriptionsHalmos is Test {
     SubscriptionManager sm;
     HToken token;
     address merchant;
     address payer = address(0xCAFE);
+    address payout = address(0xBEEF);
 
     function setUp() public {
         sm = new SubscriptionManager();
@@ -190,5 +308,110 @@ contract SubscriptionsHalmos is Test {
         if (elapsed < interval) assert(!ok); // too early: always reverts
         assert(s.charged <= s.cap);
         assert(token.balanceOf(address(sm)) == 0);
+    }
+
+    function _subscribe(uint256 amount, uint64 interval, uint256 cap, uint256 balance) internal returns (bytes32 id) {
+        token.mint(payer, balance);
+        vm.prank(payer);
+        token.approve(address(sm), type(uint256).max);
+        SubscriptionManager.Plan memory p =
+            SubscriptionManager.Plan("plan", merchant, payout, address(token), amount, interval, type(uint64).max);
+        vm.prank(payer);
+        id = sm.subscribe(p, "", cap);
+    }
+
+    function _status(bytes32 id) internal view returns (SubscriptionManager.Status) {
+        return sm.getSubscription(id).status;
+    }
+
+    /// charge/cancel only make these moves: Active <-> PastDue, either -> Cancelled; Cancelled is terminal for
+    /// them (a payer may later re-subscribe, which starts a new cycle by design). The manager never holds tokens,
+    /// and a charge that fails moves no funds.
+    function check_subStatusMachine(uint256 amount, uint256 balance, uint8 op1, uint8 op2, uint64 t1, uint64 t2) public {
+        vm.assume(amount > 0 && amount <= type(uint128).max && balance >= amount && balance <= type(uint128).max);
+        bytes32 id = _subscribe(amount, 1 days, type(uint256).max, balance);
+        SubscriptionManager.Status s0 = _status(id);
+        _subOp(id, op1, t1);
+        SubscriptionManager.Status s1 = _status(id);
+        _subOp(id, op2, t2);
+        SubscriptionManager.Status s2 = _status(id);
+        assert(s0 == SubscriptionManager.Status.Active);
+        assert(_subForward(s0, s1) && _subForward(s1, s2));
+        assert(token.balanceOf(address(sm)) == 0);
+        // Value is conserved: charges only ever move `amount` payer -> payout (0xD00D is where a drained payer sent theirs).
+        assert(token.balanceOf(payer) + token.balanceOf(payout) + token.balanceOf(address(0xD00D)) == balance);
+        assert(token.balanceOf(payout) == sm.getSubscription(id).charged);
+    }
+
+    function _subOp(bytes32 id, uint8 op, uint64 dt) internal {
+        vm.warp(block.timestamp + dt);
+        if (op % 3 == 0) {
+            try sm.charge(id) {} catch {}
+        } else if (op % 3 == 1) {
+            vm.prank(payer);
+            try sm.cancel(id) {} catch {}
+        } else {
+            // the payer drains their wallet, so the next charge fails
+            uint256 b = token.balanceOf(payer);
+            vm.prank(payer);
+            token.transfer(address(0xD00D), b);
+        }
+    }
+
+    function _subForward(SubscriptionManager.Status a, SubscriptionManager.Status b) internal pure returns (bool) {
+        if (a == SubscriptionManager.Status.Cancelled) return b == SubscriptionManager.Status.Cancelled;
+        return b != SubscriptionManager.Status.None;
+    }
+
+    /// Exactly MAX_FAILED_CHARGES consecutive failures cancel; fewer leave it PastDue; a success in between resets
+    /// the counter. Failed charges never move funds and never advance the schedule.
+    function check_failedChargesCancelAfterMax(uint256 amount, bool recoverAfterTwo) public {
+        vm.assume(amount > 0 && amount <= type(uint128).max);
+        bytes32 id = _subscribe(amount, 1 days, type(uint256).max, amount); // only the first cycle is funded
+        uint64 due = sm.getSubscription(id).nextChargeAt;
+        vm.warp(due);
+        uint256 payoutBefore = token.balanceOf(payout);
+        for (uint256 i = 1; i <= 2; i++) {
+            assert(!sm.charge(id));
+            SubscriptionManager.Subscription memory s = sm.getSubscription(id);
+            assert(s.status == SubscriptionManager.Status.PastDue && s.failedCharges == i && s.nextChargeAt == due);
+        }
+        assert(token.balanceOf(payout) == payoutBefore);
+        if (recoverAfterTwo) {
+            token.mint(payer, amount);
+            assert(sm.charge(id));
+            SubscriptionManager.Subscription memory s = sm.getSubscription(id);
+            assert(s.status == SubscriptionManager.Status.Active && s.failedCharges == 0);
+        } else {
+            assert(!sm.charge(id));
+            assert(_status(id) == SubscriptionManager.Status.Cancelled);
+            (bool ok,) = address(sm).call(abi.encodeCall(sm.charge, (id)));
+            assert(!ok);
+        }
+    }
+
+    /// Only the payer or the merchant can cancel.
+    function check_onlyPartiesCancel(uint256 amount, address anyone) public {
+        vm.assume(amount > 0 && amount <= type(uint128).max && anyone != payer && anyone != merchant);
+        bytes32 id = _subscribe(amount, 1 days, type(uint256).max, amount);
+        vm.prank(anyone);
+        (bool ok,) = address(sm).call(abi.encodeCall(sm.cancel, (id)));
+        assert(!ok);
+        assert(_status(id) == SubscriptionManager.Status.Active);
+    }
+
+    /// A revoked plan can't be subscribed to, by anyone.
+    function check_revokedPlanBlocksSubscribe(uint256 amount, address who) public {
+        vm.assume(amount > 0 && who != address(sm));
+        vm.prank(merchant);
+        sm.revokePlan("plan");
+        token.mint(who, amount);
+        vm.prank(who);
+        token.approve(address(sm), amount);
+        SubscriptionManager.Plan memory p =
+            SubscriptionManager.Plan("plan", merchant, payout, address(token), amount, 1 days, type(uint64).max);
+        vm.prank(who);
+        (bool ok,) = address(sm).call(abi.encodeCall(sm.subscribe, (p, "", amount)));
+        assert(!ok);
     }
 }
