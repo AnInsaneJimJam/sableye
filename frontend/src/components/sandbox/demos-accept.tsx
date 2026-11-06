@@ -340,6 +340,7 @@ export function CheckoutDemo({ gasless = false }: { gasless?: boolean }) {
         {inv && !paid && (
           <div className="sbx-checkout">
             <Checkout
+              appearance={{ theme: "none" }}
               walletConnectProjectId={process.env.NEXT_PUBLIC_REOWN_PROJECT_ID}
               invoice={inv}
               onSuccess={({ txHash }) => setPaid(txHash)}

@@ -9,15 +9,15 @@ The merchant's server signs an invoice (no gas). The customer pays it in one on-
 
 ## Guardrails: follow these every time
 
-1. **The secret key never goes in client code.** `MERCHANT_KEY` is only read in server code. Never prefix it with `NEXT_PUBLIC_`, never import `sableye/server` from a client component, and keep `.env` out of git.
-2. **Set the price on the server.** Never accept an amount from the browser.
-3. **Verify on the server, never trust the client.** `onSuccess` is for UI only. Fulfil an order only after `verifyPayment(orderRef)` returns `paid: true`.
-4. **Check the chain ID.** Leave the SDK's checks on, and never catch and ignore `wrong_chain`. Don't hand-roll wallet calls: `<Checkout/>` handles chain switching.
-5. **Use testnet first.** Start on `whitechain-sepolia` with a fresh key. Move to mainnet only when the user asks; official USDT is not on mainnet yet.
-6. **Amounts are decimal strings** like `'5.00'`, never JS numbers.
-7. **Create the client inside a request handler or a lazy getter.** Creating it at module level breaks `next build` when the key isn't set. In a Next.js `GET` route, read the request before creating the client.
-8. **Pass the customer's email.** `invoices.create({ amount, customer: { email, name } })` (ask for it at checkout if needed), with `orderStore: fileOrderStore('.sableye/orders.json')` in the `Sableye` config. With email configured, Sableye then sends the invoice, the receipt and the merchant's "you got paid" notice by itself, once `verifyPayment` confirms the payment. No indexer needed.
-9. **Start the indexer on a long-running server** (Express, Fastify, Hono, plain Node, `next start` on a VPS/Railway). Two lines, once at startup, on the same `Sableye` instance the routes use: `import { fileStore } from 'sableye/server'` and `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await it). Payments are then confirmed, and emails sent, even if the customer closes the tab. Skip it on serverless (Vercel, Netlify functions).
+1. **Integrate, don't redesign.** Connect Sableye to the payment step the app already has (replace a fake, simulated or placeholder payment). Don't add products, prices, pages, buttons or form fields, and don't change how the app sells. If there is no payment step, stop and ask the merchant where payments belong.
+2. **Follow "This app's setup" in AGENTS.md.** It lists what the merchant enabled (gasless, refunds, emails, webhooks, hosting, checkout look…). Wire only those.
+3. **The secret key never goes in client code.** `MERCHANT_KEY` is only read in server code. Never prefix it with `NEXT_PUBLIC_`, never import `sableye/server` from a client component, and keep `.env` out of git.
+4. **Prices come from the app's server-side data.** Never accept an amount from the browser. Amounts are decimal strings like `'5.00'`, never JS numbers.
+5. **Verify on the server, never trust the client.** `onSuccess` is for UI only. Fulfil an order only after `verifyPayment(orderRef)` returns `paid: true`.
+6. **Don't hand-roll wallet calls.** `<Checkout/>` handles wallet, chain, gas and approval. Never catch and ignore `wrong_chain`. Match its look with `appearance` (theme + `variables` from the app's styles) instead of rewriting it.
+7. **Create the client inside a request handler or a lazy getter.** Module level breaks `next build` when the key isn't set.
+8. **Emails are automatic.** If the app already knows the customer's email, pass `customer: { email, name }` to `invoices.create`; don't add a field just for it. The merchant's "you got paid" needs nothing.
+9. **Long-running server:** start the indexer once at startup (2 lines, see AGENTS.md) so payments confirm even if the customer closes the tab. Skip it on serverless.
 
 ## Fastest start
 
@@ -69,8 +69,10 @@ import { Sableye, fileOrderStore, fileStore } from 'sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia', orderStore: fileOrderStore('.sableye/orders.json') })
 const app = express()
 
-app.post('/invoice', express.json(), async (req, res) =>
-  res.json(await sableye.invoices.create({ amount: '5.00', customer: { email: req.body.email } })))
+app.post('/orders/:id/invoice', async (req, res) => {
+  const order = await db.orders.get(req.params.id) // the app's own order: price and customer come from here
+  res.json(await sableye.invoices.create({ amount: order.total, customer: order.email ? { email: order.email } : undefined }))
+})
 
 app.get('/orders/:ref/paid', async (req, res) => {
   const { paid } = await sableye.verifyPayment(req.params.ref)

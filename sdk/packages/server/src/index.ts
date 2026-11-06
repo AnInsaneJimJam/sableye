@@ -94,6 +94,8 @@ export interface SableyeConfig {
   tokens?: Record<string, TokenConfig>
   /** Base URL of your checkout page. Payment links are `<checkoutUrl>#<signed invoice>`. Default `http://localhost:3000/pay`. */
   checkoutUrl?: string
+  /** Default wallet that receives payments (e.g. a cold wallet). Default: `SABLEYE_PAYOUT`, else the merchant key's address. */
+  payout?: Address
   /**
    * Your gasless relayer endpoint. Added to every invoice so customers can pay without holding WBT. Use an
    * absolute URL if you share payment links, because the hosted checkout page may be on another origin.
@@ -211,6 +213,7 @@ export class Sableye {
   private readonly signer: InvoiceSigner
   private readonly client: PublicClient
   private readonly checkoutUrl: string
+  private readonly payout?: Address
   /** The RPC URL in use (undefined = the network's public default). */
   readonly rpcUrl?: string
   private readonly relayUrl?: string
@@ -235,6 +238,9 @@ export class Sableye {
     this.merchant = this.signer.address
     this.client = createPublicClient({ chain: this.network.chain, transport: http(config.rpcUrl) }) as PublicClient
     this.checkoutUrl = config.checkoutUrl ?? 'http://localhost:3000/pay'
+    const payout = config.payout ?? process.env.SABLEYE_PAYOUT
+    if (payout && !/^0x[0-9a-fA-F]{40}$/.test(payout)) throw new SableyeError('invalid_payout', `Payout address ${payout} is not an address.`, 'Set SABLEYE_PAYOUT (or config.payout) to a 0x… wallet address, or remove it to receive payments at the merchant key.')
+    this.payout = payout as Address | undefined
     this.rpcUrl = config.rpcUrl
     this.relayUrl = config.relayUrl
     this.paymentLinkUrl = config.paymentLinkUrl ?? 'http://localhost:3000/api/pay'
@@ -242,9 +248,14 @@ export class Sableye {
     this.orders = config.orderStore ?? memoryOrderStore()
     this.couponStore = config.couponStore ?? memoryCouponStore()
     this.outbox = createOutbox(config.outbox)
-    this.business = config.business ?? { name: process.env.SABLEYE_BUSINESS_NAME || 'Merchant' }
+    this.business = config.business ?? {
+      name: process.env.SABLEYE_BUSINESS_NAME || 'Merchant',
+      ...(process.env.SABLEYE_BUSINESS_ADDRESS && { address: process.env.SABLEYE_BUSINESS_ADDRESS }),
+      ...(process.env.SABLEYE_SUPPORT_EMAIL && { email: process.env.SABLEYE_SUPPORT_EMAIL }),
+    }
     this.mail = attachEmails(config.email === false ? undefined : (config.email ?? emailConfigFromEnv()), this.outbox, {
       businessName: this.business.name,
+      business: this.business,
       merchant: this.merchant,
       getOrder: (id) => this.orders.get(id),
       verify: (id) => this.checkPayment(id),
@@ -363,7 +374,7 @@ export class Sableye {
       const invoice: Invoice = {
         orderId: toOrderId(orderRef),
         merchant: this.merchant,
-        payout: params.payout ?? this.merchant,
+        payout: params.payout ?? this.payout ?? this.merchant,
         token: token.address,
         amount: price.total,
         expiry: BigInt(Math.floor(Date.now() / 1000) + (params.expiresIn ?? 1800)),

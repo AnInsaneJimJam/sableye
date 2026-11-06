@@ -4,6 +4,8 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync, cpSync } from 'node:fs'
 import { join } from 'node:path'
+import { agentsBlock } from './config.mjs'
+export { agentPrompt } from './config.mjs'
 
 export const BEGIN = '<!-- BEGIN sableye'
 export const END = '<!-- END sableye -->'
@@ -21,6 +23,7 @@ export function detectProject(dir = '.') {
   else if (has('fastify')) framework = 'fastify'
   else if (has('hono')) framework = 'hono'
   else if (has('vite') && has('react')) framework = 'vite-react'
+  else if (['index.html', 'public/index.html', 'dist/index.html', 'src/index.html'].some((f) => existsSync(join(dir, f)))) framework = 'static'
   const pm = existsSync(join(dir, 'pnpm-lock.yaml')) ? 'pnpm' : existsSync(join(dir, 'yarn.lock')) ? 'yarn' : existsSync(join(dir, 'bun.lock')) || existsSync(join(dir, 'bun.lockb')) ? 'bun' : 'npm'
   return {
     hasPackageJson: !!pkg, framework, ts, pm,
@@ -31,7 +34,7 @@ export function detectProject(dir = '.') {
 
 export const FRAMEWORK_NAMES = {
   'next-app': 'Next.js (App Router)', 'next-pages': 'Next.js (Pages Router)', express: 'Express', fastify: 'Fastify',
-  hono: 'Hono', 'vite-react': 'React (Vite)', node: 'Node.js',
+  hono: 'Hono', 'vite-react': 'React (Vite)', static: 'Static site (HTML/JS)', node: 'Node.js',
 }
 
 /** The install command for the missing packages, or undefined if nothing is missing. */
@@ -51,12 +54,14 @@ export function upsertBlock(text, block) {
 
 /**
  * Write the agent files into the repo at `dir`: the AGENTS.md block, a CLAUDE.md pointer (Claude Code reads CLAUDE.md;
- * `@AGENTS.md` imports it) and the skill. `pkgDir` is the installed sableye package (holds docs/ and skills/).
+ * `@AGENTS.md` imports it) and the skill. `pkgDir` is the installed sableye package (holds docs/ and skills/); `config` is
+ * the "sableye" section of package.json, which decides what the block says.
  * Returns the paths it touched.
  */
-export function installAgentFiles({ dir = '.', pkgDir }) {
+export function installAgentFiles({ dir = '.', pkgDir, config }) {
   const touched = []
-  const block = readFileSync(join(pkgDir, 'docs/AGENTS.block.md'), 'utf8')
+  const version = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8')).version
+  const block = agentsBlock(config, { version, index: readFileSync(join(pkgDir, 'docs/AGENTS.index.md'), 'utf8') })
   const agents = join(dir, 'AGENTS.md')
   const before = existsSync(agents) ? readFileSync(agents, 'utf8') : ''
   const after = upsertBlock(before, block)
@@ -74,42 +79,6 @@ export function installAgentFiles({ dir = '.', pkgDir }) {
   cpSync(join(pkgDir, 'skills/sableye/SKILL.md'), join(skillDir, 'SKILL.md'))
   touched.push('.claude/skills/sableye/SKILL.md')
   return touched
-}
-
-const SHAPE = {
-  'next-app': 'Add a route handler that creates the invoice (price set on the server), one that verifies it, and a page that renders <Checkout> from sableye/react.',
-  'next-pages': 'Add API routes under pages/api that create the invoice (price set on the server) and verify it, and a page that renders <Checkout> from sableye/react.',
-  express: 'Add routes that create the invoice (price set on the server) and verify it. In the UI, render <Checkout> from sableye/react, or redirect to the invoice\'s checkoutUrl.',
-  fastify: 'Add routes that create the invoice (price set on the server) and verify it. In the UI, render <Checkout> from sableye/react, or redirect to the invoice\'s checkoutUrl.',
-  hono: 'Add routes that create the invoice (price set on the server) and verify it. In the UI, render <Checkout> from sableye/react, or redirect to the invoice\'s checkoutUrl.',
-  'vite-react': 'This is a browser-only app, and invoices must be signed on a server. Add a small server or serverless functions to create and verify invoices, and render <Checkout> from sableye/react in the UI.',
-  node: 'Add server code that creates the invoice (price set on the server) and verifies it, and a checkout UI: <Checkout> from sableye/react, or a redirect to the invoice\'s checkoutUrl.',
-}
-
-// Long-running servers also start the indexer (2 lines), so payments confirm even if the customer closes the tab.
-const INDEXER = {
-  next: '- If this app runs as a long-running server (next start on a VPS or Railway), start the Sableye indexer once at startup (AGENTS.md shows the 2 lines). On Vercel, skip it: the thank-you page\'s verifyPayment confirms the payment.',
-  server: '- Start the Sableye indexer once when the server starts, on the same Sableye instance the routes use (AGENTS.md shows the 2 lines), so payments are confirmed even if the customer closes the tab.',
-  browser: '- If the server you add is long-running (not serverless functions), start the Sableye indexer once at startup (AGENTS.md shows the 2 lines).',
-}
-const indexerLine = (f) => (f.startsWith('next') ? INDEXER.next : f === 'vite-react' ? INDEXER.browser : INDEXER.server)
-
-/** The prompt the merchant pastes into their coding agent. Holds no secrets. */
-export function agentPrompt({ framework, ts, sells, envFile = '.env' }) {
-  const app = `${FRAMEWORK_NAMES[framework] ?? 'Node.js'}${ts ? ', TypeScript' : ''}`
-  return [
-    `Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to add USDT payments to this ${app} app.`,
-    '',
-    `What customers pay for: ${sells || 'work it out from the app. If it already has a payment step (even a simulated one), replace it with Sableye; otherwise pick the natural place (pricing, cart, invoices). Use the app\'s own prices, and tell me what you chose.'}`,
-    '',
-    `- Before writing payment code, read the matching guide in node_modules/sableye/docs/ (the APIs are newer than your training data).`,
-    `- ${SHAPE[framework] ?? SHAPE.node}`,
-    '- Fulfil an order only after the server\'s verifyPayment returns paid: true. After payment, send the customer to a thank-you page.',
-    indexerLine(framework),
-    '- Pass the customer\'s email (ask for it at checkout if the app doesn\'t have it) as customer: { email, name } to invoices.create, and use fileOrderStore for orders, so Sableye emails the invoice, the receipt and my "you got paid" notice.',
-    `- ${envFile} is already configured. Don't print, copy or commit its values.`,
-    '- When done, run `npx sableye doctor` and the build, then tell me how to make a test payment.',
-  ].join('\n')
 }
 
 /** Best-effort copy to the system clipboard. Returns true if it worked. */

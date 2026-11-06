@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tea House</title></head>
+<body style="font-family: system-ui; max-width: 640px; margin: 40px auto">
+  <h1>Tea House</h1>
+  <ul id="menu"></ul>
+  <p id="status"></p>
+  <script>
+    const status = document.getElementById('status')
+    fetch('/api/menu').then((r) => r.json()).then((menu) => {
+      for (const [id, item] of Object.entries(menu)) {
+        const li = document.createElement('li')
+        li.innerHTML = `${item.name}: ${item.price} USDT <button>Pay now</button>`
+        li.querySelector('button').onclick = async () => {
+          const order = await (await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ item: id }) })).json()
+          const paid = await (await fetch(`/api/orders/${order.id}/pay`, { method: 'POST' })).json()
+          status.textContent = `Order ${paid.id}: ${paid.status}`
+        }
+        document.getElementById('menu').append(li)
+      }
+    })
+  </script>
+</body>
+</html>

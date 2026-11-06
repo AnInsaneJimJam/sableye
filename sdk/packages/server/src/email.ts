@@ -44,11 +44,11 @@ export function resendTransport(apiKey: string, fetchImpl: typeof fetch = fetch)
       if (r.ok || (r.status === 401 && /restricted_api_key/.test(await r.clone().text()))) return true
       throw await fail(r)
     },
-    async sendMail(m: { from: string; to: string; subject: string; text: string; html?: string; attachments?: { filename: string; content: Buffer }[] }) {
+    async sendMail(m: { from: string; to: string; subject: string; text: string; html?: string; replyTo?: string; attachments?: { filename: string; content: Buffer }[] }) {
       const r = await call('/emails', {
         method: 'POST',
         body: JSON.stringify({
-          from: m.from, to: [m.to], subject: m.subject, text: m.text, html: m.html,
+          from: m.from, to: [m.to], subject: m.subject, text: m.text, html: m.html, ...(m.replyTo && { reply_to: m.replyTo }),
           attachments: m.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })),
         }),
       })
@@ -135,6 +135,8 @@ export interface EmailLogEntry {
 /** What the email module needs from the Sableye client. */
 export interface EmailDeps {
   businessName: string
+  /** Support email (Reply-To) and address (footer). Real contact details help keep mail out of spam folders. */
+  business?: { name: string; address?: string; email?: string }
   merchant: string
   getOrder(orderId: Hex): Promise<OrderDetails | undefined>
   verify(orderId: Hex): Promise<{ paid: boolean; amountFormatted?: string; payer?: string; paidAt?: Date; explorerUrl?: string }>
@@ -178,10 +180,18 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
   const from = () => cfg!.from ?? `"${deps.businessName.replace(/"/g, '')}" <${cfg!.user}>`
   const notifyTo = () => (cfg?.notify === false ? undefined : (cfg?.notify ?? cfg?.user))
 
+  // A plain footer with who sent it and how to reach them: transactional mail with real contact details is trusted more.
+  const footer = () => {
+    const b = deps.business
+    const lines = [`${deps.businessName}${b?.address ? ` · ${b.address}` : ''}`, ...(b?.email ? [`Questions? Reply to this email or write to ${b.email}.`] : [])]
+    return `\n\n--\n${lines.join('\n')}`
+  }
   const send = async (to: string, subject: string, text: string, attachment?: { filename: string; bytes: Uint8Array }) => {
     transport ??= smtpTransport(cfg!)
+    const body = text + footer()
     await transport.sendMail({
-      from: from(), to, subject, text, html: html(text),
+      from: from(), to, subject, text: body, html: html(body),
+      ...(deps.business?.email && { replyTo: deps.business.email }),
       attachments: attachment ? [{ filename: attachment.filename, content: Buffer.from(attachment.bytes), contentType: 'application/pdf' }] : [],
     })
   }

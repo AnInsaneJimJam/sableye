@@ -53,6 +53,7 @@ export default function PayPage() {
         ) : (
           <div className="sbx-checkout">
             <Checkout
+              appearance={{ theme: "none" }}
               key={hash}
               invoice={hash}
               walletConnectProjectId={process.env.NEXT_PUBLIC_REOWN_PROJECT_ID}

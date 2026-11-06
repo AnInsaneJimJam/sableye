@@ -1,40 +1,38 @@
 # AI integration eval
 
-Can an AI coding agent integrate Sableye into a **blank** Next.js app, set up exactly as `npx sableye init` sets up a
-merchant's repo (the `sableye` package installed, `.env`, a Sableye block in `AGENTS.md` indexing the docs bundled in
-`node_modules/sableye/docs/`, the skill in `.claude/skills/sableye`) and given the prompt `init` prints?
-Harness: `scripts/ai-eval/run.mjs` (re-run it to reproduce).
+Can an AI coding agent add Sableye to a **real-shaped merchant app that already has its own (fake) payment step**, set up
+exactly as a merchant would (`sableye` installed, `npx sableye init --yes`), given only the prompt `init` printed, and
+**integrate without redesigning the app**? Harness: `scripts/ai-eval/run.mjs` (re-run it to reproduce). Apps:
+`scripts/ai-eval/fixtures/`: a Next.js shop (deployed to Vercel → serverless, or Railway → long-running), an Express
+shop, and a static HTML site with no server.
 
-**Pass rate: 3/3 (100%)**. Run on 2026-11-06 with Claude Code (`claude -p`, edit + npm/npx tools only).
-
-Task given to the agent:
-
-> Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to add USDT payments to this Next.js (App Router), TypeScript app.
-> 
-> What customers pay for: "Masala chai" for 1.00 USDT on Whitechain Sepolia. A Buy button on the home page that shows the Sableye checkout, and a receipt page that confirms the payment on the server.
-> 
-> - Before writing payment code, read the matching guide in node_modules/sableye/docs/ (the APIs are newer than your training data).
-> - Add a route handler that creates the invoice (price set on the server), one that verifies it, and a page that renders <Checkout> from sableye/react.
-> - Fulfil an order only after the server's verifyPayment returns paid: true. After payment, send the customer to a thank-you page.
-> - .env is already configured. Don't print, copy or commit its values.
-> - When done, run `npx sableye doctor` and the build, then tell me how to make a test payment.
-> 
-> Don't ask questions; just do it.
+**Pass rate: 12/12 (100%)**. Run on 2026-11-06 with Claude Code (`claude -p`, edit + npm/npx/node tools only).
 
 A trial passes only if every check passes:
 
 | Check | Meaning |
 |---|---|
-| builds | `npm run build` succeeds |
+| builds | Next.js: `npm run build`; Node: every server file parses |
+| serves | the app starts and serves its home page |
 | signsOnServer | `invoices.create()` is called from server code |
-| verifiesOnServer | `verifyPayment()` is called from server code (the receipt doesn't trust the browser) |
-| usesCheckoutWidget | `<Checkout/>` is rendered in a client component |
-| keyStaysOnServer | no client component references the merchant key |
-| correctNetwork | uses `whitechain-sepolia` |
-| doctorPasses | `npx sableye doctor` exits 0 in the generated app |
+| verifiesOnServer | `verifyPayment()` is called from server code |
+| usesCheckout | the checkout is shown (`<Checkout>`, `createCheckout` or the hosted `checkoutUrl`) |
+| keyStaysOnServer | no client code references the merchant key |
+| followsSetup | what `init` configured is wired: the gasless relay route, and the indexer on long-running hosts |
+| noNewUi | no new buttons, inputs or forms, and no new pages (a hosted pay/checkout page is allowed) |
+| doctorPasses | `npx sableye doctor` exits 0 in the result |
 
-| Trial | Result | builds | signsOnServer | verifiesOnServer | usesCheckoutWidget | keyStaysOnServer | correctNetwork | doctorPasses | Minutes | Turns |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.3 | 15 |
-| 2 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.6 | 17 |
-| 3 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.7 | 13 |
+| App | Trial | Result | builds | serves | signsOnServer | verifiesOnServer | usesCheckout | keyStaysOnServer | followsSetup | noNewUi | doctorPasses | Minutes | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| next-vercel | 1 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.5 | $0.48 |
+| next-vercel | 2 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.5 | $0.49 |
+| next-vercel | 3 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.6 | $0.49 |
+| next-railway | 1 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 2 | $0.55 |
+| next-railway | 2 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 2 | $0.60 |
+| next-railway | 3 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.9 | $0.59 |
+| express | 1 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.5 | $0.65 |
+| express | 2 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.8 | $0.64 |
+| express | 3 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.8 | $0.71 |
+| static | 1 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 2 | $0.76 |
+| static | 2 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 2.5 | $0.75 |
+| static | 3 | ✅ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 1.6 | $0.72 |

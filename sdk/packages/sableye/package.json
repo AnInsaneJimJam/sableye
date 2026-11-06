@@ -1,6 +1,6 @@
 {
   "name": "sableye",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Stripe-style USDT checkout on Whitechain: signed invoices, hosted and React checkout, gasless payments, refunds, subscriptions, webhooks, emails, and merchant-owned records. Non-custodial.",
   "license": "MIT",
   "type": "module",
@@ -41,7 +41,8 @@
     "bin",
     "create",
     "docs",
-    "skills"
+    "skills",
+    "browser"
   ],
   "scripts": {
     "build": "node build.mjs",
@@ -80,7 +81,8 @@
     "viem": "^2.57.16",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "esbuild": "^0.28.2"
   },
   "repository": {
     "type": "git",

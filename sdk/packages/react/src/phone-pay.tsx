@@ -30,10 +30,11 @@ export function QrCode({ value, size = 184, title }: { value: string; size?: num
 export function QrToggle({ open, onClick }: { open: boolean; onClick: () => void }) {
   return (
     <button type="button" data-sableye-qr-toggle aria-expanded={open} aria-label={open ? 'Hide phone wallet QR code' : 'Pay with a phone wallet'} title="Pay with a phone wallet" onClick={onClick}>
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
         <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
       </svg>
+      Phone
     </button>
   )
 }

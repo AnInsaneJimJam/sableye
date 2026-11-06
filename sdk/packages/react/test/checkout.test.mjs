@@ -92,7 +92,7 @@ test('click pay -> paid: onSuccess fires once and shows the result', async () =>
   const wins = []
   const { status, button, host, root } = await mount({ invoice: wire, provider: await makeWallet(), onSuccess: (r) => wins.push(r) })
   await until(() => status() === 'ready')
-  assert.match(button().textContent, /Pay 5 USDT/)
+  assert.match(button().textContent, /Pay 5.00 USDT/)
   await act(async () => button().click())
   await until(() => status() === 'success')
   assert.equal(wins.length, 1)
@@ -126,7 +126,7 @@ test('errors reach onError with a remedy, and show in the DOM', async () => {
   assert.equal(host.querySelector('[data-sableye-error]').dataset.sableyeCode, 'insufficient_balance')
   assert.match(button().textContent, /Try again/)
   // The account that was checked is shown, with a way to pick another one.
-  assert.ok(host.querySelector('[data-sableye-account] code'))
+  assert.match(host.querySelector('[data-sableye-account]').textContent, /Paying from 0x[0-9a-fA-F]{4}…/)
   assert.ok(host.querySelector('[data-sableye-switch-account]'))
   await act(async () => root.unmount())
 })
@@ -150,7 +150,7 @@ test('several EIP-6963 wallets get one button each', async () => {
   const inv = await sableye.invoices.create({ amount: '1.00', orderId: `o${++order}` })
   const { host, root } = await mount({ invoice: inv })
   await until(() => host.querySelectorAll('[data-sableye-pay]').length === 2)
-  assert.deepEqual([...host.querySelectorAll('[data-sableye-pay]')].map((b) => b.textContent.trim()), ['Pay 1 USDT with WalletA', 'Pay 1 USDT with WalletB'])
+  assert.deepEqual([...host.querySelectorAll('[data-sableye-pay]')].map((b) => b.textContent.trim()), ['Pay 1.00 USDT with WalletA', 'Pay 1.00 USDT with WalletB'])
   window.removeEventListener('eip6963:requestProvider', announce)
   await act(async () => root.unmount())
 })

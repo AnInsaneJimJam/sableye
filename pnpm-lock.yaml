@@ -264,6 +264,9 @@ importers:
       create-sableye-app:
         specifier: workspace:*
         version: link:../create-sableye-app
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
       react:
         specifier: ^19.0.0
         version: 19.3.0

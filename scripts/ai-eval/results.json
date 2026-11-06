@@ -1,81 +1,506 @@
 [
   {
+    "shape": "next-vercel",
     "trial": 1,
-    "dir": "/tmp/ai-eval-1-pHj9WF",
-    "minutes": 1.3,
-    "turns": 15,
-    "costUsd": 0.3935872,
+    "dir": "/tmp/ai-eval-next-vercel-1-PaSjQs",
+    "minutes": 1.5,
+    "turns": 14,
+    "costUsd": 0.47886380000000006,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Next.js (App Router), TypeScript app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs serverless: create `new Sableye(...)` inside each handler (or a lazy getter). Payments are confirmed by `verifyPayment` when the customer returns; for tabs closed early, a cron route can call `sableye.indexer({ store }).poll()` with a durable store (docs: indexer.md).\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
     "checks": {
       "builds": true,
+      "serves": true,
       "signsOnServer": true,
       "verifiesOnServer": true,
-      "usesCheckoutWidget": true,
+      "usesCheckout": true,
       "keyStaysOnServer": true,
-      "correctNetwork": true,
+      "followsSetup": true,
+      "noNewUi": true,
       "doctorPasses": true
     },
     "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      }
+    },
     "files": [
-      "app/api/invoice/route.ts",
-      "app/api/verify/route.ts",
+      "app/api/order/route.ts",
+      "app/api/relay/route.ts",
       "app/layout.tsx",
       "app/page.tsx",
-      "app/thank-you/page.tsx",
+      "app/products.ts",
       "lib/sableye.ts",
       "next-env.d.ts"
     ]
   },
   {
+    "shape": "next-vercel",
     "trial": 2,
-    "dir": "/tmp/ai-eval-2-IvH7xY",
-    "minutes": 1.6,
-    "turns": 17,
-    "costUsd": 0.45822859999999993,
+    "dir": "/tmp/ai-eval-next-vercel-2-gEMxnt",
+    "minutes": 1.5,
+    "turns": 15,
+    "costUsd": 0.4919418,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Next.js (App Router), TypeScript app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs serverless: create `new Sableye(...)` inside each handler (or a lazy getter). Payments are confirmed by `verifyPayment` when the customer returns; for tabs closed early, a cron route can call `sableye.indexer({ store }).poll()` with a durable store (docs: indexer.md).\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
     "checks": {
       "builds": true,
+      "serves": true,
       "signsOnServer": true,
       "verifiesOnServer": true,
-      "usesCheckoutWidget": true,
+      "usesCheckout": true,
       "keyStaysOnServer": true,
-      "correctNetwork": true,
+      "followsSetup": true,
+      "noNewUi": true,
       "doctorPasses": true
     },
     "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      }
+    },
     "files": [
-      "app/api/invoice/route.ts",
-      "app/api/verify/route.ts",
+      "app/api/order/route.ts",
+      "app/api/relay/route.ts",
       "app/layout.tsx",
-      "app/lib/sableye.ts",
       "app/page.tsx",
-      "app/pay/page.tsx",
-      "app/thanks/page.tsx",
+      "app/products.ts",
+      "lib/sableye.ts",
       "next-env.d.ts"
     ]
   },
   {
+    "shape": "next-vercel",
     "trial": 3,
-    "dir": "/tmp/ai-eval-3-wr7HU6",
-    "minutes": 1.7,
-    "turns": 13,
-    "costUsd": 0.4106248,
+    "dir": "/tmp/ai-eval-next-vercel-3-5tCwJZ",
+    "minutes": 1.6,
+    "turns": 15,
+    "costUsd": 0.48621179999999997,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Next.js (App Router), TypeScript app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs serverless: create `new Sableye(...)` inside each handler (or a lazy getter). Payments are confirmed by `verifyPayment` when the customer returns; for tabs closed early, a cron route can call `sableye.indexer({ store }).poll()` with a durable store (docs: indexer.md).\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
     "checks": {
       "builds": true,
+      "serves": true,
       "signsOnServer": true,
       "verifiesOnServer": true,
-      "usesCheckoutWidget": true,
+      "usesCheckout": true,
       "keyStaysOnServer": true,
-      "correctNetwork": true,
+      "followsSetup": true,
+      "noNewUi": true,
       "doctorPasses": true
     },
     "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      }
+    },
     "files": [
-      "app/api/invoice/route.ts",
-      "app/api/verify/route.ts",
+      "app/api/order/route.ts",
+      "app/api/relay/route.ts",
       "app/layout.tsx",
       "app/page.tsx",
-      "app/thanks/page.tsx",
+      "app/products.ts",
       "lib/sableye.ts",
       "next-env.d.ts"
+    ]
+  },
+  {
+    "shape": "next-railway",
+    "trial": 1,
+    "dir": "/tmp/ai-eval-next-railway-1-qt2JQn",
+    "minutes": 2,
+    "turns": 22,
+    "costUsd": 0.5520233999999999,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Next.js (App Router), TypeScript app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      }
+    },
+    "files": [
+      "app/api/order/route.ts",
+      "app/api/relay/route.ts",
+      "app/layout.tsx",
+      "app/page.tsx",
+      "app/products.ts",
+      "instrumentation.ts",
+      "lib/sableye.ts",
+      "next-env.d.ts"
+    ]
+  },
+  {
+    "shape": "next-railway",
+    "trial": 2,
+    "dir": "/tmp/ai-eval-next-railway-2-KqiY94",
+    "minutes": 2,
+    "turns": 22,
+    "costUsd": 0.6004906000000001,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Next.js (App Router), TypeScript app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      }
+    },
+    "files": [
+      "app/api/order/route.ts",
+      "app/api/relay/route.ts",
+      "app/layout.tsx",
+      "app/page.tsx",
+      "app/products.ts",
+      "instrumentation.ts",
+      "lib/sableye.ts",
+      "next-env.d.ts"
+    ]
+  },
+  {
+    "shape": "next-railway",
+    "trial": 3,
+    "dir": "/tmp/ai-eval-next-railway-3-Y7lRsR",
+    "minutes": 1.9,
+    "turns": 22,
+    "costUsd": 0.5855080000000001,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Next.js (App Router), TypeScript app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "app/page.tsx"
+        ]
+      }
+    },
+    "files": [
+      "app/api/order/route.ts",
+      "app/api/relay/route.ts",
+      "app/layout.tsx",
+      "app/page.tsx",
+      "app/products.ts",
+      "instrumentation.ts",
+      "lib/sableye.ts",
+      "next-env.d.ts"
+    ]
+  },
+  {
+    "shape": "express",
+    "trial": 1,
+    "dir": "/tmp/ai-eval-express-1-ADbBKh",
+    "minutes": 1.5,
+    "turns": 23,
+    "costUsd": 0.6462562,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Express app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "public/index.html"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "public/index.html"
+        ]
+      }
+    },
+    "files": [
+      "public/index.html",
+      "server.js"
+    ]
+  },
+  {
+    "shape": "express",
+    "trial": 2,
+    "dir": "/tmp/ai-eval-express-2-L1ycXG",
+    "minutes": 1.8,
+    "turns": 22,
+    "costUsd": 0.6405168,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Express app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "public/index.html"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "public/index.html"
+        ]
+      }
+    },
+    "files": [
+      "public/index.html",
+      "server.js"
+    ]
+  },
+  {
+    "shape": "express",
+    "trial": 3,
+    "dir": "/tmp/ai-eval-express-3-BqpWpg",
+    "minutes": 1.8,
+    "turns": 25,
+    "costUsd": 0.7094802000000002,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Express app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 1,
+        "pages": [
+          "public/index.html"
+        ]
+      },
+      "after": {
+        "controls": 1,
+        "pages": [
+          "public/index.html"
+        ]
+      }
+    },
+    "files": [
+      "public/index.html",
+      "server.js"
+    ]
+  },
+  {
+    "shape": "static",
+    "trial": 1,
+    "dir": "/tmp/ai-eval-static-1-AgAXDs",
+    "minutes": 2,
+    "turns": 25,
+    "costUsd": 0.7640167999999999,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Node.js app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 4,
+        "pages": [
+          "site/index.html"
+        ]
+      },
+      "after": {
+        "controls": 4,
+        "pages": [
+          "site/index.html"
+        ]
+      }
+    },
+    "files": [
+      "server.js",
+      "site/app.js",
+      "site/index.html"
+    ]
+  },
+  {
+    "shape": "static",
+    "trial": 2,
+    "dir": "/tmp/ai-eval-static-2-o6nlax",
+    "minutes": 2.5,
+    "turns": 24,
+    "costUsd": 0.7529518000000001,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Node.js app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 4,
+        "pages": [
+          "site/index.html"
+        ]
+      },
+      "after": {
+        "controls": 4,
+        "pages": [
+          "site/index.html"
+        ]
+      }
+    },
+    "files": [
+      "server.js",
+      "site/app.js",
+      "site/index.html"
+    ]
+  },
+  {
+    "shape": "static",
+    "trial": 3,
+    "dir": "/tmp/ai-eval-static-3-y9MS5G",
+    "minutes": 1.6,
+    "turns": 22,
+    "costUsd": 0.7175974,
+    "prompt": "Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to accept USDT in this Node.js app.\n\nWhat customers pay for: work it out from the app. Use its existing payment step and prices, and tell me what you chose.\n\nIntegrate into what exists: don't add new products, pages, buttons or form fields, or change how the app sells. If there's no payment step, ask me first.\n\n- Find the payment step the app already has and connect it to Sableye: the server creates the invoice with `invoices.create` (amount from the app's own data), the existing pay action shows `<Checkout>` from sableye/react, and the order is marked paid only after the server's `verifyPayment` returns paid: true.\n- Runs as a long-running server: create one `Sableye` client (lazy getter is fine) and, once at startup, `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await). It confirms payments even if the customer closes the tab. Use `orderStore: fileOrderStore('.sableye/orders.json')` so order details survive restarts.\n- Checkout look: `<Checkout appearance={{ theme: 'light' }}>`; set `appearance.variables` (colorPrimary, borderRadius, fontFamily) from the app's existing styles so it matches.\n- Gasless: on. Add a POST route that is `sableye.relayHandler()` and pass its absolute URL as `relayUrl` in the Sableye config (docs: gasless.md). The merchant wallet pays the gas.\n- .env is already configured. Don't print, copy or commit its values.\n- When done, run `npx sableye doctor` and the build, then tell me exactly what you changed and how to make a test payment.",
+    "checks": {
+      "builds": true,
+      "serves": true,
+      "signsOnServer": true,
+      "verifiesOnServer": true,
+      "usesCheckout": true,
+      "keyStaysOnServer": true,
+      "followsSetup": true,
+      "noNewUi": true,
+      "doctorPasses": true
+    },
+    "pass": true,
+    "ui": {
+      "before": {
+        "controls": 4,
+        "pages": [
+          "site/index.html"
+        ]
+      },
+      "after": {
+        "controls": 4,
+        "pages": [
+          "site/index.html"
+        ]
+      }
+    },
+    "files": [
+      "server.js",
+      "site/app.js",
+      "site/index.html"
     ]
   }
 ]

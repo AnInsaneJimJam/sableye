@@ -30,3 +30,11 @@ test('sableye CLI: usage, and `create` scaffolds a store that depends on `sabley
   assert.ok(m.dependencies.sableye)
   assert.ok(existsSync(join(cwd, 'shop/.gitignore')))
 })
+
+test('the drop-in browser build ships and exposes SableyeCheckout.mount', async () => {
+  const { readFileSync } = await import('node:fs')
+  const js = readFileSync(new URL('../browser/checkout.js', import.meta.url), 'utf8')
+  assert.match(js, /var SableyeCheckout=/)
+  assert.match(js, /mount/)
+  assert.ok(js.length < 1_000_000, 'stays under 1 MB')
+})

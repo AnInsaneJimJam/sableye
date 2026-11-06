@@ -20,7 +20,7 @@ const { paid } = await sableye.verifyPayment('order_123') // fulfil only after t
 
 One package, `sableye`. Needs Node 22 or newer.
 
-**Existing app:** run this in its folder. It installs the package, sets up `.env` and your coding agent, then prints a prompt to paste into Claude Code, Cursor, Codex or Copilot:
+**Existing app:** run this in its folder. It asks what you need (features, emails via Resend or SMTP, where the app runs, the checkout look), sets up `.env` and your coding agent, then prints a prompt that wires Sableye into your existing payment step. Paste it into Claude Code, Cursor, Codex or Copilot:
 
 ```sh
 npx sableye init
@@ -158,7 +158,7 @@ The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye.xyz/
 
 `npx sableye init` sets up the merchant's coding agent as well as `.env`. It writes a managed Sableye block into `AGENTS.md` with the rules and an index of the docs bundled in `node_modules/sableye/docs/`, so they always match the installed version. It adds `@AGENTS.md` to `CLAUDE.md` and installs the skill in `.claude/skills/sableye/`. Then it prints a prompt that names the skill. That's the layout [Vercel's agent evals](https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals) found most reliable: an `AGENTS.md` docs index scored 100%, against 53–79% for skills alone. `npx sableye agents` redoes just this step.
 
-**Measured:** we set up a blank Next.js app exactly as `npx sableye init` would, and gave Claude Code the prompt `init` prints. It integrated Sableye correctly in **3/3 trials**, taking 1.3–1.7 min and about $0.40 each. Each trial passed seven automatic checks: server-side signing and verification, key safety, the right network, a successful build, and `sableye doctor`. Details and reproduction: [project-docs/AI_EVAL.md](project-docs/AI_EVAL.md).
+**Measured:** four real-shaped merchant apps, each with its own fake payment step: a Next.js shop on Vercel (serverless), the same shop on Railway (long-running), an Express shop, and a static HTML site with no server. Each was set up with the real `npx sableye init --yes`, and Claude Code got only the prompt it printed. The result was **12/12 trials** passing nine automatic checks, including server-side signing and verification, key safety, the features init configured (gasless relay, indexer), the app starting, `sableye doctor`, and **no new buttons, fields or pages** (it wired Sableye into the existing payment step). Details and reproduction: [project-docs/AI_EVAL.md](project-docs/AI_EVAL.md).
 
 ## Emails, PDFs and merchant-owned records (Arkiv)
 

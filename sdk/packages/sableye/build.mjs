@@ -8,13 +8,13 @@ import ts from 'typescript'
 
 const here = (p) => new URL(p, import.meta.url).pathname
 const pkgs = here('../')
-for (const d of ['dist', 'bin', 'create', 'docs', 'skills', 'LICENSE']) rmSync(here(d), { recursive: true, force: true })
+for (const d of ['dist', 'bin', 'create', 'docs', 'skills', 'browser', 'LICENSE']) rmSync(here(d), { recursive: true, force: true })
 
 for (const [from, to] of [['core', 'core'], ['server', 'server'], ['react', 'react'], ['mcp', 'mcp']]) {
   cpSync(join(pkgs, from, 'dist'), here(`dist/${to}`), { recursive: true })
 }
 cpSync(join(pkgs, 'server/bin/sableye.mjs'), here('bin/cli.mjs'))
-for (const f of ['init.mjs', 'agents.mjs', 'banner.mjs']) cpSync(join(pkgs, `server/bin/${f}`), here(`bin/${f}`))
+for (const f of ['init.mjs', 'agents.mjs', 'banner.mjs', 'config.mjs']) cpSync(join(pkgs, `server/bin/${f}`), here(`bin/${f}`))
 cpSync(join(pkgs, 'mcp/bin/sableye-mcp.mjs'), here('bin/mcp.mjs'))
 cpSync(join(pkgs, 'create-sableye-app/bin.mjs'), here('create/bin.mjs'))
 cpSync(join(pkgs, 'create-sableye-app/template'), here('create/template'), { recursive: true })
@@ -48,6 +48,16 @@ for (const f of walk(here('dist'))) {
 rewrite(here('bin/cli.mjs'), [[`'../dist/index.js'`, `'../dist/server/index.js'`]])
 rewrite(here('bin/mcp.mjs'), [[`'../dist/index.js'`, `'../dist/mcp/index.js'`], [`'@sableye/server'`, `'../dist/server/index.js'`]])
 
+// ---- The drop-in browser build: <Checkout> for pages without React or a bundler (plain HTML, classic Express apps) ----
+const esbuild = await import('esbuild')
+await esbuild.build({
+  entryPoints: [join(pkgs, 'react/src/browser.ts')], bundle: true, minify: true, format: 'iife', globalName: 'SableyeCheckout',
+  platform: 'browser', target: 'es2020', outfile: here('browser/checkout.js'), legalComments: 'none',
+  define: { 'process.env.NODE_ENV': '"production"' },
+  external: ['@walletconnect/universal-provider'], // optional; needs a bundler. The drop-in offers the phone QR instead.
+  logLevel: 'warning',
+})
+
 // ---- Docs for coding agents, version-matched and inside the package (node_modules/sableye/docs) ----
 // Rendered from the developer docs site (frontend/src/lib/docs), plus the full API reference (llms.txt) and the skill.
 const repo = join(pkgs, '../..')
@@ -70,16 +80,6 @@ for (const page of pages) {
 cpSync(join(repo, 'llms.txt'), here('docs/api.md'))
 cpSync(join(repo, 'skills/sableye'), here('skills/sableye'), { recursive: true })
 
-const RULES = [
-  'MERCHANT_KEY is server-only: never NEXT_PUBLIC_, never import `sableye/server` in client code, never print or commit env files.',
-  'Set prices on the server; amounts are decimal strings ("5.00"), never JS numbers.',
-  'Fulfil an order only after the server\'s `verifyPayment(orderRef)` returns `paid: true`; `onSuccess` in the browser is UI only.',
-  'Create `new Sableye(...)` inside a request handler or a lazy getter (module level breaks `next build`).',
-  'Use network `whitechain-sepolia` (testnet) unless told otherwise. Don\'t hand-roll wallet calls: `<Checkout>` handles chain, gas and token approval.',
-  'Errors are `SableyeError` with `code` and `remedy`: act on the remedy.',
-  'Long-running server (Express, Fastify, Hono, plain Node, `next start` on a VPS/Railway): start the indexer once at startup, on the same Sableye instance your routes use: `import { fileStore } from \'sableye/server\'` then `sableye.indexer({ store: fileStore(\'.sableye/state.json\') }).start().catch(console.error)` (don\'t await it). It confirms payments even if the customer closes the tab, so orders get marked paid and emails go out. Not on serverless (Vercel/Netlify functions): there the thank-you page\'s `verifyPayment` does it.',
-  'Emails: pass `customer: { email, name }` to `invoices.create` (ask for the email at checkout if the app doesn\'t know it). With email set up in the env, Sableye then emails the invoice and, once `verifyPayment` (or the indexer) confirms payment, the receipt (PDFs) and a "you got paid" notice. Use `orderStore: fileOrderStore(\'.sableye/orders.json\')` (or your DB) so order details survive restarts.',
-]
 const groups = navigation.map((g) => {
   const items = g.items.flatMap((i) => i.children ?? [i]).filter((i) => i.slug !== undefined)
   const line = items.map((i) => {
@@ -88,24 +88,8 @@ const groups = navigation.map((g) => {
   }).filter(Boolean).join(',')
   return `|${g.title}:{${line}}`
 }).join('\n')
-writeFileSync(here('docs/AGENTS.block.md'), `<!-- BEGIN sableye (managed by \`npx sableye agents\`; edits inside this block are overwritten) -->
-## Sableye payments (USDT on Whitechain), sableye@${version}
-
-This app takes payments with the \`sableye\` npm package. Its APIs are newer than your training data:
-**before writing or changing payment code, read the matching file in \`node_modules/sableye/docs/\`** instead of guessing.
-For the "add a checkout" task, follow the skill in \`.claude/skills/sableye/SKILL.md\`.
-
-Rules:
-${RULES.map((r) => `- ${r}`).join('\n')}
-
-Imports: \`sableye\` (browser-safe core) · \`sableye/server\` (Sableye client, holds the key) · \`sableye/react\` (\`<Checkout>\`) · \`sableye/mcp\`.
-Env (already configured, names only): MERCHANT_KEY, SABLEYE_BUSINESS_NAME; optional SABLEYE_SMTP_USER/PASS or SABLEYE_RESEND_API_KEY + SABLEYE_EMAIL_FROM, MERCHANT_EMAIL, ARKIV_ACCESS_KEY, NEXT_PUBLIC_REOWN_PROJECT_ID.
-Check your work: \`npx sableye doctor\`, then the app's build.
-
-Docs index (node_modules/sableye/docs/<name>.md; api.md = full API reference; README.md = descriptions):
-${groups}
-<!-- END sableye -->
-`)
+// The docs index for the AGENTS.md block, which `npx sableye init`/`agents` assembles per app from its settings.
+writeFileSync(here('docs/AGENTS.index.md'), `Docs index (node_modules/sableye/docs/<name>.md; api.md = full API reference; README.md = descriptions):\n${groups}\n`)
 writeFileSync(here('docs/README.md'), `# Sableye docs (sableye@${version})\n\nBundled with the package so they always match the installed version. Full API reference: [api.md](api.md). Web: https://sableye.xyz/docs\n\n${navigation.map((g) => `## ${g.title}\n\n${g.items.flatMap((i) => i.children ?? [i]).map((i) => pages.find((x) => x.slug === i.slug)).filter(Boolean).map((p) => `- [${p.title}](${fileOf(p.slug)}): ${p.description}`).join('\n')}`).join('\n\n')}\n`)
 
 const left = walk(here('.')).filter((f) => !f.includes('node_modules') && !f.endsWith('build.mjs') && /\.(m?js|d\.ts)$/.test(f) && /['"]@sableye\//.test(readFileSync(f, 'utf8')))
