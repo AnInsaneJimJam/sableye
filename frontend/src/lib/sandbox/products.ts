@@ -35,7 +35,7 @@ export const products: Product[] = [
     summary:
       "Your server signs an invoice for an order: amount, payout wallet, expiry. It costs nothing and sends no transaction. The customer can pay it exactly once, for exactly that amount, to exactly that wallet.",
     stripe: { name: "PaymentIntents / Invoices", how: "Four API calls create a customer, a draft invoice and a line item, then finalize it. Stripe stores it and is the source of truth." },
-    differences: ["Signed locally in milliseconds; nothing is stored anywhere until it's paid", "Pay-once and exact amount are enforced by the contract, not by a vendor", "The blockchain is the source of truth: nobody can alter or lose a payment"],
+    differences: ["Coupons are applied before signing: the contract only ever sees the final amount, so a customer can't edit the discount", "Signed locally in milliseconds; nothing is stored anywhere until it's paid", "Pay-once and exact amount are enforced by the contract, not by a vendor", "The blockchain is the source of truth: nobody can alter or lose a payment"],
     steps: ["Server signs the invoice (EIP-712)", "Customer opens the checkout link", "Contract checks the signature, expiry and pay-once", "USDT moves straight to your wallet"],
     code: {
       sableye: {
@@ -47,10 +47,14 @@ const sableye = new Sableye({
   network: 'whitechain-sepolia',
 })
 
+await sableye.coupons.create({ code: 'WELCOME10', percentOff: 10 })
+
 const invoice = await sableye.invoices.create({
   amount: '5.00',
   orderId: 'order_123',
   expiresIn: 1800, // seconds
+  coupon: 'WELCOME10',                 // optional: signed for 4.50
+  customer: { email: 'ada@example.com' }, // optional: emailed with a PDF
 })
 // invoice.checkoutUrl → send to the customer
 

@@ -93,6 +93,10 @@ function items(doc: Doc, order: OrderDetails | undefined) {
   for (const i of order?.items ?? []) {
     row(doc, 'Item', `${i.quantity && i.quantity !== 1 ? `${i.quantity} × ` : ''}${i.name}${i.amount ? `  (${i.amount} ${order!.token})` : ''}`)
   }
+  if (order?.coupon) {
+    row(doc, 'Subtotal', `${order.subtotal} ${order.token}`)
+    row(doc, 'Discount', `-${order.discount} ${order.token}  (${order.coupon})`)
+  }
 }
 
 /** A QR code drawn as squares (vector, crisp at any zoom). */

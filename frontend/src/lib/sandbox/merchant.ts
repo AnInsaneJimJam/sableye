@@ -3,6 +3,7 @@ import "server-only";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
+  fileCouponStore,
   fileOrderStore,
   fileStore,
   type Indexer,
@@ -44,6 +45,7 @@ function boot(): Merchant {
     // to .sableye/ on a normal server; on Vercel they stay in memory (no writable disk).
     ...(process.env.VERCEL !== "1" && {
       orderStore: fileOrderStore(".sableye/orders.json"),
+      couponStore: fileCouponStore(".sableye/coupons.json"),
       outbox: { path: ".sableye/outbox.json" },
       ...(process.env.ARKIV_ACCESS_KEY && {
         arkiv: {
@@ -53,6 +55,16 @@ function boot(): Merchant {
       }),
     }),
   });
+  // Demo promo codes for the Invoices page.
+  for (const c of [
+    { code: "WELCOME10", percentOff: 10 },
+    { code: "SAVE1", amountOff: "1", minAmount: "2" },
+  ]) {
+    void sableye.coupons
+      .get(c.code)
+      .then((found) => found ?? sableye.coupons.create(c))
+      .catch(() => {});
+  }
   let indexer: Indexer | undefined;
   let keeper: Keeper | undefined;
   // invoices.create() persists order references through an attached indexer.
