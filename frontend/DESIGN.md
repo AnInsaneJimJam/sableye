@@ -32,8 +32,10 @@ Keep the hero limited to its original headline, supporting sentence, and two
 actions. Do not add cards, diagrams, labels, or other content. Change positioning,
 typography, and background framing to suit the selected animation; see
 `docs/landing-compositions.md`. Every background follows the current palette and
-fades into the rest of the page. Keep content legible with a scrim. The shader navbar
-is the main interaction flourish; pause it offscreen and when the tab is hidden.
+fades into the rest of the page. Keep content legible with a scrim. The homepage's
+React Bits Gooey Nav is the main interaction flourish; its active pill and particles
+follow the palette. Preserve anchor links, section highlighting, keyboard access,
+reduced motion, and the static fallback when WebGL is unavailable.
 Cards containing content do not drag. Reduced motion removes entry movement,
 physics and smooth scrolling. Keep keyboard focus visible.
 
@@ -59,5 +61,6 @@ future Arkiv/Swarm features as shipped.
   filter IDs, reduced motion and an explicit keyboard-accessible expansion button.
 - `glass-button.tsx` is the only button. Every button and call-to-action link uses
   `GlassButton`. Rules, and the verbatim source prompt: `docs/liquid-glass-button.md`.
-- `liquid-glass-navbar.tsx` adapts Nimbus UI Waterline by
-  https://guglielmogiannattasio.it. Keep attribution and the CSS fallback.
+- `homepage-gooey-nav.tsx` adapts React Bits Gooey Nav, with source and license in
+  `src/components/ui/react-bits/gooey-nav/`. The bottom dock keeps the existing
+  homepage links and stays clear of both appearance controls on smaller screens.
