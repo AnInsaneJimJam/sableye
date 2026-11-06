@@ -149,6 +149,13 @@ An AI agent given only our Agent Skill and `llms.txt` integrated Sableye into a 
 - Fee-on-transfer tokens are rejected.
 - The merchant key never leaves the server: the SDK throws `secret_in_client` if it's used in a browser.
 
+- **Formal verification:**
+  - 17 Halmos symbolic proofs cover every money path in both contracts, and each is checked against planted bugs.
+  - The solc SMTChecker found no counterexamples.
+  - Gambit mutation testing found 25 test gaps, now covered.
+  - Quint models of the keeper and indexer found 5 SDK bugs, all fixed with regression tests.
+  - What's proved, what's tested and what isn't covered: [docs/VERIFICATION.md](docs/VERIFICATION.md).
+
 Full threat model and contract spec: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ## Limitations

@@ -32,7 +32,7 @@ A merchant signs EIP-712 **invoices** (and **subscription plans**) off-chain. A 
 
 | # | Property | Enforced by | Evidence |
 |---|---|---|---|
-| S1 | The processor's / manager's token balance never changes | Direct `payer → payout`; gasless path forwards within the tx | Invariant `processorHoldsNothing`, Medusa `managerHoldsNothing`, Halmos (Phase 4 branch) |
+| S1 | The processor's / manager's token balance never changes | Direct `payer → payout`; gasless path forwards within the tx | Invariant `processorHoldsNothing`, Medusa `managerHoldsNothing`, Halmos `check_pay_noCustody_exactAmount` and friends (docs/VERIFICATION.md) |
 | S2 | An invoice is paid at most once | Receipt written before transfer; status check | Unit `test_revert_doublePay`, invariant `noDoublePay` |
 | S3 | Refunded ≤ paid, per invoice | `total > amount` revert; zero refunds rejected | Fuzz `refundCapped`, invariant `refundsNeverExceedPayments` |
 | S4 | Status only moves forward | Explicit transitions | Invariant `statusOnlyMovesForward` |

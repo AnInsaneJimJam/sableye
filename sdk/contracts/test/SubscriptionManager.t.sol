@@ -59,6 +59,38 @@ contract SubscriptionManagerTest is Test {
         assertEq(usdt.balanceOf(address(sm)), 0);
     }
 
+    function test_subscribeEmitsChargedWithNextChargeAt() public {
+        SubscriptionManager.Plan memory p = _plan("pro");
+        bytes memory sig = _sign(p);
+        bytes32 id = sm.subscriptionId(merchant, "pro", payer);
+        vm.expectEmit(address(sm));
+        emit SubscriptionManager.Charged(id, merchant, payer, 5e6, 5e6, uint64(block.timestamp + INTERVAL));
+        vm.prank(payer);
+        sm.subscribe(p, sig, 50e6);
+    }
+
+    /// Liveness: a due charge within the cap, from a funded payer, always goes through for exactly one cycle.
+    function testFuzz_dueChargeWithinCapSucceeds(uint64 interval, uint64 late, uint256 amount) public {
+        interval = uint64(bound(interval, 1, 365 days));
+        late = uint64(bound(late, 0, 10 * 365 days));
+        amount = bound(amount, 1, 10e6);
+        SubscriptionManager.Plan memory p =
+            SubscriptionManager.Plan("fz", merchant, payout, address(usdt), amount, interval, uint64(block.timestamp + 1 days));
+        bytes memory sig = _sign(p);
+        vm.prank(payer);
+        bytes32 id = sm.subscribe(p, sig, 2 * amount);
+        uint256 start = block.timestamp;
+        vm.warp(start + interval + late);
+        assertTrue(sm.charge(id));
+        SubscriptionManager.Subscription memory s = sm.getSubscription(id);
+        assertEq(s.charged, 2 * amount);
+        assertEq(s.nextChargeAt, start + 2 * uint256(interval));
+        assertEq(usdt.balanceOf(payout), 2 * amount);
+        vm.warp(s.nextChargeAt); // next cycle is due, but the cap (2 cycles) is used up
+        vm.expectRevert(SubscriptionManager.CapReached.selector);
+        sm.charge(id);
+    }
+
     function test_renewalAfterInterval() public {
         bytes32 id = _subscribe(50e6);
         vm.expectRevert(abi.encodeWithSelector(SubscriptionManager.NotDue.selector, uint64(block.timestamp + INTERVAL)));
