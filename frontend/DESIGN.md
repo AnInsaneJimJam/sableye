@@ -41,6 +41,14 @@ demos. Remove redundant navigation and comparison labels from the overview; the
 deeper product pages keep their sidebar, full explanations and live controls.
 Scope overview styling to `.sandbox-overview` and its containing shell.
 
+Sandbox product pages carry this treatment into the live workspace: warm titles,
+one short introduction, connected demo and code areas, and internal dividers.
+Keep the walkthrough expandable and remove the repeated comparison essay.
+Preserve useful wallet guidance, status feedback and every transaction control.
+Product styles live in `src/app/sandbox/product-pages.css`, scoped to
+`.sbx-product-page` and its containing shell so the overview and hosted checkout
+keep their own layouts.
+
 Keep the hero limited to its original headline, supporting sentence, and two
 actions. Do not add cards, diagrams, labels, or other content. Change positioning,
 typography, and background framing for Gradient Waves; see

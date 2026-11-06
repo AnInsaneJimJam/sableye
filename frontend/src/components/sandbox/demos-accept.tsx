@@ -56,8 +56,7 @@ type Verification = {
 export function WalletHint() {
   return (
     <p className="sbx-hint">
-      You need a browser wallet on Whitechain Sepolia with a little test USDT.
-      Get WBT at the{" "}
+      Use a wallet on Whitechain Sepolia. Get test WBT at the{" "}
       <a
         href="https://faucet.testnet.whitechain.io"
         target="_blank"
@@ -65,7 +64,7 @@ export function WalletHint() {
       >
         faucet
       </a>
-      , then swap a bit for USDT on{" "}
+      , then swap for USDT on{" "}
       <a href="https://testnet.yetitrade.fi" target="_blank" rel="noreferrer">
         Yetitrade
       </a>
@@ -117,7 +116,7 @@ export function InvoicesDemo() {
     <div className="sbx-stack">
       <Panel
         title="Create an invoice"
-        hint="Signed on the server in milliseconds. No gas, no transaction."
+        hint="Sign a payment request without spending gas."
       >
         <div className="sbx-form">
           <label>
@@ -186,8 +185,7 @@ export function InvoicesDemo() {
         </div>
         {mail && !mail.enabled && (
           <p className="sbx-hint">
-            Email isn't configured on this server (SMTP_USER / SMTP_PASS), so no
-            email will be sent; the PDFs still work.
+            Email is unavailable. You can still download the invoice PDF.
           </p>
         )}
         <ErrorNote error={error} />
@@ -195,18 +193,12 @@ export function InvoicesDemo() {
       {inv && (
         <Panel
           title="Signed invoice"
-          hint="These exact fields are what the contract will check."
           action={
             <Pill tone={statusTone(status?.status)}>
               {status?.status === "none" ? "unpaid" : (status?.status ?? "…")}
             </Pill>
           }
         >
-          <div className="sbx-chips">
-            <span>0 transactions</span>
-            <span>0 gas</span>
-            <span>Stored: nowhere</span>
-          </div>
           <KV
             rows={[
               ["Order", <code key="o">{inv.orderRef}</code>],
@@ -247,9 +239,6 @@ export function InvoicesDemo() {
             >
               <Receipt size={15} /> Open the checkout link
             </GlassButton>
-            <span className="sbx-muted">
-              Status refreshes from the chain every few seconds.
-            </span>
           </div>
           <div className="sbx-row">
             <GlassButton
@@ -286,10 +275,6 @@ export function InvoicesDemo() {
               <TxLink hash={status.txHash} />
             </OkNote>
           )}
-          <p className="sbx-hint">
-            Try it twice: once paid, the same link is refused. Change one
-            character after <code>#</code> and the signature check fails.
-          </p>
         </Panel>
       )}
     </div>
@@ -325,8 +310,8 @@ export function CheckoutDemo({ gasless = false }: { gasless?: boolean }) {
         title={gasless ? "Pay without gas" : "A checkout page"}
         hint={
           gasless
-            ? "The checkout picks the gasless path first: you only sign."
-            : "The widget below is the real <Checkout/> component, embedded in this page."
+            ? "Gas is sponsored when the token and relayer support it."
+            : "Pay 1 USDT using your test wallet."
         }
       >
         <div className="sbx-product">
@@ -451,7 +436,7 @@ export function LinksDemo() {
     <div className="sbx-stack">
       <Panel
         title="Create a payment link"
-        hint="Signed by the merchant key. Nothing on-chain until someone pays."
+        hint="Create a reusable link for your customers."
       >
         <div className="sbx-form">
           <label>

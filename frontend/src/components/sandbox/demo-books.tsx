@@ -252,7 +252,7 @@ export function BooksDemo({
     <div className="sbx-stack">
       <Panel
         title="Open a merchant's books"
-        hint="Reads Arkiv directly from your browser. No Sableye server, no API key, no permission needed."
+        hint="Read wallet-owned records directly from Arkiv."
       >
         <div className="sbx-form">
           <label>
@@ -299,7 +299,7 @@ export function BooksDemo({
       {rows && (
         <Panel
           title={`${rows.length} record${rows.length === 1 ? "" : "s"} on Arkiv`}
-          hint="Each one is checked against its Whitechain transaction before it counts."
+          hint="Only records verified on Whitechain count toward totals."
           action={
             rows.length > 0 && (
               <Btn variant="ghost" onClick={csv}>

@@ -108,7 +108,7 @@ export function RefundsDemo() {
     <div className="sbx-stack">
       <Panel
         title="Refund a payment"
-        hint="Only orders paid in this sandbox are listed. No setup: the SDK approves exactly the refund amount on the fly. Refunds can never exceed what was paid."
+        hint="Sandbox payments only. Refunds are capped at the amount paid."
       >
         {refundable.length === 0 ? (
           <p className="sbx-muted">
@@ -184,7 +184,7 @@ export function RefundsDemo() {
       </Panel>
       <Panel
         title="Cancel an unpaid invoice"
-        hint="Revoked on-chain: the link stops working for everyone, immediately."
+        hint="Cancel an unpaid invoice on-chain."
       >
         <div className="sbx-row">
           <Btn
@@ -549,7 +549,7 @@ export function SubscriptionsDemo() {
       {all && (
         <Panel
           title="Across all subscribers"
-          hint="Computed from SubscriptionManager events on-chain."
+          hint="Live subscription activity."
         >
           <div className="sbx-stats">
             <Stat label="Active" value={all.stats.active} />
@@ -602,7 +602,7 @@ export function EventsDemo() {
     <div className="sbx-stack">
       <Panel
         title="Confirmation depth"
-        hint="Whitechain's heads right now. A payment is pending until the safe head passes it, then safe, then final."
+        hint="Track pending, safe and final payments."
       >
         <div className="sbx-heads">
           <div className="sbx-heads-track">
@@ -665,7 +665,7 @@ export function EventsDemo() {
       </Panel>
       <Panel
         title="Webhooks received"
-        hint="Delivered to /api/webhook, HMAC-verified, de-duplicated by event id."
+        hint="Signed events delivered to your server."
       >
         {data.webhooks.length === 0 ? (
           <p className="sbx-muted">
@@ -748,7 +748,7 @@ function EmailsPanel({ now }: { now?: number }) {
   return (
     <Panel
       title="Emails sent"
-      hint="From the merchant's own email account. Each one is keyed, so a replayed or reorged event never sends twice."
+      hint="Delivery status and retries."
     >
       {!data.enabled ? (
         <p className="sbx-muted">
@@ -838,7 +838,7 @@ export function ReconcileDemo() {
     <div className="sbx-stack">
       <Panel
         title="Reconcile with the chain"
-        hint="Re-reads every payment's receipt from the contract and compares."
+        hint="Compare your payment records with on-chain receipts."
       >
         <Btn busy={busy} onClick={run}>
           <RefreshCw size={14} /> Run reconcile
@@ -972,11 +972,11 @@ function RevenueChart({
   return (
     <Panel
       title="Net revenue"
-      hint="Payments minus refunds, from on-chain events. Refunds count in the period they happened."
+      hint="Payments minus refunds in each period."
       action={
         <div className="sbx-seg" role="group" aria-label="Period">
           {(["day", "week", "month"] as const).map((b) => (
-            <button
+            <GlassButton size="sm"
               key={b}
               type="button"
               aria-pressed={bucket === b}
@@ -987,7 +987,7 @@ function RevenueChart({
                 : b === "week"
                   ? "12 weeks"
                   : "12 months"}
-            </button>
+            </GlassButton>
           ))}
         </div>
       }
@@ -1112,10 +1112,7 @@ export function DashboardDemo() {
     s = data.subscriptions;
   return (
     <div className="sbx-stack">
-      <Panel
-        title="Payments"
-        hint="From the indexer: on-chain events, not a database."
-      >
+      <Panel title="Payments">
         <div className="sbx-stats">
           <Stat
             label="Volume"
@@ -1137,7 +1134,7 @@ export function DashboardDemo() {
         bucket={bucket}
         setBucket={setBucket}
       />
-      <Panel title="Subscriptions" hint="From SubscriptionManager events.">
+      <Panel title="Subscriptions">
         <div className="sbx-stats">
           <Stat
             label="MRR"
@@ -1181,7 +1178,7 @@ export function DevelopersDemo() {
     <div className="sbx-stack">
       <Panel
         title="sableye doctor"
-        hint="The same checks as `npx sableye doctor`, run against the live network now."
+        hint="Check your network and payment setup."
         action={
           <Btn busy={busy} onClick={run}>
             <Stethoscope size={15} /> Run doctor
@@ -1217,40 +1214,35 @@ export function DevelopersDemo() {
           <b>Webhooks on localhost</b>
           <code>npx sableye listen --forward-to localhost:3000/api/webhook</code>
           <span>
-            Like stripe listen: watches your payments and forwards signed
-            events to your dev server. --since replays history.
+            Forward signed payment events to your dev server.
           </span>
         </div>
         <div className="sbx-tile">
           <b>First-time setup</b>
           <code>npx sableye init</code>
           <span>
-            Merchant key, business name, email (tested before saving) and
-            Arkiv, written to .env. Then runs doctor.
+            Configure your merchant account and check your setup.
           </span>
         </div>
         <div className="sbx-tile">
           <b>Scaffold a store</b>
           <code>npx create-whitechain-checkout --name my-store</code>
           <span>
-            Working checkout, server routes, .env.example. Passes doctor out of
-            the box.
+            Start with checkout and server routes ready.
           </span>
         </div>
         <div className="sbx-tile">
           <b>MCP server for agents</b>
           <code>claude mcp add sableye -- npx sableye-mcp</code>
           <span>
-            Agents read payments and create invoices; refunds come back
-            unsigned.
+            Read payments and create invoices. Refunds need your signature.
           </span>
         </div>
         <div className="sbx-tile">
           <b>Agent Skill + llms.txt</b>
           <code>skills/whitechain-pay</code>
           <span>
-            An AI agent integrated Sableye into a blank app in 3/3 trials using
-            only these.
+            Give your coding agent the integration guide.
           </span>
         </div>
       </div>
