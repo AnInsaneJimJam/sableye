@@ -168,6 +168,17 @@
 [data-sableye-account] { font-size: 12px; color: var(--copy-soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 [data-sableye-switch-account] { font: 12px var(--font-sans); color: var(--ink); background: #abcfff0f; border: 1px solid var(--edge-strong); border-radius: 8px; padding: 4px 9px; cursor: pointer; }
 [data-sableye-pay] { font: 500 14px var(--font-sans), sans-serif; padding: 12px 16px; border-radius: 12px; cursor: pointer; width: 100%; }
+[data-sableye-actions] { display: flex; align-items: stretch; flex-wrap: wrap; gap: 8px; }
+[data-sableye-actions] [data-sableye-pay] { flex: 1; width: auto; }
+[data-sableye-qr-toggle] { display: grid; place-items: center; min-width: 44px; min-height: 44px; color: var(--ink); background: #abcfff0f; border: 1px solid var(--edge-strong); border-radius: 12px; cursor: pointer; }
+[data-sableye-phone-pay] { display: grid; justify-items: center; gap: 14px; padding: 16px; border: 1px solid var(--edge-strong); border-radius: 12px; }
+[data-sableye-wallet-picker], [data-sableye-open-in-wallet] { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+[data-sableye-wallet-picker] button, [data-sableye-wallet-link] { padding: 10px 12px; color: var(--ink); background: #abcfff0f; border: 1px solid var(--edge-strong); border-radius: 8px; cursor: pointer; }
+[data-sableye-wallet-picker] [aria-checked="true"] { color: #9fc4f7; border-color: #60a5fa; }
+[data-sableye-qr-code] { max-width: 100%; height: auto; border-radius: 8px; }
+[data-sableye-phone-hint], [data-sableye-phone-warning] { text-align: center; font-size: 12px; overflow-wrap: anywhere; }
+[data-sableye-phone-warning] { color: #f5d49b; }
+[data-sableye-qr-toggle]:focus-visible, [data-sableye-wallet-picker] button:focus-visible, [data-sableye-wallet-link]:focus-visible { outline: 2px solid #9fc4f7; outline-offset: 3px; }
 
 /* tables, feeds, stats */
 .sbx-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }

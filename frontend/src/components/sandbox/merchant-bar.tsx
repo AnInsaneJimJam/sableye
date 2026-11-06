@@ -3,7 +3,7 @@ import { Activity, Wallet } from "lucide-react";
 import { EXPLORER } from "./bits";
 import { short, usdt, useApi } from "./use-api";
 
-type M = { merchant: string; network: string; chainId: number; block: string; wbt: string; usdt: string; refundsEnabled: boolean };
+type M = { merchant: string; network: string; chainId: number; block: string; wbt: string; usdt: string };
 
 /** The live merchant the whole sandbox runs against. */
 export function MerchantBar() {

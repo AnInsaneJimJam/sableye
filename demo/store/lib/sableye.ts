@@ -4,13 +4,13 @@
 import 'server-only'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fileStore, Sableye, type Indexer } from '@sableye/server'
+import { fileStore, Sableye, type Indexer, type Keeper } from '@sableye/server'
 import { fileLinkStore, webhookSecret } from './store'
 
 if (!process.env.MERCHANT_KEY && existsSync(join(process.cwd(), '../../.env'))) process.loadEnvFile(join(process.cwd(), '../../.env'))
 export const BASE_URL = process.env.PUBLIC_URL ?? 'http://localhost:3000'
 
-type Merchant = { sableye: Sableye; indexer: Indexer }
+type Merchant = { sableye: Sableye; indexer: Indexer; keeper: Keeper }
 const g = globalThis as typeof globalThis & { __merchant?: Merchant }
 
 function boot(): Merchant {
@@ -34,9 +34,9 @@ function boot(): Merchant {
     webhooks: [{ url: `${BASE_URL}/api/webhook`, secret: webhookSecret() }],
   })
   void indexer.start()
-  setInterval(() => void sableye.subscriptions.runDue().catch(() => {}), 30_000) // subscription keeper
+  const keeper = sableye.subscriptions.keeper()
   // </sableye:extra>
-  return { sableye, indexer }
+  return { sableye, indexer, keeper }
 }
 
 export const merchant = (): Merchant => (g.__merchant ??= boot())

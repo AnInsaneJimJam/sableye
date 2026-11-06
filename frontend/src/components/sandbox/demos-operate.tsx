@@ -13,7 +13,6 @@ type Events = { heads: { latest: string; safe: string; finalized: string }; invo
 
 /* ---------- Refunds & cancellations ---------- */
 export function RefundsDemo() {
-  const { data: m, reload: reloadM } = useApi<{ refundsEnabled: boolean }>("/api/sandbox/merchant");
   const { data: ev, reload } = useApi<Events>("/api/sandbox/events", 8000);
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
@@ -22,13 +21,13 @@ export function RefundsDemo() {
   const [unpaid, setUnpaid] = useState<{ orderRef: string; checkoutUrl: string; cancelled?: boolean }>();
   const run = async (key: string, fn: () => Promise<{ text: string; tx?: string }>) => {
     setBusy(key); setError(undefined); setOk(undefined);
-    try { setOk(await fn()); await Promise.all([reload(), reloadM()]); } catch (e) { setError(e as ApiError); }
+    try { setOk(await fn()); await reload(); } catch (e) { setError(e as ApiError); }
     setBusy(undefined);
   };
   const refundable = (ev?.invoices ?? []).filter((i) => (i.status === "paid" || i.status === "partially_refunded") && (i.orderRef?.startsWith("sbx_") || i.orderRef?.startsWith("plink_")));
   return (
     <div className="sbx-stack">
-      <Panel title="Refund a payment" hint="Only orders paid in this sandbox are listed. Refunds can never exceed what was paid." action={m && (m.refundsEnabled ? <Pill tone="ok">refunds enabled</Pill> : <Btn busy={busy === "enable"} onClick={() => run("enable", async () => { const r = await post<{ txHash: string }>("/api/sandbox/refunds-enable"); return { text: "Refunds enabled with a one-time approval.", tx: r.txHash }; })}>Enable refunds</Btn>)}>
+      <Panel title="Refund a payment" hint="Only orders paid in this sandbox are listed. No setup: the SDK approves exactly the refund amount on the fly. Refunds can never exceed what was paid.">
         {refundable.length === 0 ? (
           <p className="sbx-muted">No refundable sandbox payments yet. Pay one on the Checkout page, then come back.</p>
         ) : (
@@ -47,7 +46,7 @@ export function RefundsDemo() {
                     <td>
                       <div className="sbx-row">
                         <input className="sbx-mini" placeholder={`≤ ${usdt(String(left))}`} value={amounts[key] ?? ""} onChange={(e) => setAmounts({ ...amounts, [key]: e.target.value })} />
-                        <Btn variant="ghost" disabled={!m?.refundsEnabled} busy={busy === key} onClick={() => run(key, async () => { const r = await post<{ txHash: string; amount: string }>("/api/sandbox/refund", { orderId: key, amount: amounts[key] }); return { text: `Refunded ${usdt(r.amount)} USDT to the payer.`, tx: r.txHash }; })}>Refund</Btn>
+                        <Btn variant="ghost" busy={busy === key} onClick={() => run(key, async () => { const r = await post<{ txHash: string; amount: string }>("/api/sandbox/refund", { orderId: key, amount: amounts[key] }); return { text: `Refunded ${usdt(r.amount)} USDT to the payer.`, tx: r.txHash }; })}>Refund</Btn>
                       </div>
                     </td>
                   </tr>
@@ -151,7 +150,7 @@ export function SubscriptionsDemo() {
                   <Btn variant="ghost" busy={busy === "renew"} onClick={renew}><Play size={14} /> Run renewals now</Btn>
                   <Btn variant="ghost" busy={busy === "cancel"} onClick={() => void send("cancel", (w) => w.writeContract({ address: offer.subscriptions, abi: subscriptionManagerAbi, functionName: "cancel", args: [sub.subId], account: account as Address, chain: net.chain }))}>Cancel on-chain</Btn>
                 </div>
-                <p className="sbx-hint">To see a failed charge handled: move your USDT out of this wallet before the next renewal. It goes past due, then recovers when you top up.</p>
+                <p className="sbx-hint">To see a failed charge handled: move your USDT out of this wallet before the next renewal. It goes past due; after you top up, the keeper retries after its one-hour backoff.</p>
               </>
             ) : (
               <div className="sbx-form">

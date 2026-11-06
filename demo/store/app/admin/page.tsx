@@ -159,7 +159,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
       <section className="card">
         <h2>Subscriptions (Chai Club)</h2>
-        <form action={runRenewals}><button>Run renewals now</button> <span className="muted">(a keeper also runs every 30 s)</span></form>
+        <form action={runRenewals}><button>Run renewals now</button> <span className="muted">(scheduled renewals; failed charges retry after 1 hour)</span></form>
         {subs.length === 0 ? <p className="muted">No subscribers yet. Try <a href="/subscribe">Chai Club</a>.</p> : (
           <table style={{ marginTop: 10 }}>
             <thead><tr><th>Subscriber</th><th>Status</th><th>Charged / cap</th><th>Next charge</th><th>Failed</th><th></th></tr></thead>

@@ -66,6 +66,8 @@ With gasless checkout the customer spends no WBT. A little WBT lets them fall ba
 
 ## Where the data lives
 
+Chai Club uses `sableye.subscriptions.keeper()` in the running server. It schedules due renewals, discovers new subscribers every 60 seconds, and backs off failed charges for one hour. **Run renewals now** uses the same keeper and respects its retry backoff. Retry state is in memory; restarting the server resets it. Direct contract callers can still retry sooner.
+
 Payments, refunds and their status are read from the chain. Item names, customer names and email addresses never go on-chain: they stay in `demo/store/.sableye/`, which is git-ignored.
 
-**If you change `MERCHANT_KEY`, delete `demo/store/.sableye/`.** It holds the indexer's position and order data for the old merchant.
+**Before changing `MERCHANT_KEY`, stop the store and move `demo/store/.sableye/` to a private backup.** Start with a fresh directory so the new merchant gets its own indexer cursor. Keep the backup: it contains the previous merchant's order and customer records.
