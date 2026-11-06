@@ -1,6 +1,6 @@
 # Sableye documentation app
 
-An independent Next.js app based on the setup in `frontend/`, with the dark Mintlify-style layout from the supplied references. Existing Markdown project documents in this folder remain reference material; the website content lives in `src/lib/content.ts`.
+An independent Next.js app based on the setup in `frontend/`, with the dark Mintlify-style layout from the supplied references. The Markdown project documents live separately in `docs/`; the website content lives in `src/lib/content.ts`.
 
 ## Run
 
