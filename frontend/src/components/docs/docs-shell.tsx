@@ -192,7 +192,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             <Menu size={20} />
           </GlassButton>
           <Brand />
-          <span className="language">English</span>
         </div>
         <nav className="top-links" aria-label="Main navigation">
           <Link
