@@ -19,6 +19,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
+    "@arkiv-network/sdk": "1.0.1",
     "@sableye/core": "workspace:*",
     "nodemailer": "^7.0.13",
     "pdf-lib": "1.17.1",
