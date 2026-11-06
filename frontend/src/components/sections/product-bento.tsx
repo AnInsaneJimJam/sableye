@@ -9,7 +9,7 @@ import "./product-bento.css";
 
 const surfaces = {
   "--mb-surface":
-    "linear-gradient(145deg, color-mix(in oklab, var(--sheet) 92%, var(--brand) 8%), var(--background))",
+    "color-mix(in oklab, color-mix(in oklab, var(--sheet) 92%, var(--brand) 8%) 50%, var(--background) 50%)",
   "--mb-edge": "color-mix(in oklab, var(--brand-accent) 20%, transparent)",
   "--mb-highlight": "color-mix(in oklab, var(--foreground) 7%, transparent)",
   "--mb-shadow": "none",

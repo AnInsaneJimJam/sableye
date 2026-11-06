@@ -1,3 +1,4 @@
+import "@/components/sections/homepage-panels.css";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BackgroundSwitch } from "@/components/backgrounds/background-switch";

@@ -5,10 +5,8 @@ import {
   Code2,
   Fingerprint,
   LockKeyhole,
-  ReceiptText,
   Store,
   UserRound,
-  Webhook,
   Zap,
 } from "lucide-react";
 import {
@@ -32,7 +30,6 @@ import { ProductBento } from "@/components/sections/product-bento";
 import { DeveloperCode } from "@/components/sections/developer-code";
 import { FormalVerification } from "@/components/sections/formal-verification";
 import { GlassButton } from "@/components/ui/glass-button";
-import { LiquidGlassCard } from "@/components/ui/liquid-weather-glass";
 import { siteConfig } from "@/lib/site";
 
 const repo = siteConfig.links.github;
@@ -175,10 +172,6 @@ export function ProductStory() {
           <h2>
             Signed. Paid. <span>Yours.</span>
           </h2>
-          <p>
-            A simple handoff from your server to your customer’s wallet. Every
-            payment leaves a verifiable on-chain receipt.
-          </p>
         </div>
         <div className="payment-flow">
           {[
@@ -222,32 +215,27 @@ export function ProductStory() {
             </div>
           ))}
         </div>
-        <LiquidGlassCard
-          draggable={false}
-          shadowIntensity="none"
-          glowIntensity="none"
-          borderRadius="20px"
-          className="gasless-callout"
-        >
-          <span className="gasless-icon">
-            <Zap size={25} strokeWidth={1.4} />
-          </span>
-          <div>
-            <h3>The gas is on the house.</h3>
-            <p>
-              With supported tokens and your relayer enabled, customers sign
-              once. Your business pays the network fee. No WBT needed by the
-              payer.
-            </p>
+        <div className="homepage-panel gasless-callout">
+          <div className="relative">
+            <span className="gasless-icon">
+              <Zap size={25} strokeWidth={1.4} />
+            </span>
+            <div>
+              <h3>Smoother checkout. Happier customers.</h3>
+              <p>
+                Enable gasless checkout for supported tokens. Your business pays
+                the network fee, so customers only need USDT.
+              </p>
+            </div>
+            <GlassButton
+              size="sm"
+              className="gasless-action"
+              href={`${repo}#gasless-relayer-who-pays-and-why-it-cant-be-drained-scale-track`}
+            >
+              Explore gasless <ArrowUpRight size={16} />
+            </GlassButton>
           </div>
-          <GlassButton
-            size="sm"
-            className="gasless-action"
-            href={`${repo}#gasless-relayer-who-pays-and-why-it-cant-be-drained-scale-track`}
-          >
-            Explore gasless <ArrowUpRight size={16} />
-          </GlassButton>
-        </LiquidGlassCard>
+        </div>
       </section>
 
       <section
@@ -255,44 +243,17 @@ export function ProductStory() {
         className="developer-section page-width section-space"
       >
         <div className="developer-copy">
-          <span className="section-kicker">
-            SMALL INTEGRATION. FULL PAYMENT LIFECYCLE.
-          </span>
           <h2>
             Your product.
             <br />
             <span>Our twenty lines.</span>
           </h2>
-          <p>
-            Keep building what makes your business yours. Let the SDK handle the
-            payment path.
-          </p>
-          <div className="developer-points">
-            <span>
-              <Code2 size={17} /> TypeScript. React. A headless core.
-            </span>
-            <span>
-              <Webhook size={17} /> Signed webhooks and reconciliation.
-            </span>
-            <span>
-              <ReceiptText size={17} /> Receipts and CSV exports.
-            </span>
-          </div>
-          <p className="install-note">
-            Available from a repository clone.
-            <br />
-            Packages are not published to npm yet.
-          </p>
         </div>
-        <LiquidGlassCard
-          draggable={false}
-          shadowIntensity="xs"
-          glowIntensity="none"
-          borderRadius="24px"
-          className="developer-glass"
-        >
-          <DeveloperCode />
-        </LiquidGlassCard>
+        <div className="homepage-panel developer-glass">
+          <div className="relative">
+            <DeveloperCode />
+          </div>
+        </div>
       </section>
 
       <AgentIntegration />
@@ -303,22 +264,17 @@ export function ProductStory() {
       >
         <div className="business-tiers">
           {tiers.map(({ icon: Icon, title, text }) => (
-            <LiquidGlassCard
-              key={title}
-              draggable={false}
-              shadowIntensity="none"
-              glowIntensity="none"
-              borderRadius="22px"
-              className="tier-card"
-            >
-              <span className="tier-icon">
-                <Icon size={21} strokeWidth={1.4} />
-              </span>
-              <div>
-                <h3>{title}</h3>
-                <p>{text}</p>
+            <div key={title} className="homepage-panel tier-card">
+              <div className="relative">
+                <span className="tier-icon">
+                  <Icon size={21} strokeWidth={1.4} />
+                </span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </div>
               </div>
-            </LiquidGlassCard>
+            </div>
           ))}
         </div>
         <div className="business-copy">
@@ -456,32 +412,28 @@ export function ProductStory() {
       </section>
 
       <section className="closing-section page-width">
-        <LiquidGlassCard
-          draggable={false}
-          shadowIntensity="xs"
-          glowIntensity="none"
-          borderRadius="32px"
-          className="closing-glass"
-        >
-          <div>
-            <span className="closing-symbol" aria-hidden="true">
-              s
-            </span>
-            <h2>
-              Make room for
-              <br />
-              <span>better payments.</span>
-            </h2>
-            <p>Your business. Your wallet. Start with Sableye.</p>
+        <div className="homepage-panel closing-glass">
+          <div className="relative">
+            <div>
+              <span className="closing-symbol" aria-hidden="true">
+                s
+              </span>
+              <h2>
+                Make room for
+                <br />
+                <span>better payments.</span>
+              </h2>
+              <p>Your business. Your wallet. Start with Sableye.</p>
+            </div>
+            <div className="closing-figure hairline-figure">
+              <Exploded
+                intensity={0.6}
+                theme="dark"
+                label="An app window in layers that open as the pointer moves across it"
+              />
+            </div>
           </div>
-          <div className="closing-figure hairline-figure">
-            <Exploded
-              intensity={0.6}
-              theme="dark"
-              label="An app window in layers that open as the pointer moves across it"
-            />
-          </div>
-        </LiquidGlassCard>
+        </div>
       </section>
     </>
   );
