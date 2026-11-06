@@ -10,7 +10,7 @@ This file records what is **proved**, what is **model-checked**, what is **teste
 | Contracts | Model checking of arithmetic | solc 0.8.30 SMTChecker (CHC, z3) | **Proof** per verification condition | 88 proved safe, 13 unproved (triaged below), 0 counterexamples |
 | Contracts | Vacuity check | `test/halmos/vacuity.py` | Every proof can fail | 13 of 13 planted bugs caught |
 | Contracts | Mutation testing | Gambit 1.0.6 | Measures how much the tests and proofs actually check | **165 of 165 mutants killed (100%)** on the final run |
-| SDK | Protocol model checking | Quint 0.33 + Apalache | **Proof about the design**, up to a bound | Keeper: no violation up to 10 steps (see the caveat in §4) |
+| SDK | Protocol model checking | Quint 0.33 + Apalache | **Proof about the design**, up to a bound | Keeper: no violation up to 10 steps |
 | SDK | Protocol simulation | Quint simulator | Random exploration of the design | Keeper and indexer: the fixed designs hold over thousands of random traces |
 | SDK | Regression tests from counterexamples | `node:test` | Testing | One test per model-found bug |
 | SDK | Differential and property tests | `node:test` + anvil | Testing | TS `hashInvoice` equals the contract's over 300 invoices; codec and webhooks checked |
@@ -33,7 +33,7 @@ This file records what is **proved**, what is **model-checked**, what is **teste
 | 7 | `normalizeSignedInvoice` | Property test | A corrupted payment link with an out-of-range amount, nonce or expiry was accepted, and failed later with a raw viem error | The checkout crashes instead of saying "invalid link" | Range checks at the trust boundary; the `orderId` case is normalised |
 | 8 | `keeper.ts` discovery | Keeper model (simulation counterexample) | Discovery scanned only blocks above its cursor, and the cursor followed the chain head. A reorg could re-include a new `Subscribed` log in a block at or below the cursor | That subscription is never charged until the process restarts | The cursor follows the **finalized** block, so each discovery re-scans the unfinalized range (one `getLogs` call on Whitechain) |
 
-Bugs 3–8 each have a regression test that passes on the fixed code. For bugs 3–7 the test was also confirmed to fail on the old code; for bug 8 the failure is shown by the model.
+Bugs 3–8 each have a regression test that fails on the old code and passes on the fixed code. For bug 8, the test was run against the pre-fix `keeper.ts` from git (`d5eb0f7~1`): the keeper watched 0 subscriptions instead of 1.
 - bugs 3 and 8: `sdk/packages/server/test/keeper.test.mjs`;
 - bugs 4–6: `test/indexer-faults.test.mjs`, which uses a fake chain with injected RPC failures;
 - bug 7: `test/differential.test.mjs`.
@@ -132,7 +132,7 @@ So each model shows both the bug and the fix.
 **Results:**
 - **Old keeper:** the model finds both bugs. The retry storm (bug 3) shows up as `noStorm`, and the reorg-hidden subscription (bug 8) as `noOverdue`.
 - **Fixed keeper,** with every fault enabled: the simulator finds no violation over 5,000 random traces of 30 steps.
-- **Caveat:** Apalache (exhaustive, 10 steps) found no violation on an earlier version of the fixed model. Since then, a ghost variable used only by the liveness invariant has changed. Re-run it with the command in `specs/README.md`.
+- **Fixed keeper, exhaustively:** Apalache explores every interleaving up to 10 steps, with every fault enabled, and finds no violation of `safety` (93 s).
 
 ### Indexer (`specs/indexer.qnt`), mirroring `sync` / `rollback` / `emit`
 
@@ -169,7 +169,7 @@ All in `sdk/packages/server/test/differential.test.mjs`. They're seeded, so a fa
 - **The TypeScript code itself.** It's covered by tests pinned to the models; nothing proves the TS directly.
 - **viem, the RPC node, and sequencer liveness.**
 - **The React and checkout UI.** They're covered by component tests only.
-- **Bounds.** The Apalache keeper check stops at 10 steps, and was last run before the final ghost-variable change. The Quint simulations are random, not exhaustive. The keeper model treats a pass as atomic and abstracts wall time to chain time.
+- **Bounds.** The Apalache keeper check stops at 10 steps. The Quint simulations are random, not exhaustive. The keeper model treats a pass as atomic and abstracts wall time to chain time.
 - **Indexer edge case.** An RPC that doesn't support the `finalized` tag is treated as instantly final, by design. On such an RPC, reorgs aren't detected.
 
 ## 7. Re-running after SDK or contract changes
