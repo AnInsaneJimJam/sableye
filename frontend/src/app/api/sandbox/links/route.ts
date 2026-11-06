@@ -25,7 +25,7 @@ export const GET = () =>
 export const POST = (req: Request) =>
   handle(async () => {
     const { name, amount } = (await req.json()) as { name?: string; amount?: string };
-    const link = await merchant().sableye.paymentLinks.create({ amount: amount || "1.00", name: name?.slice(0, 40) || "Masala chai" });
+    const link = await merchant().sableye.paymentLinks.create({ amount: amount || "1.00", name: name?.slice(0, 40) || "Consulting hour" });
     links.add({ id: link.id, name: link.name, amount: link.amount, token: link.token, url: link.url, createdAt: Date.now() });
     return json(link);
   });

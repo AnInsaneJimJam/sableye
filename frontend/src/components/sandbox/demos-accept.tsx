@@ -1,7 +1,8 @@
 "use client";
 import { Checkout } from "@sableye/react";
-import { Coffee, Fuel, QrCode, Receipt, Shuffle } from "lucide-react";
+import { Fuel, Package, QrCode, Receipt, Shuffle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { GlassButton } from "@/components/ui/glass-button";
 import { Btn, ErrorNote, KV, OkNote, Panel, Pill, statusTone, TxLink } from "./bits";
 import { type ApiError, post, short, useApi } from "./use-api";
 
@@ -65,7 +66,7 @@ export function InvoicesDemo() {
             ["Merchant signature", <code key="s">{short(inv.signature, 10)}</code>],
           ]} />
           <div className="sbx-row">
-            <a className="sbx-btn sbx-btn-primary" href={inv.checkoutUrl} target="_blank" rel="noreferrer"><Receipt size={15} /> Open the checkout link</a>
+            <GlassButton size="sm" tone="accent" href={inv.checkoutUrl} target="_blank" rel="noreferrer"><Receipt size={15} /> Open the checkout link</GlassButton>
             <span className="sbx-muted">Status refreshes from the chain every few seconds.</span>
           </div>
           {status?.paid && <OkNote>Paid by <code>{short(status.payer)}</code> · <TxLink hash={status.txHash} /></OkNote>}
@@ -92,10 +93,10 @@ export function CheckoutDemo({ gasless = false }: { gasless?: boolean }) {
   const sponsored = tx && status?.payer && tx.from.toLowerCase() !== status.payer.toLowerCase();
   return (
     <div className="sbx-stack">
-      <Panel title={gasless ? "Pay without gas" : "A shop page"} hint={gasless ? "The checkout picks the gasless path first: you only sign." : "The widget below is the real <Checkout/> component, embedded in this page."}>
+      <Panel title={gasless ? "Pay without gas" : "A checkout page"} hint={gasless ? "The checkout picks the gasless path first: you only sign." : "The widget below is the real <Checkout/> component, embedded in this page."}>
         <div className="sbx-product">
-          <div className="sbx-product-icon">{gasless ? <Fuel size={26} strokeWidth={1.5} /> : <Coffee size={26} strokeWidth={1.5} />}</div>
-          <div><b>Masala chai</b><span className="sbx-muted">Whitechain Sepolia · test USDT</span></div>
+          <div className="sbx-product-icon">{gasless ? <Fuel size={26} strokeWidth={1.5} /> : <Package size={26} strokeWidth={1.5} />}</div>
+          <div><b>Starter plan, 1 month</b><span className="sbx-muted">Whitechain Sepolia · test USDT</span></div>
           <div className="sbx-price">1.00 <span>USDT</span></div>
           {!inv && <Btn busy={busy} onClick={buy}>Buy</Btn>}
         </div>
@@ -114,7 +115,7 @@ export function CheckoutDemo({ gasless = false }: { gasless?: boolean }) {
               <KV rows={[
                 ["Transaction sent by", <code key="f">{short(tx.from)}</code>],
                 ["Network fee", `${Number(tx.feeWbt).toFixed(7)} WBT`],
-                ["Paid by", sponsored ? <Pill key="p" tone="ok">the shop: your wallet paid 0</Pill> : <Pill key="p" tone="warn">your wallet (gasless not used)</Pill>],
+                ["Paid by", sponsored ? <Pill key="p" tone="ok">the merchant: your wallet paid 0</Pill> : <Pill key="p" tone="warn">your wallet (gasless not used)</Pill>],
               ]} />
             )}
             <Btn variant="ghost" onClick={() => { setInv(undefined); setPaid(undefined); }}>Buy another</Btn>
@@ -130,7 +131,7 @@ export function CheckoutDemo({ gasless = false }: { gasless?: boolean }) {
 type Link = { id: string; name?: string; amount: string; token: string; url: string; active: boolean; qr: string };
 export function LinksDemo() {
   const { data: list, reload } = useApi<Link[]>("/api/sandbox/links");
-  const [name, setName] = useState("Masala chai");
+  const [name, setName] = useState("Consulting hour");
   const [amount, setAmount] = useState("1.00");
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
@@ -161,7 +162,7 @@ export function LinksDemo() {
             <img src={l.qr} alt={`QR code for ${l.name}`} className="sbx-qr" />
             <div className="sbx-stack">
               <div className="sbx-row">
-                <a className="sbx-btn sbx-btn-primary" href={l.url} target="_blank" rel="noreferrer"><QrCode size={15} /> Open as a customer</a>
+                <GlassButton size="sm" tone="accent" href={l.url} target="_blank" rel="noreferrer"><QrCode size={15} /> Open as a customer</GlassButton>
                 <Btn variant="ghost" busy={busy === `v${l.id}`} onClick={() => visit(l)}><Shuffle size={15} /> Simulate a visit</Btn>
                 {l.active && <Btn variant="ghost" busy={busy === `d${l.id}`} onClick={() => act(`d${l.id}`, () => post("/api/sandbox/links/deactivate", { id: l.id }))}>Deactivate</Btn>}
               </div>

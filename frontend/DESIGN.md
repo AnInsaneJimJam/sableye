@@ -20,7 +20,7 @@ liquid glass, using layered highlights, blur and a WebGL navigation effect.
 
 ## Composition and motion
 
-The homepage explains the product in this order: promise and checkout walkthrough,
+The homepage explains the product in this order: promise,
 merchant capabilities, payment flow, integration, business context, trust and
 limits, FAQs, then a final action. Vary section composition and leave room between
 ideas. No invented adoption numbers, endorsements or customer quotes.
@@ -51,18 +51,7 @@ future Arkiv/Swarm features as shipped.
   `bunx shadcn@latest add <component>` from `frontend`.
 - `liquid-weather-glass.tsx` adapts the supplied card with strict types, per-instance
   filter IDs, reduced motion and an explicit keyboard-accessible expansion button.
+- `glass-button.tsx` is the only button. Every button and call-to-action link uses
+  `GlassButton`. Rules, and the verbatim source prompt: `docs/liquid-glass-button.md`.
 - `liquid-glass-navbar.tsx` adapts Nimbus UI Waterline by
   https://guglielmogiannattasio.it. Keep attribution and the CSS fallback.
-
-## Supporting asset
-
-`public/images/chai-shop.webp` was generated with the built-in ImageGen tool and
-compressed to WebP. It illustrates the business use case and is not a customer
-endorsement or a photograph of an actual Sableye merchant.
-
-Generation prompt: “An intimate modern Mumbai chai shop counter at blue hour,
-close up of two small clear glasses of steaming masala chai on a dark brushed
-steel counter, soft out of focus shop interior, no people. Horizontal 3:2;
-glasses in right half, counter negative space on left. Atmospheric midnight navy,
-cool blue edge light, small warm highlights in tea, realistic premium hospitality
-editorial photography. No text, logos, coins, crypto graphics or watermark.”

@@ -110,17 +110,15 @@
 .sbx-input-unit input { border: 0; background: transparent; width: 92px; box-shadow: none !important; }
 .sbx-input-unit span { font-size: 11px; color: var(--copy-soft); padding-right: 12px; }
 .sbx-mini { width: 92px; padding: 6px 9px !important; font-size: 12px !important; }
-.sbx-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; text-decoration: none; white-space: nowrap;
-  font: 500 13px var(--font-sans), sans-serif; border-radius: 10px; padding: 9px 15px; transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+/* Buttons are <GlassButton/>. The checkout widget's Pay button comes from @sableye/react,
+   so it gets a CSS approximation of the same glass. */
+[data-sableye-pay] {
+  border: 0; border-radius: 999px; color: #fff;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  background: linear-gradient(-75deg, rgb(96 165 250 / 14%), rgb(96 165 250 / 34%), rgb(96 165 250 / 14%));
+  box-shadow: inset 0 0.125em 0.125em rgb(248 250 252 / 5%), inset 0 -0.125em 0.125em rgb(8 15 31 / 50%), 0 0.25em 0.125em -0.125em rgb(248 250 252 / 20%), inset 0 0 0 1px rgb(248 250 252 / 28%);
 }
-.sbx-btn-primary, [data-sableye-pay] {
-  color: #f8fafc; background: linear-gradient(180deg, #3b7cf5, #2563eb); border: 1px solid #60a5fa80; box-shadow: inset 0 1px 0 #ffffff33, 0 6px 18px #2563eb40;
-}
-.sbx-btn-primary:hover, [data-sableye-pay]:hover { background: linear-gradient(180deg, #4b88f7, #2f6df0); }
-.sbx-btn-ghost { color: var(--ink); background: #abcfff0f; border: 1px solid var(--edge-strong); }
-.sbx-btn-ghost:hover { background: #abcfff1c; }
-.sbx-btn:disabled { opacity: 0.55; cursor: default; }
+[data-sableye-pay]:hover { transform: scale(0.975); }
 .sbx-spin { animation: sbx-spin 0.8s linear infinite; }
 @keyframes sbx-spin { to { transform: rotate(360deg); } }
 .sbx-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
