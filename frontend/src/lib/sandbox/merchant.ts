@@ -2,13 +2,21 @@
 import "server-only";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { fileStore, RateLimiter, Sableye, type Indexer } from "@sableye/server";
+import {
+  fileStore,
+  type Indexer,
+  RateLimiter,
+  Sableye,
+  SableyeError,
+} from "@sableye/server";
 import { fileLinkStore, webhookSecret } from "./store";
 
 const rootEnv = join(process.cwd(), "../.env");
-if (!process.env.MERCHANT_KEY && existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+if (!process.env.MERCHANT_KEY && existsSync(rootEnv))
+  process.loadEnvFile(rootEnv);
 
-export const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+export const BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 type Merchant = { sableye: Sableye; indexer: Indexer; limiter: RateLimiter };
 const g = globalThis as typeof globalThis & { __sableyeSandbox?: Merchant };
@@ -22,15 +30,43 @@ function boot(): Merchant {
     paymentLinkUrl: `${BASE_URL}/api/pay`,
     linkStore: fileLinkStore(),
   });
-  const indexer = sableye.indexer({
-    store: fileStore(".sableye/state.json"),
-    webhooks: [{ url: `${BASE_URL}/api/webhook`, secret: webhookSecret() }],
-  });
-  void indexer.start();
-  // Subscription keeper: charges every due Chai Club renewal.
-  setInterval(() => void sableye.subscriptions.runDue().catch(() => {}), 30_000);
+  let indexer: Indexer | undefined;
+  // invoices.create() persists order references through an attached indexer.
+  // On Vercel, leave it unattached so signing an invoice never writes files.
+  if (process.env.VERCEL !== "1") {
+    const worker = sableye.indexer({
+      store: fileStore(".sableye/state.json"),
+      webhooks: [{ url: `${BASE_URL}/api/webhook`, secret: webhookSecret() }],
+    });
+    indexer = worker;
+    void worker.start().catch((error: unknown) => {
+      worker.stop();
+      console.error("Sandbox indexer could not start:", error);
+    });
+    // Subscription keeper runs only on a persistent server; Vercel uses /renewals.
+    setInterval(
+      () => void sableye.subscriptions.runDue().catch(() => {}),
+      30_000,
+    );
+  }
   // Public sandbox: actions that cost the merchant gas are rate-limited per visitor.
-  return { sableye, indexer, limiter: new RateLimiter(20) };
+  return {
+    sableye,
+    get indexer() {
+      if (!indexer) {
+        throw Object.assign(
+          new SableyeError(
+            "persistent_storage_required",
+            "This sandbox feature requires persistent storage.",
+            "Run the full sandbox on a persistent Node.js server. Invoice creation and payment verification are available on Vercel.",
+          ),
+          { status: 503 },
+        );
+      }
+      return indexer;
+    },
+    limiter: new RateLimiter(20),
+  };
 }
 
 export const merchant = (): Merchant => (g.__sableyeSandbox ??= boot());
@@ -41,5 +77,9 @@ export const newOrderRef = (kind = "order") =>
   `${SANDBOX_PREFIX}${kind}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 export function clientKey(req: Request) {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "local";
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "local"
+  );
 }

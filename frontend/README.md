@@ -46,19 +46,26 @@ compile the SDK dependencies in dependency order because their exports use `dist
    Remove any old `bun install` override in the project settings.
 4. Set `NEXT_PUBLIC_SITE_URL` to the public HTTPS origin (no trailing slash).
    The marketing pages and hosted `/pay` checkout do not need a merchant key to build.
+   To create invoices in the sandbox, also set the server-only `MERCHANT_KEY` to a
+   testnet merchant wallet's private key for the deployment's environment.
 5. Deploy. If retrying a previous Bun deployment, redeploy without the existing build cache.
 
 Vercel's [monorepo settings](https://vercel.com/docs/monorepos/monorepo-faq)
 describe the outside-root setting. Package versions are pinned through Corepack
 and `packageManager`; no global pnpm version override is needed.
 
-**Sandbox runtime limitation:** the interactive merchant sandbox currently writes
-JSON files to `.sableye/` and starts an indexer and subscription keeper in the
-server process. These require persistent writable storage and a long-running
-process; they are not suitable for Vercel Functions. Deploying the frontend does
-not make those sandbox APIs production-ready. Run the full sandbox on a persistent
-Node.js server with a server-only `MERCHANT_KEY`, or migrate its storage and workers
-before enabling it on Vercel. Never use a `NEXT_PUBLIC_` variable for the key.
+**Sandbox runtime:** invoice creation and on-chain payment verification work on
+Vercel with `MERCHANT_KEY` configured. When `VERCEL=1`, merchant startup does not
+write `.sableye/`, attach a file-backed indexer, or start background workers.
+This avoids `ENOENT` / read-only filesystem errors when signing invoices.
+Subscription renewals can be triggered explicitly through the sandbox's Renewals action.
+
+The full sandbox still requires a persistent Node.js server: saved payment links,
+link deactivation, webhook logs, and the indexer use JSON files in `.sableye/`.
+Indexer-dependent endpoints return `503 persistent_storage_required` on Vercel.
+Migrate storage and workers before enabling these features there. Temporary `/tmp`
+files are not a durable substitute for link revocations or webhook delivery state.
+Never use a `NEXT_PUBLIC_` variable for the key.
 
 ## Layout
 
