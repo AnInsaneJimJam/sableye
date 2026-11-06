@@ -1,4 +1,4 @@
-import { Plot, Relay, Riffle } from "@lucasmarkes/hairline/react";
+import { Cabinet, Plot, Relay, Riffle, Terminal } from "@lucasmarkes/hairline/react";
 import {
   ArrowUpRight,
   BookOpen,
@@ -74,13 +74,13 @@ const demos = [
     slug: "books",
     Icon: BookOpen,
     text: "Read sales records owned by your wallet.",
-    wide: true,
+    Figure: Cabinet,
   },
   {
     slug: "developers",
     Icon: Code2,
     text: "Set up your SDK, tools and coding agent.",
-    wide: true,
+    Figure: Terminal,
   },
 ] satisfies {
   slug: ProductSlug;
@@ -136,7 +136,11 @@ export default function SandboxHome() {
                       className="sandbox-demo__figure hairline-figure"
                       aria-hidden="true"
                     >
-                      <Figure intensity={0.6} theme="dark" />
+                      <Figure
+                        intensity={0.6}
+                        theme="dark"
+                        play={slug === "books" || slug === "developers"}
+                      />
                     </div>
                   )}
                   <ArrowUpRight
