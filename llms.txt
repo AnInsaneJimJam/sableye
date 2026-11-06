@@ -16,7 +16,11 @@ Rules:
 ## @sableye/server
 
 ### new Sableye(config)
-Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, checkoutUrl?, relayUrl? }`
+Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, checkoutUrl?, relayUrl?, business?, email?, orderStore?, outbox?, arkiv? }`
+- `business`: `{ name, address?, email? }`, shown on invoices, receipts and emails. Default name from `SABLEYE_BUSINESS_NAME`.
+- `email`: `{ user, pass, host?, port?, from?, notify? }`. Default from `SMTP_USER`/`SMTP_PASS`/`SMTP_HOST`/`SMTP_PORT`/`MERCHANT_EMAIL`. `false` turns email off. The SMTP server is detected for Gmail, Outlook, Yahoo, Zoho and iCloud.
+- `orderStore`: `fileOrderStore('.sableye/orders.json')` keeps customer details across restarts (default: memory). `outbox: { path: '.sableye/outbox.json' }` keeps email and Arkiv retries.
+- `arkiv`: `{ accessKey, statePath? }`, on by default when `ARKIV_ACCESS_KEY` is set. Publishes paid invoices and refunds to Arkiv, owned by the merchant wallet.
 - `signer`: any `{ address, signTypedData, signTransaction? }`, e.g. a KMS adapter.
 - `network`: `"whitechain-sepolia"`, or `"whitechain"` once the processor and USDT are on mainnet.
 - `checkoutUrl`: base of payment links. Default `http://localhost:3000/pay`.
@@ -27,8 +31,9 @@ import { Sableye } from '@sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
 ```
 
-### sableye.invoices.create({ amount, token?, orderId?, expiresIn?, payout? })
+### sableye.invoices.create({ amount, token?, orderId?, expiresIn?, payout?, customer?, description?, items? })
 Signs an invoice. No transaction, no gas. Returns `{ invoice, signature, chainId, processor, relayUrl?, orderRef, checkoutUrl }`. Safe to send to the browser, and works with `Response.json()`.
+`customer: { email?, name? }`, `description` and `items: { name, quantity?, amount? }[]` stay off-chain in the order store. With a customer email and email configured, the invoice is emailed with a PDF; the receipt follows on payment.
 Defaults: `token: 'USDT'`, `orderId`: random, `expiresIn: 1800` seconds, `payout`: the merchant address.
 
 ```ts
@@ -44,7 +49,7 @@ await sableye.invoices.cancel('order_123')
 ```
 
 ### sableye.verifyPayment(orderId)
-Reads the on-chain receipt. Returns `{ status, paid, payer?, token?, amount?, amountFormatted?, refunded?, paidAt?, txHash?, explorerUrl? }`.
+Reads the on-chain receipt. Returns `{ status, paid, payer?, payout?, token?, amount?, amountFormatted?, refunded?, paidAt?, txHash?, explorerUrl? }`.
 `status`: `none`, `paid`, `partially_refunded`, `refunded` or `cancelled`. `paid` is true for `paid`, `partially_refunded` and `refunded`.
 
 ```ts
@@ -55,6 +60,28 @@ if (paid) fulfil()
 ### sableye.refunds.create({ orderId, amount? })
 Refunds all remaining funds by default, or the decimal-string `amount`. When payout is the merchant wallet and allowance is insufficient, it approves exactly that amount before refunding. Existing sufficient allowances are reused. A different payout wallet must approve the processor itself. Returns `{ txHash, amount, approvalTxHash? }`.
 `refunds.prepare()` sends nothing: it returns a summary and unsigned `transactions` in execution order. Agents must leave signing to the merchant. `refunds.enable()` remains an optional unlimited pre-approval.
+
+### Emails and PDFs
+Once email is configured (`npx sableye init --email`, or `SMTP_USER` + `SMTP_PASS`) and an indexer runs, these go out automatically: the invoice on create, a receipt plus a "you got paid" notice on `invoice.paid` (verified on-chain first), and a refund confirmation on `invoice.refunded`. Every email goes through a keyed outbox, so a replay or reorg never sends twice and an SMTP failure never affects a payment.
+
+```ts
+await sableye.emails.test()                         // send yourself a test email
+sableye.emails.log()                                // [{ kind, to, status: 'pending'|'sent'|'failed', attempts, error?, at }]
+const pdf = await sableye.documents.invoicePdf('order_123')          // Uint8Array
+const receipt = await sableye.documents.receiptPdf('order_123')      // undefined until paid; no customer details unless { includeCustomer: true }
+```
+
+### Arkiv records (merchant-owned)
+With `ARKIV_ACCESS_KEY` set (and tGLM for the merchant address), the indexer publishes a `sableye.invoice.v1` entity when a payment reaches the `safe` head. It creates a `sableye.refund.v1` per refund (and patches the invoice), and patches `status: 'reorged'` on a reorg. The merchant key signs every write, so the merchant's wallet owns the records. Public columns hold only what's already on Whitechain; order ref, items and customer are AES-256-GCM encrypted with the view key. The format is in `arkiv/schema.md`.
+
+```ts
+await sableye.arkiv.viewKey()   // share with an accountant (also: npx sableye view-key)
+await sableye.arkiv.records()   // read back, decrypted
+sableye.arkiv.status()          // { published, pending, failed, lastError? }
+```
+
+### CLI
+`npx sableye init` runs first-time setup: merchant key, business name, email (logs in and sends a test email before saving), Arkiv access key. It writes `.env`. `npx sableye init --email` reruns only the email step. `npx sableye doctor` checks the chain setup and the SMTP login. `npx sableye view-key` prints the Arkiv view key.
 
 ### sableye.subscriptions.keeper(options?)
 Start once in a long-running server after creating signed plans with `subscriptions.createPlan({ planId, amount, interval })`. The customer approves a cap and calls `SubscriptionManager.subscribe(plan, signature, cap)`; the first cycle charges immediately.

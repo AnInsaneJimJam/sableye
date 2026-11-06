@@ -184,3 +184,5 @@ The models mirror specific code. When the code changes, update the model **first
 | `invoice.ts`, `webhooks.ts` | `test/differential.test.mjs` | Add the new fields to the generators. |
 
 Afterwards, run `forge build` in `sdk/contracts` before the SDK tests, because Halmos rebuilds `out/` without test artifacts.
+
+**Emails and Arkiv sit outside the verified paths.** They hook into indexer events with `indexer.on('*')` and only *enqueue* outbox jobs. The indexer's `sync` / `rollback` / `emit` logic, which `specs/indexer.qnt` models, is unchanged, so the models and proofs above still hold. Their own behaviour is covered by tests (`test/email.test.mjs`, `test/arkiv.test.mjs`): deduplication, retries, failures never reaching payments, reorg handling, renewal and encryption round-trips.
