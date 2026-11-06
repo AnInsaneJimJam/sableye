@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CodeCompare } from "@/components/sandbox/code-compare";
+import { BooksDemo } from "@/components/sandbox/demo-books";
 import { CheckoutDemo, InvoicesDemo, LinksDemo } from "@/components/sandbox/demos-accept";
 import { DashboardDemo, DevelopersDemo, EventsDemo, ReconcileDemo, RefundsDemo, SubscriptionsDemo } from "@/components/sandbox/demos-operate";
 import { type ProductSlug, productBySlug, products } from "@/lib/sandbox/products";
@@ -16,6 +17,7 @@ const demos: Record<ProductSlug, React.ReactNode> = {
   events: <EventsDemo />,
   reconcile: <ReconcileDemo />,
   dashboard: <DashboardDemo />,
+  books: <BooksDemo />,
   developers: <DevelopersDemo />,
 };
 

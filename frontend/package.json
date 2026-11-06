@@ -15,9 +15,11 @@
     "check:render": "node scripts/check-render.mjs",
     "check:serverless-invoice": "node --conditions=react-server --test scripts/check-serverless-invoice.mjs",
     "dev:clean": "pkill -f \"next dev\" || true; rm -rf .next; next dev",
-    "check:navbar": "node scripts/check-navbar.mjs"
+    "check:navbar": "node scripts/check-navbar.mjs",
+    "check:books": "node --test scripts/check-books-independent.mjs"
   },
   "dependencies": {
+    "@arkiv-network/sdk": "1.0.1",
     "@base-ui/react": "^1.9.0",
     "@lucasmarkes/hairline": "0.5.1",
     "@sableye/core": "workspace:*",

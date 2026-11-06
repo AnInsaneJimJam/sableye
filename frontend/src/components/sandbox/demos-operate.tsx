@@ -1,6 +1,6 @@
 "use client";
 import { discoverWallets, formatAmount, networks, subscriptionManagerAbi, type WalletProvider } from "@sableye/core";
-import { CheckCircle2, CircleAlert, Download, Play, RefreshCw, ShieldCheck, Stethoscope, XCircle } from "lucide-react";
+import { CheckCircle2, CircleAlert, Download, Mail, Play, RefreshCw, ShieldCheck, Stethoscope, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { type Address, createPublicClient, createWalletClient, custom, erc20Abi, type Hex, http, numberToHex } from "viem";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -228,7 +228,35 @@ export function EventsDemo() {
           </ul>
         )}
       </Panel>
+      <EmailsPanel now={now} />
     </div>
+  );
+}
+
+type EmailLog = { enabled: boolean; log: { kind: string; to?: string; status: "pending" | "sent" | "failed"; attempts: number; error?: string; at: string }[] };
+const EMAIL_LABEL: Record<string, string> = { invoice: "Invoice", receipt: "Receipt", merchant_notice: "You got paid", refund: "Refund", test: "Test" };
+
+/** The email outbox: what was sent from the merchant's own SMTP account, de-duplicated and retried. */
+function EmailsPanel({ now }: { now?: number }) {
+  const { data } = useApi<EmailLog>("/api/sandbox/emails", 5000);
+  if (!data) return null;
+  return (
+    <Panel title="Emails sent" hint="From the merchant's own email account. Each one is keyed, so a replayed or reorged event never sends twice.">
+      {!data.enabled ? <p className="sbx-muted">Email isn't configured on this server. Run <code>npx sableye init --email</code> to turn it on.</p>
+        : data.log.length === 0 ? <p className="sbx-muted">None yet. Create an invoice with a customer email on the Invoices page.</p> : (
+        <ul className="sbx-feed">
+          {data.log.slice(0, 12).map((e) => (
+            <li key={`${e.kind}${e.at}${e.to}`}>
+              <Mail size={14} className={e.status === "sent" ? "ok" : undefined} />
+              <code className="sbx-evt">{EMAIL_LABEL[e.kind] ?? e.kind}</code>
+              <span>{e.to ?? ""}</span>
+              <Pill tone={e.status === "sent" ? "ok" : e.status === "failed" ? "bad" : "warn"}>{e.status}</Pill>
+              <span className="sbx-muted">{e.error ? e.error.slice(0, 40) : now ? ago(now - new Date(e.at).getTime()) : ""}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   );
 }
 const ago = (ms: number) => (ms < 60_000 ? `${Math.round(ms / 1000)}s ago` : ms < 3_600_000 ? `${Math.round(ms / 60_000)}m ago` : `${Math.round(ms / 3_600_000)}h ago`);
