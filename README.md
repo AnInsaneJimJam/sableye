@@ -67,6 +67,7 @@ For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skill
 ## Why this flow needs onchain stablecoin settlement
 
 A card rail (Stripe) can't do any of the following:
+
 - **Settle in about 1 second, final, into the merchant's own wallet.** There are no 2–7 day payout holds and no reserves.
 - **Avoid chargebacks** while still allowing merchant-issued refunds, which are enforced on-chain and capped at what was paid.
 - **Accept the 40M WhiteBIT users** who already hold USDT, with no card and no bank account.
@@ -99,6 +100,7 @@ The browser picks the best payment path by itself, falling back automatically: g
 The customer only signs; the **business's own server** submits the transaction and pays the WBT gas, about 0.0001 WBT per payment. The relayer is just the merchant key inside `@sableye/server` (`export const POST = sableye.relayHandler()`), and the merchant tops it up with WBT from the faucet (testnet) or an exchange (mainnet). `npx sableye doctor` warns when the balance runs low.
 
 **Why a stranger can't drain it:**
+
 1. **It only relays its own invoices.** Anything not signed by this merchant is rejected before any RPC call.
 2. **Each invoice can be paid exactly once on-chain**, so there's at most one sponsored transaction per invoice. Concurrent requests for the same invoice share one submission.
 3. **Every request is simulated first.** Anything that would revert is refused, so no gas is spent.
@@ -120,8 +122,9 @@ cd frontend && pnpm dev                # landing page + Sandbox on :3000/sandbox
 The demo is the **Sableye Sandbox** (`/sandbox`): every product live on Whitechain Sepolia, next to its code and the Stripe equivalent.
 
 **Testnet funds:**
-1. Get WBT for gas from https://faucet.testnet.whitechain.io (2 WBT/day).
-2. Swap WBT for USDT on https://testnet.yetitrade.fi.
+
+1. Get WBT for gas from <https://faucet.testnet.whitechain.io> (2 WBT/day).
+2. Swap WBT for USDT on <https://testnet.yetitrade.fi>.
 3. Pay with USDT `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7`.
 
 ## Deployments
@@ -166,4 +169,4 @@ Full threat model and contract spec: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md
 
 ## AI usage
 
-Much of this project was written with AI coding assistants (Claude Code), with human review. Every contract change was checked by tests and Slither.
+Much of this project was written with AI and other tools coding assistants (Claude Code), with human review. Every contract change was checked by tests and Slither.
