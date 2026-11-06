@@ -213,32 +213,37 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           <Link
             href="/"
             className={
-              !["api-reference", "changelog"].includes(current)
+              !["api-reference", "core", "contracts"].includes(current)
                 ? "selected"
                 : ""
             }
           >
-            Documentation
+            Guides
           </Link>
           <Link
             href="/api-reference"
-            className={current === "api-reference" ? "selected" : ""}
+            className={
+              ["api-reference", "core"].includes(current) ? "selected" : ""
+            }
           >
             API reference
           </Link>
           <Link
-            href="/changelog"
-            className={current === "changelog" ? "selected" : ""}
+            href="/contracts"
+            className={current === "contracts" ? "selected" : ""}
           >
-            Changelog
+            Contracts
           </Link>
           <details className="learn-menu">
             <summary>
-              Learn <ChevronDown size={13} />
+              Resources <ChevronDown size={13} />
             </summary>
             <div>
-              <Link href="/how-it-works">How it works</Link>
-              <Link href="/security">Security</Link>
+              <Link href="/configuration">Configuration</Link>
+              <Link href="/deployment">Deployment</Link>
+              <Link href="/cli/doctor">CLI doctor</Link>
+              <Link href="/errors">Errors &amp; remedies</Link>
+              <Link href="/changelog">Implementation status</Link>
               <Link href="/ai">AI & MCP</Link>
             </div>
           </details>
@@ -263,9 +268,9 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
           </button>
           <Link
             className="outline-button header-reference"
-            href="/api-reference"
+            href="/configuration"
           >
-            Explore SDK
+            SDK configuration
           </Link>
           <Link className="primary-button" href="/quickstart">
             Get started
