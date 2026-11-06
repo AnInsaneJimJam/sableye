@@ -2,6 +2,7 @@
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ComponentProps } from "react";
+import { ThemeSwitch } from "@/components/ui/theme-switch";
 
 export function ThemeProvider({
   children,
@@ -16,6 +17,7 @@ export function ThemeProvider({
       {...props}
     >
       {children}
+      <ThemeSwitch />
     </NextThemesProvider>
   );
 }

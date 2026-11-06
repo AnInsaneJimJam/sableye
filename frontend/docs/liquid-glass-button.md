@@ -5,7 +5,7 @@
 `<a className="…">` or `<button className="…">` for actions. This applies to the
 homepage, the sandbox and any new page. Humans and AI agents both follow it.
 
-Documentation pages are an exception: all controls use plain native buttons and flat call-to-action links, without liquid-glass styling. Documentation uses a fixed dark theme without a day/night toggle.
+Documentation pages are an exception: all controls use plain native buttons and flat call-to-action links, without liquid-glass styling. All pages, including documentation, share the selected dark color palette and the persistent native palette switch in the bottom-right corner. The palette switch is also an exception to the GlassButton rule.
 
 ```tsx
 import { GlassButton } from "@/components/ui/glass-button";

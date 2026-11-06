@@ -67,9 +67,13 @@ export const THEMES: Theme[] = [
 export const DEFAULT_THEME = THEMES[0];
 
 const STORAGE_KEY = "sableye-theme";
+
+/** Restore the palette before paint on every route, including direct checkout links. */
+export const THEME_INIT_SCRIPT = `(()=>{let id=${JSON.stringify(DEFAULT_THEME.id)};try{const saved=localStorage.getItem(${JSON.stringify(STORAGE_KEY)});if(${JSON.stringify(THEMES.map((theme) => theme.id))}.includes(saved))id=saved}catch{}document.documentElement.dataset.theme=id})()`;
 /** Fired on window when the palette changes, so the shader can follow. */
 export const THEME_EVENT = "sableye:theme";
 
+/** Resolve a saved palette ID, falling back to Midnight for unknown values. */
 export function themeById(id: string | null): Theme {
   return THEMES.find((t) => t.id === id) ?? DEFAULT_THEME;
 }
@@ -84,8 +88,12 @@ export function readTheme(): Theme {
   }
 }
 
+/** Apply a palette immediately and persist it when browser storage is available. */
 export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme.id;
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", theme.glass.void);
   try {
     window.localStorage.setItem(STORAGE_KEY, theme.id);
   } catch {
@@ -99,5 +107,19 @@ export function onThemeChange(fn: (theme: Theme) => void): () => void {
   const handler = (e: Event) =>
     fn(themeById((e as CustomEvent<string>).detail));
   window.addEventListener(THEME_EVENT, handler);
-  return () => window.removeEventListener(THEME_EVENT, handler);
+  const storageHandler = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY || event.key === null) {
+      const theme = readTheme();
+      document.documentElement.dataset.theme = theme.id;
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", theme.glass.void);
+      fn(theme);
+    }
+  };
+  window.addEventListener("storage", storageHandler);
+  return () => {
+    window.removeEventListener(THEME_EVENT, handler);
+    window.removeEventListener("storage", storageHandler);
+  };
 }

@@ -2,6 +2,7 @@ import type { Viewport } from "next";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createMetadata } from "@/lib/seo";
+import { THEME_INIT_SCRIPT } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -42,6 +43,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={cn(fontSans.variable, fontDisplay.variable, fontMono.variable)}
     >
+      <head>
+        <script
+          id="sableye-palette"
+          // The script contains only our palette IDs and storage key, never user input.
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+      </head>
       <body className="min-h-dvh bg-background text-foreground antialiased">
         <ThemeProvider forcedTheme="dark">{children}</ThemeProvider>
       </body>

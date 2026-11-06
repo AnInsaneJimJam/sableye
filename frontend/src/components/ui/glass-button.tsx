@@ -223,12 +223,12 @@ const sableyeExtensions = `
 @layer base { .all-unset { all: unset; } }
 .glass-button-wrap { display:inline-block; width:fit-content }
 .glass-button-wrap[data-tone="accent"] .glass-button {
-  background:linear-gradient(-75deg,rgb(96 165 250 / 14%),rgb(96 165 250 / 34%),rgb(96 165 250 / 14%))
+  background:linear-gradient(-75deg,oklch(0.7137 calc(0.1434 * var(--t-accent-sat)) calc(var(--t-accent-hue) + -8.26deg) / 0.140),oklch(0.7137 calc(0.1434 * var(--t-accent-sat)) calc(var(--t-accent-hue) + -8.26deg) / 0.340),oklch(0.7137 calc(0.1434 * var(--t-accent-sat)) calc(var(--t-accent-hue) + -8.26deg) / 0.140))
 }
 .glass-button-text svg { flex-shrink:0 }
 .glass-button-wrap[data-disabled] { pointer-events:none; opacity:.55 }
 @media (prefers-reduced-transparency: reduce) {
-  .glass-button { -webkit-backdrop-filter:none; backdrop-filter:none; background:#111d35 }
+  .glass-button { -webkit-backdrop-filter:none; backdrop-filter:none; background:oklch(0.2336 calc(0.0496 * var(--t-base-sat)) calc(var(--t-base-hue) + -1.76deg)) }
 }
 `;
 

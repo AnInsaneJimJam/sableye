@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   applyTheme,
   DEFAULT_THEME,
+  onThemeChange,
   readTheme,
   THEMES,
   type Theme,
@@ -19,12 +20,12 @@ import {
 export function ThemeSwitch() {
   const [theme, setTheme] = useState<Theme>(DEFAULT_THEME);
 
-  // The stored choice is applied after mount, so the server HTML and the first
-  // client render agree.
+  // The head script restores the palette before paint; React catches up here.
   useEffect(() => {
     const stored = readTheme();
     setTheme(stored);
-    document.documentElement.dataset.theme = stored.id;
+    applyTheme(stored);
+    return onThemeChange(setTheme);
   }, []);
 
   const index = THEMES.findIndex((t) => t.id === theme.id);
@@ -48,7 +49,7 @@ export function ThemeSwitch() {
           <span
             key={color}
             style={{ background: color }}
-            className="size-4 rounded-full ring-1 ring-black/40 transition-transform group-hover:translate-y-0 first:translate-y-0"
+            className="size-4 rounded-full ring-1 ring-[var(--rule-strong)]"
           />
         ))}
       </span>

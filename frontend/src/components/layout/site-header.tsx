@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { LiquidNavbar } from "@/components/ui/liquid-glass-navbar";
 
 const items = [
@@ -123,13 +124,7 @@ export function SiteHeader() {
           aria-label="Sableye home"
           onClick={() => selectSection(-1)}
         >
-          <img
-            src="/logo.svg"
-            width={27}
-            height={29}
-            alt=""
-            aria-hidden="true"
-          />
+          <BrandMark />
           Sableye
         </a>
       </header>
