@@ -61,7 +61,7 @@ console.log(`Created ${name}.
 Next:
   cd ${name}
   npm install
-  cp .env.example .env     # then set MERCHANT_KEY
+  npx sableye init         # merchant key, business name, email (SMTP), Arkiv → .env
   npx sableye doctor       # checks RPC, chain, contract, token and your key
   npm run dev              # http://localhost:3000
 `)
