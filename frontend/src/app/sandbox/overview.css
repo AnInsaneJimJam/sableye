@@ -65,7 +65,7 @@
   line-height: 1.8;
   color: var(--copy-soft);
 }
-.sandbox-overview__intro .glass-button-wrap {
+.sandbox-overview__intro .sbx-button {
   flex-shrink: 0;
   margin-bottom: 4px;
 }

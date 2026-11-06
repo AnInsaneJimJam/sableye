@@ -10,7 +10,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { GlassButton } from "@/components/ui/glass-button";
+import { SandboxButton } from "@/components/sandbox/sandbox-button";
 import {
   Btn,
   ErrorNote,
@@ -21,6 +21,7 @@ import {
   statusTone,
   TxLink,
 } from "./bits";
+import { useDemoField } from "./live-example";
 import { type ApiError, post, short, useApi } from "./use-api";
 
 type Hex = `0x${string}`;
@@ -82,12 +83,12 @@ function useOrderStatus(orderRef?: string) {
 
 /* ---------- Invoices ---------- */
 export function InvoicesDemo() {
-  const [amount, setAmount] = useState("1.00");
-  const [expiresIn, setExpiresIn] = useState(1800);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [coupon, setCoupon] = useState("");
+  const [amount, setAmount] = useDemoField<string>("amount", "1.00");
+  const [expiresIn, setExpiresIn] = useDemoField<number>("expiresIn", 1800);
+  const [email, setEmail] = useDemoField<string>("email", "");
+  const [name, setName] = useDemoField<string>("name", "");
+  const [description, setDescription] = useDemoField<string>("description", "");
+  const [coupon, setCoupon] = useDemoField<string>("coupon", "");
   const { data: mail } = useApi<{ enabled: boolean }>("/api/sandbox/emails");
   const [inv, setInv] = useState<Invoice>();
   const [busy, setBusy] = useState(false);
@@ -230,34 +231,34 @@ export function InvoicesDemo() {
             ]}
           />
           <div className="sbx-row">
-            <GlassButton
-              size="sm"
+            <SandboxButton
+              size="default"
               tone="accent"
               href={inv.checkoutUrl}
               target="_blank"
               rel="noreferrer"
             >
               <Receipt size={15} /> Open the checkout link
-            </GlassButton>
+            </SandboxButton>
           </div>
           <div className="sbx-row">
-            <GlassButton
-              size="sm"
+            <SandboxButton
+              size="default"
               href={`/api/sandbox/pdf?kind=invoice&ref=${inv.orderRef}`}
               target="_blank"
               rel="noreferrer"
             >
               <FileText size={15} /> Invoice PDF
-            </GlassButton>
+            </SandboxButton>
             {status?.paid && (
-              <GlassButton
-                size="sm"
+              <SandboxButton
+                size="default"
                 href={`/api/sandbox/pdf?kind=receipt&ref=${inv.orderRef}`}
                 target="_blank"
                 rel="noreferrer"
               >
                 <FileText size={15} /> Receipt PDF
-              </GlassButton>
+              </SandboxButton>
             )}
             {inv.emailed && (
               <span className="sbx-muted">
@@ -406,8 +407,8 @@ type Link = {
 };
 export function LinksDemo() {
   const { data: list, reload } = useApi<Link[]>("/api/sandbox/links");
-  const [name, setName] = useState("Consulting hour");
-  const [amount, setAmount] = useState("1.00");
+  const [name, setName] = useDemoField<string>("name", "Consulting hour");
+  const [amount, setAmount] = useDemoField<string>("amount", "1.00");
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
   const [visits, setVisits] = useState<Record<string, string[]>>({});
@@ -480,15 +481,15 @@ export function LinksDemo() {
             <img src={l.qr} alt={`QR code for ${l.name}`} className="sbx-qr" />
             <div className="sbx-stack">
               <div className="sbx-row">
-                <GlassButton
-                  size="sm"
+                <SandboxButton
+                  size="default"
                   tone="accent"
                   href={l.url}
                   target="_blank"
                   rel="noreferrer"
                 >
                   <QrCode size={15} /> Open as a customer
-                </GlassButton>
+                </SandboxButton>
                 <Btn
                   variant="ghost"
                   busy={busy === `v${l.id}`}

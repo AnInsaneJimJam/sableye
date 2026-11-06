@@ -1,7 +1,7 @@
 "use client";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { GlassButton } from "@/components/ui/glass-button";
+import { SandboxButton } from "@/components/sandbox/sandbox-button";
 import type { ApiError } from "./use-api";
 
 export const EXPLORER = "https://explorer.testnet.whitechain.io";
@@ -65,10 +65,10 @@ export function OkNote({ children }: { children: ReactNode }) {
 
 export function Btn({ busy, children, variant = "primary", ...p }: React.ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean; variant?: "primary" | "ghost" }) {
   return (
-    <GlassButton size="sm" tone={variant === "primary" ? "accent" : "clear"} {...p} disabled={busy || p.disabled}>
+    <SandboxButton size="default" tone={variant === "primary" ? "accent" : "clear"} {...p} disabled={busy || p.disabled}>
       {busy && <Loader2 size={15} className="sbx-spin" />}
       {children}
-    </GlassButton>
+    </SandboxButton>
   );
 }
 

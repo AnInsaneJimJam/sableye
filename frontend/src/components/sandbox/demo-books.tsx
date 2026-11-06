@@ -35,6 +35,7 @@ import {
   parseAbi,
   parseEventLogs,
 } from "viem";
+import { useDemoField, useDemoCodeValues } from "./live-example";
 import { Btn, KV, Panel, Pill } from "./bits";
 
 // ---- the open schema (arkiv/schema.md) ----
@@ -134,8 +135,9 @@ export function BooksDemo({
 }: {
   defaultMerchant?: string;
 }) {
-  const [merchant, setMerchant] = useState(defaultMerchant);
+  const [merchant, setMerchant] = useDemoField<string>("merchant", defaultMerchant);
   const [viewKey, setViewKey] = useState("");
+  useDemoCodeValues({ hasViewKey: viewKey ? 1 : 0 });
   const [rows, setRows] = useState<Row[]>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();

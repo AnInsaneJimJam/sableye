@@ -14,7 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { ProductBento } from "@/components/sections/product-bento";
-import { GlassButton } from "@/components/ui/glass-button";
+import { SandboxButton } from "@/components/sandbox/sandbox-button";
 import { products, type ProductSlug } from "@/lib/sandbox/products";
 import { createMetadata } from "@/lib/seo";
 import "./overview.css";
@@ -102,9 +102,9 @@ export default function SandboxHome() {
             <span>to the test.</span>
           </h1>
         </div>
-        <GlassButton href="/docs" size="sm">
+        <SandboxButton href="/docs" size="default">
           Read the docs <ArrowUpRight size={15} />
-        </GlassButton>
+        </SandboxButton>
       </header>
       <section aria-label="Explore the sandbox">
         <ProductBento

@@ -149,7 +149,7 @@
 .sbx-product-page .sbx-input-unit input {
   width: 100%;
 }
-.sbx-product-page .sbx-form > .glass-button-wrap {
+.sbx-product-page .sbx-form > .sbx-button {
   margin-top: 4px;
 }
 .sbx-product-page .sbx-hint {
@@ -179,16 +179,9 @@
 .sbx-product-page .code-toolbar [role="tablist"] {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-}
-.sbx-product-page .code-toolbar .glass-button {
-  background-color: transparent;
-  padding: 7px 12px;
+  gap: 12px;
 }
 .sbx-product-page .code-toolbar [aria-selected="true"] {
-  color: var(--palette-active);
-}
-.sbx-product-page .code-toolbar [aria-selected="true"] .glass-button-text {
   color: var(--palette-active);
 }
 .sbx-product-page .code-filename {
@@ -261,7 +254,7 @@
   grid-column: 2;
   font-size: 32px;
 }
-.sbx-product-page .sbx-product > .glass-button-wrap {
+.sbx-product-page .sbx-product > .sbx-button {
   grid-column: 2;
   justify-self: start;
 }
@@ -438,25 +431,14 @@
   }
 }
 
-/* Override the older flat code toolbar's button radius. */
-.sbx-product-page .code-toolbar .glass-button {
-  border-radius: 999px;
-}
 .sbx-product-page .sbx-side:hover {
   border-color: color-mix(in oklab, var(--palette-motion) 35%, var(--rule));
 }
 .sbx-product-page .sbx-seg {
   flex-wrap: wrap;
   border: 0;
-  gap: 6px;
+  gap: 12px;
   padding: 0;
-}
-.sbx-product-page .sbx-seg .glass-button {
-  padding: 6px 10px;
-  font-size: 12px;
-}
-.sbx-product-page .sbx-seg [aria-pressed="true"] .glass-button-text {
-  color: var(--palette-active);
 }
 
 /* Data-heavy demos use the full canvas; code follows the live content. */
@@ -535,4 +517,51 @@
     font-size: 12px;
   }
 }
-.sbx-product-page .sbx-code code { font-size: 12px; line-height: 1.85; }
+.sbx-product-page .sbx-code code {
+  font-size: 12px;
+  line-height: 1.85;
+}
+
+/* Syntax colors use the same roles as landing-page text and illustrations. */
+.sbx-code .token {
+  color: var(--palette-copy);
+}
+.sbx-code .token:is(.keyword, .builtin, .boolean) {
+  color: var(--palette-active);
+}
+.sbx-code .token:is(.string, .char, .attr-value, .template-string) {
+  color: var(--palette-motion);
+}
+.sbx-code .token:is(.number, .constant) {
+  color: var(--palette-emphasis);
+}
+.sbx-code .token:is(.function, .class-name, .tag) {
+  color: var(--palette-type);
+}
+.sbx-code .token:is(.comment, .prolog) {
+  color: var(--palette-muted);
+}
+.sbx-code .token:is(.operator, .punctuation) {
+  color: var(--palette-copy);
+}
+.sbx-code .token:is(.property, .attr-name, .parameter) {
+  color: var(--palette-heading);
+}
+.sbx-code .token .token {
+  color: inherit;
+}
+.sbx-product-page [data-sableye-pay] {
+  border-radius: 999px;
+  padding: 14px 24px;
+  font:
+    500 16px / 1.5 var(--font-sans),
+    sans-serif;
+}
+
+.sbx-product-page [data-sableye-pay]:hover {
+  transform: none;
+  background: color-mix(in oklab, var(--palette-active) 82%, white);
+}
+.sbx-product-page .code-toolbar [role="tablist"] {
+  gap: 8px;
+}

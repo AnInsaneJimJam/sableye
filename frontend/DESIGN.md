@@ -80,8 +80,10 @@ future Arkiv/Swarm features as shipped.
   `bunx shadcn@latest add <component>` from `frontend`.
 - `liquid-weather-glass.tsx` adapts the supplied card with strict types, per-instance
   filter IDs, reduced motion and an explicit keyboard-accessible expansion button.
-- `glass-button.tsx` is the only button. Every button and call-to-action link uses
-  `GlassButton`. Rules, and the verbatim source prompt: `docs/liquid-glass-button.md`.
+- Landing actions use `GlassButton`. Sandbox uses plain native controls through
+  `sandbox/sandbox-button.tsx`, with 44px minimum hit areas, subtle borders and
+  clear focus, disabled and selected states. Docs also use plain native controls.
+  Glass source prompt: `docs/liquid-glass-button.md`.
 - `homepage-gooey-nav.tsx` adapts React Bits Gooey Nav, with source and license in
   `src/components/ui/react-bits/gooey-nav/`. The bottom dock keeps the existing
   homepage links and stays clear of the viewport edges on smaller screens.

@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CodeCompare } from "@/components/sandbox/code-compare";
+import { LiveExample } from "@/components/sandbox/live-example";
 import { BooksDemo } from "@/components/sandbox/demo-books";
 import {
   CheckoutDemo,
@@ -81,22 +82,24 @@ async function Product({ params }: { params: Promise<{ product: string }> }) {
         <h1>{p.title}</h1>
         <p className="sbx-tagline">{p.tagline}</p>
       </header>
-      <div className="sbx-split">
-        <div className="sbx-try">{demos[p.slug]}</div>
-        <div className="sbx-side">
-          <CodeCompare code={p.code} />
-          <details className="sbx-walkthrough">
-            <summary>
-              How it works <ChevronDown size={16} aria-hidden="true" />
-            </summary>
-            <ol>
-              {p.steps.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ol>
-          </details>
+      <LiveExample key={p.slug}>
+        <div className="sbx-split">
+          <div className="sbx-try">{demos[p.slug]}</div>
+          <div className="sbx-side">
+            <CodeCompare code={p.code} product={p.slug} />
+            <details className="sbx-walkthrough">
+              <summary>
+                How it works <ChevronDown size={16} aria-hidden="true" />
+              </summary>
+              <ol>
+                {p.steps.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ol>
+            </details>
+          </div>
         </div>
-      </div>
+      </LiveExample>
     </article>
   );
 }

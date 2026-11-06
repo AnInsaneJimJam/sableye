@@ -1,11 +1,11 @@
 # Liquid glass buttons
 
-**Rule: every button and call-to-action link on the Sableye site is a `GlassButton`**
+**Rule: marketing buttons and call-to-action links use `GlassButton`**
 (`src/components/ui/glass-button.tsx`). Don't hand-roll button CSS, and don't use
 `<a className="…">` or `<button className="…">` for actions. This applies to the
-homepage, the sandbox and any new page. Humans and AI agents both follow it.
+homepage and new marketing pages. Humans and AI agents both follow it.
 
-Documentation pages are an exception: all controls use plain native buttons and flat call-to-action links, without liquid-glass styling. All pages, including documentation, use the fixed Midnight Blue palette. The homepage uses Gradient Waves with Ice colors scoped to its artwork. There are no appearance switchers.
+Documentation and all Sandbox pages are exceptions: all controls use plain native buttons and flat call-to-action links, without liquid-glass styling. All pages, including documentation, use the fixed Midnight Blue palette. The homepage uses Gradient Waves with Ice colors scoped to its artwork. There are no appearance switchers.
 
 ```tsx
 import { GlassButton } from "@/components/ui/glass-button";
@@ -17,10 +17,11 @@ import { GlassButton } from "@/components/ui/glass-button";
 
 - `href` renders an `<a>`; without it you get a `<button type="button">`.
 - `tone="accent"` (a blue tint) marks the one primary action in a group. Default is `clear`.
-- Sizes: `sm` for in-card and sandbox actions, `default` for hero actions, `lg` rarely, `icon` for icon-only.
+- Sizes: `default` for hero actions, `sm` for compact in-card actions, `lg` rarely, `icon` for icon-only.
 - Position the button with `className` on the wrapper (for example `margin-left: auto`). Never restyle the glass itself.
-- The one exception is the checkout widget's Pay button: it's rendered by `@sableye/react`,
-  so `sandbox.css` gives `[data-sableye-pay]` a CSS approximation of the same glass.
+- Legacy toolbar and segmented-control rules must exclude `.glass-button`. Padding belongs to the component's text span; adding padding to the button itself doubles its size and distorts the glass.
+- Sandbox uses `src/components/sandbox/sandbox-button.tsx` and plain styling in
+  `sandbox.css`. Its embedded SDK checkout also uses plain button styling.
 
 ## What was changed from the source prompt
 

@@ -247,8 +247,8 @@
 
 /* Revenue chart: one series, thin bars rounded at the data end, recessive axis, hover tooltip */
 .sbx-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; border: 1px solid var(--edge); }
-.sbx-seg button { white-space: nowrap; padding: 4px 10px; border-radius: 999px; font-size: 12px; color: var(--muted-foreground); background: none; border: 0; cursor: pointer; }
-.sbx-seg button[aria-pressed="true"] { background: var(--brand-weak); color: var(--ink); }
+.sbx-seg button:not(.glass-button):not(.sbx-button) { white-space: nowrap; padding: 4px 10px; border-radius: 999px; font-size: 12px; color: var(--muted-foreground); background: none; border: 0; cursor: pointer; }
+.sbx-seg button:not(.glass-button):not(.sbx-button)[aria-pressed="true"] { background: var(--brand-weak); color: var(--ink); }
 .sbx-chart { position: relative; margin-bottom: 12px; }
 .sbx-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
 .sbx-chart-axis { stroke: var(--edge); stroke-width: 1; }
@@ -257,3 +257,55 @@
 .sbx-chart-bar.on { opacity: 1; }
 .sbx-chart-tip { position: absolute; top: 0; transform: translate(-50%, -105%); display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: oklch(0.1867 calc(0.0337 * var(--t-base-sat)) calc(var(--t-base-hue) + -4.57deg) / 0.949); border: 1px solid var(--edge); font-size: 12px; color: var(--ink); white-space: nowrap; pointer-events: none; z-index: 2; }
 .sbx-chart-tip span { color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+
+/* Plain, consistent controls across the Sandbox. */
+.sbx-page .sbx-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 16px;
+  border: 1px solid color-mix(in oklab, var(--palette-muted) 30%, transparent);
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--sheet) 80%, var(--background));
+  color: var(--palette-heading);
+  font: 500 14px/1.5 var(--font-sans), sans-serif;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.sbx-page .sbx-button svg { flex-shrink: 0; }
+.sbx-page .sbx-button--clear:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: color-mix(in oklab, var(--palette-active) 10%, var(--sheet));
+  border-color: var(--palette-active);
+}
+.sbx-page .sbx-button--accent {
+  background: var(--palette-active);
+  border-color: var(--palette-active);
+  color: var(--background);
+}
+.sbx-page .sbx-button--accent:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: color-mix(in oklab, var(--palette-active) 82%, white);
+}
+.sbx-page .sbx-button:is([aria-selected="true"], [aria-pressed="true"]) {
+  background: color-mix(in oklab, var(--palette-active) 14%, var(--sheet));
+  border-color: var(--palette-active);
+  color: var(--palette-heading);
+}
+.sbx-page .sbx-button:is(:disabled, [aria-disabled="true"]) {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.sbx-page .sbx-button:focus-visible {
+  outline: 2px solid var(--palette-active);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sbx-page .sbx-button { transition: none; }
+}

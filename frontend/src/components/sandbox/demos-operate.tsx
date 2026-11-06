@@ -28,7 +28,7 @@ import {
   http,
   numberToHex,
 } from "viem";
-import { GlassButton } from "@/components/ui/glass-button";
+import { SandboxButton } from "@/components/sandbox/sandbox-button";
 import {
   Btn,
   ErrorNote,
@@ -39,6 +39,7 @@ import {
   statusTone,
   TxLink,
 } from "./bits";
+import { useDemoField, useDemoCodeValues } from "./live-example";
 import { useNow, WalletHint } from "./demos-accept";
 import { type ApiError, post, short, usdt, useApi } from "./use-api";
 
@@ -79,6 +80,8 @@ export function RefundsDemo() {
   const [error, setError] = useState<ApiError>();
   const [ok, setOk] = useState<{ text: string; tx?: string }>();
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [, setRefundOrder] = useDemoField<string>("refundOrder", "order_123");
+  const [, setRefundAmount] = useDemoField<string>("refundAmount", "");
   const [unpaid, setUnpaid] = useState<{
     orderRef: string;
     checkoutUrl: string;
@@ -146,11 +149,14 @@ export function RefundsDemo() {
                       <div className="sbx-row">
                         <input
                           className="sbx-mini"
+                          aria-label={`Refund amount for ${key}`}
                           placeholder={`≤ ${usdt(String(left))}`}
                           value={amounts[key] ?? ""}
-                          onChange={(e) =>
-                            setAmounts({ ...amounts, [key]: e.target.value })
-                          }
+                          onChange={(e) => {
+                            setAmounts({ ...amounts, [key]: e.target.value });
+                            setRefundOrder(key);
+                            setRefundAmount(e.target.value);
+                          }}
                         />
                         <Btn
                           variant="ghost"
@@ -206,15 +212,15 @@ export function RefundsDemo() {
             1. Create an invoice
           </Btn>
           {unpaid && (
-            <GlassButton
-              size="sm"
+            <SandboxButton
+              size="default"
               tone="clear"
               href={unpaid.checkoutUrl}
               target="_blank"
               rel="noreferrer"
             >
               2. Open its checkout
-            </GlassButton>
+            </SandboxButton>
           )}
           {unpaid && !unpaid.cancelled && (
             <Btn
@@ -294,13 +300,14 @@ export function SubscriptionsDemo() {
   );
   const [provider, setProvider] = useState<WalletProvider>();
   const [account, setAccount] = useState<Address>();
-  const [cycles, setCycles] = useState(3);
+  const [cycles, setCycles] = useDemoField<number>("cycles", 3);
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
   const { data: sub, reload } = useApi<Sub>(
     account ? `/api/sandbox/subscription?payer=${account}` : null,
     account ? 5000 : undefined,
   );
+  useDemoCodeValues({ planAmount: offer?.plan.amount ?? "1000000", planInterval: offer?.plan.interval ?? "120" });
   const now = useNow();
 
   const connect = async (choose = false) => {
@@ -865,9 +872,9 @@ export function ReconcileDemo() {
         title="Accountant export"
         hint="Every row links to its transaction."
         action={
-          <GlassButton size="sm" tone="accent" href="/api/sandbox/csv">
+          <SandboxButton size="default" tone="accent" href="/api/sandbox/csv">
             <Download size={15} /> Download CSV
-          </GlassButton>
+          </SandboxButton>
         }
       >
         {rows && rows.length > 1 ? (
@@ -976,7 +983,7 @@ function RevenueChart({
       action={
         <div className="sbx-seg" role="group" aria-label="Period">
           {(["day", "week", "month"] as const).map((b) => (
-            <GlassButton size="sm"
+            <SandboxButton size="default"
               key={b}
               type="button"
               aria-pressed={bucket === b}
@@ -987,7 +994,7 @@ function RevenueChart({
                 : b === "week"
                   ? "12 weeks"
                   : "12 months"}
-            </GlassButton>
+            </SandboxButton>
           ))}
         </div>
       }
@@ -1097,7 +1104,7 @@ function RevenueChart({
 }
 
 export function DashboardDemo() {
-  const [bucket, setBucket] = useState<Revenue["bucket"]>("day");
+  const [bucket, setBucket] = useDemoField<Revenue["bucket"]>("bucket", "day");
   const { data } = useApi<Stats & { revenue: Revenue | null }>(
     `/api/sandbox/stats?bucket=${bucket}`,
     15_000,
