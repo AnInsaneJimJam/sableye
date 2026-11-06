@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, ArrowRight } from "lucide-react";
-import { Illustration } from "@/components/illustration";
+import { HeroIllustration, Illustration } from "@/components/illustration";
 
 const cards = [
   {
@@ -37,13 +37,7 @@ const cards = [
 export default function IntroductionPage() {
   return (
     <main id="main-content" className="home-page">
-      <div className="hero-art" aria-hidden="true">
-        <Illustration kind="bolt" className="hero-bolt" />
-        <Illustration kind="rocket" className="hero-rocket" />
-        <Illustration kind="blocks" className="hero-blocks" />
-        <Illustration kind="terminal" className="hero-terminal" />
-        <Illustration kind="rocket" className="hero-small-rocket" />
-      </div>
+      <HeroIllustration />
       <div className="home-content">
         <div className="home-heading">
           <h1>Documentation</h1>
