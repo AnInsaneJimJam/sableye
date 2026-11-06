@@ -2,18 +2,17 @@
 
 > Non-custodial USDT checkout on Whitechain. The merchant's server signs an EIP-712 invoice (no gas). The customer pays on-chain and funds go directly to the merchant's address. A typical integration is under 20 lines.
 
-Install: not on npm yet. From a clone of the repo, after `pnpm install && pnpm build`, scaffold a store with the SDK packed in:
-`node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk`
-Once published: `npm install @sableye/server @sableye/react viem`, or `npx create-whitechain-checkout --name my-store --framework next`
-Agent recipes and guardrails: skills/whitechain-pay/SKILL.md
+Install: `npm install sableye viem` (add `react` for the checkout component). Imports: `sableye` (browser-safe core), `sableye/server`, `sableye/react`, `sableye/mcp`.
+Or scaffold a working Next.js store: `npx sableye create --name my-store --framework next`
+Agent recipes and guardrails: skills/sableye/SKILL.md
 
 Rules:
-- `MERCHANT_KEY` stays on the server. Never import `@sableye/server` in browser code.
+- `MERCHANT_KEY` stays on the server. Never import `sableye/server` in browser code.
 - Set prices on the server. Amounts are decimal strings ("5.00"), never JS numbers.
 - Fulfil orders only after a server-side `verifyPayment` returns `paid: true`. Browser callbacks are for UI only.
 - In Next.js, create `Sableye` inside the handler; at module level it breaks `next build`.
 
-## @sableye/server
+## sableye/server
 
 ### new Sableye(config)
 Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, subscriptions?, checkoutUrl?, relayUrl?, paymentLinkUrl?, linkStore?, couponStore?, business?, email?, orderStore?, outbox?, arkiv? }`
@@ -27,7 +26,7 @@ Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, s
 - `relayUrl`: your gasless relayer endpoint, attached to every invoice.
 
 ```ts
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
 ```
 
@@ -116,7 +115,7 @@ keeper.stop()             // server shutdown
 
 Renewals follow chain time. Defaults: retry failed charges after 3600 seconds; discover subscriptions from new blocks every 60 seconds. `retryAfterSeconds`, `discoverEverySeconds`, `maxSleepSeconds` and `onResult` configure the keeper. Discovery still polls, but no longer rescans all history each pass. Retry state is in memory and resets on restart; third-party callers of the permissionless contract are not bound by this backoff. `subscriptions.runDue()` remains available for cron jobs and bypasses keeper backoff.
 
-## @sableye/react
+## sableye/react
 
 ### <Checkout invoice onSuccess? onError? className? processor? chain? rpcUrl? token? provider? fetch? qr? payUrl? walletConnectProjectId? />
 The full flow: connect wallet, switch or add chain, check balance, pay, show the result. Unstyled; style it through `className` and `data-sableye-*` attributes (`data-sableye-status` holds the current status).
@@ -129,6 +128,12 @@ The QR icon offers phone-wallet links; `qr={false}` hides it. `payUrl` overrides
 
 `walletConnectProjectId` (free from cloud.reown.com, public) adds a WalletConnect option: the customer scans a QR code with Whitewallet or any WalletConnect wallet and pays from it. It needs `@walletconnect/universal-provider` installed (an optional peer dependency, loaded only when used). With it, Whitewallet also works from the phone-wallet QR panel. `connectWalletConnect({ projectId, chainId, rpcUrl, onUri })` returns the same EIP-1193 provider for custom UIs.
 
+**After payment (Stripe's `success_url`):** there is no `returnUrl` option because the checkout page is yours: `checkoutUrl` points at your own page that renders `<Checkout>`. Redirect in `onSuccess`, and fulfil only after your server's `verifyPayment(orderId)` says `paid` (the redirect is UX, not proof):
+
+```tsx
+<Checkout invoice={inv} onSuccess={({ txHash }) => location.assign(`/thanks?order=${inv.invoice.orderId}&tx=${txHash}`)} />
+```
+
 ### useCheckout(invoice, options?)
 For your own UI. Returns `{ state, wallets, pay, refresh }`; `refresh()` reloads on-chain status without prompting the wallet.
 
@@ -137,7 +142,7 @@ const { state, pay } = useCheckout(inv)
 return <button onClick={() => pay()}>Pay {state.summary?.amountFormatted}</button>
 ```
 
-## @sableye/core (browser-safe; also re-exported by @sableye/server)
+## sableye (browser-safe; also re-exported by sableye/server)
 
 ### createCheckout({ invoice, processor?, chain?, rpcUrl?, token?, provider?, fetch? })
 The framework-free engine behind `<Checkout/>`. Returns `{ getState, subscribe, load, pay }`.
@@ -209,12 +214,13 @@ EIP-712 domain `{ name: "Sableye", version: "1", chainId, verifyingContract }`, 
 
 ## Package and deployment choices
 
-- `@sableye/core`: browser-safe types, configuration, trust checks and the headless checkout engine.
-- `@sableye/server`: merchant backend and CLI; re-exports core. Never import it into browser code.
-- `@sableye/react`: Checkout, useCheckout and optional WalletConnect integration.
+- One npm package, `sableye`, with four entry points. In this repo they are built from the workspace packages `@sableye/core`, `@sableye/server`, `@sableye/react` and `@sableye/mcp` (`sdk/packages/sableye/build.mjs`).
+- `sableye`: browser-safe types, configuration, trust checks and the headless checkout engine.
+- `sableye/server`: merchant backend and CLI; re-exports core. Never import it into browser code.
+- `sableye/react`: Checkout, useCheckout and optional WalletConnect integration.
 - `@sableye/checkout`: private workspace Vite app, built and hosted as static files. Its supplied entry point does not pass walletConnectProjectId; customize the integration to enable that option.
-- `@sableye/mcp`: built stdio server for an external AI assistant. No model is bundled.
-- `create-whitechain-checkout`: Next.js scaffolder; --local-sdk packs core/server/react from this repository.
+- `sableye/mcp`: stdio server for an external AI assistant (`npx sableye mcp`). No model is bundled.
+- `npx sableye create`: Next.js scaffolder. From a clone of the repo, `node sdk/packages/create-sableye-app/bin.mjs --name my-store --local-sdk` packs the local build instead.
 
 Shared server helpers should construct Sableye lazily inside requests. In standalone workers, construct once at startup. The CLI/MCP use SABLEYE_RPC, while the generated Next.js helper maps SABLEYE_RPC_URL. Map custom RPC, checkoutUrl and relayUrl explicitly in your own application.
 

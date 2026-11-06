@@ -11,38 +11,34 @@ export const merchantPages: DocPage[] = [
     sections: [
       {
         id: "packages",
-        title: "What ships in this repository",
-        body: "Start with @sableye/server on your backend and @sableye/react in your storefront. Packages are currently consumed from the repository; use the local scaffolder in Quickstart rather than assuming npm publication.",
+        title: "What's in the package",
+        body: "Install one package, npm install sableye. Use sableye/server on your backend and sableye/react in your storefront.",
         table: {
           headers: ["Package / tool", "Responsibility"],
           rows: [
             [
-              "@sableye/core",
+              "sableye",
               "Browser-safe checkout engine, invoice types, trust verification, networks, ABIs, mobile helpers and privacy utilities.",
             ],
             [
-              "@sableye/server",
+              "sableye/server",
               "Invoice signing, verification, payment links, refunds, subscriptions, relay, coupons, workers, reporting, emails, PDFs and optional Arkiv records. Re-exports core.",
             ],
             [
-              "@sableye/react",
+              "sableye/react",
               "Checkout, useCheckout and optional WalletConnect provider integration.",
             ],
             [
-              "@sableye/checkout",
-              "Private workspace package containing the deployable static Vite checkout; not an npm library.",
-            ],
-            [
-              "@sableye/mcp",
+              "sableye/mcp",
               "Stdio tools for an external AI assistant. Read payments, create invoices/links and prepare unsigned refunds.",
             ],
             [
-              "create-whitechain-checkout",
-              "Next.js starter generator. --local-sdk packs core, server and React into the generated application.",
+              "npx sableye create",
+              "Next.js starter generator: invoice and verify routes, checkout and hosted pay page.",
             ],
             [
               "sableye CLI",
-              "Binary shipped by @sableye/server: init, doctor, listen and view-key.",
+              "The sableye command: create, init, doctor, view-key, listen and mcp.",
             ],
           ],
         },
@@ -140,13 +136,13 @@ export const merchantPages: DocPage[] = [
         id: "component",
         title: "Enable it on Checkout",
         body: "Pass walletConnectProjectId to show the WalletConnect option and pairing QR. Whitewallet has no supported wallet-specific deep link; it can use this connection path. The wallet must support the configured chain and signing/transaction methods. Server verification is still required before fulfilment.",
-        code: "'use client'\nimport { Checkout, type CheckoutInvoice } from '@sableye/react'\nexport function Payment({ invoice, projectId }: { invoice: CheckoutInvoice; projectId: string }) {\n  return <Checkout invoice={invoice} walletConnectProjectId={projectId}\n    onError={(error) => console.error(error.remedy)} />\n}",
+        code: "'use client'\nimport { Checkout, type CheckoutInvoice } from 'sableye/react'\nexport function Payment({ invoice, projectId }: { invoice: CheckoutInvoice; projectId: string }) {\n  return <Checkout invoice={invoice} walletConnectProjectId={projectId}\n    onError={(error) => console.error(error.remedy)} />\n}",
       },
       {
         id: "custom",
         title: "Connect a custom UI",
         body: "connectWalletConnect returns an EIP-1193 provider with disconnect(). Render the wc: URI from onUri as a pairing QR in your UI. Pass the provider to checkout.pay({provider}) or the React hook pay(provider); inspect the resulting state for payment errors. Handle connection rejection and session errors in your UI.",
-        code: "import { connectWalletConnect } from '@sableye/react'\nimport { createCheckout, type SignedInvoice } from '@sableye/core'\nexport async function payFromWallet(invoice: SignedInvoice, projectId: string, showQr: (uri: string) => void) {\n  const checkout = createCheckout({ invoice })\n  const state = await checkout.load()\n  if (state.status !== 'ready') return state\n  const provider = await connectWalletConnect({\n    projectId, chainId: invoice.chainId,\n    rpcUrl: 'https://rpc.testnet.whitechain.io', onUri: showQr,\n  })\n  try { return await checkout.pay({ provider }) }\n  finally { await provider.disconnect() }\n}",
+        code: "import { connectWalletConnect } from 'sableye/react'\nimport { createCheckout, type SignedInvoice } from 'sableye'\nexport async function payFromWallet(invoice: SignedInvoice, projectId: string, showQr: (uri: string) => void) {\n  const checkout = createCheckout({ invoice })\n  const state = await checkout.load()\n  if (state.status !== 'ready') return state\n  const provider = await connectWalletConnect({\n    projectId, chainId: invoice.chainId,\n    rpcUrl: 'https://rpc.testnet.whitechain.io', onUri: showQr,\n  })\n  try { return await checkout.pay({ provider }) }\n  finally { await provider.disconnect() }\n}",
       },
     ],
   },
@@ -243,7 +239,7 @@ export const merchantPages: DocPage[] = [
         id: "configure",
         title: "Configure durable state",
         body: "This is a persistent Node worker example. The invoice-creation process must use the same order records as the worker. File stores suit a single process on persistent disk; they are not a shared database or safe coordination across replicas. Use database adapters for multi-process order/coupon/indexer storage and durable job infrastructure for background work.",
-        code: "import { Sableye, fileOrderStore, fileCouponStore, fileStore } from '@sableye/server'\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  checkoutUrl: 'https://shop.example/pay',\n  orderStore: fileOrderStore('.sableye/orders.json'),\n  couponStore: fileCouponStore('.sableye/coupons.json'),\n  outbox: { path: '.sableye/outbox.json' },\n})\nconst indexer = sableye.indexer({ store: fileStore('.sableye/indexer.json') })\nawait indexer.start()\nprocess.once('SIGTERM', () => indexer.stop())",
+        code: "import { Sableye, fileOrderStore, fileCouponStore, fileStore } from 'sableye/server'\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  checkoutUrl: 'https://shop.example/pay',\n  orderStore: fileOrderStore('.sableye/orders.json'),\n  couponStore: fileCouponStore('.sableye/coupons.json'),\n  outbox: { path: '.sableye/outbox.json' },\n})\nconst indexer = sableye.indexer({ store: fileStore('.sableye/indexer.json') })\nawait indexer.start()\nprocess.once('SIGTERM', () => indexer.stop())",
       },
       {
         id: "adapters",
@@ -268,7 +264,7 @@ export const merchantPages: DocPage[] = [
         id: "enable",
         title: "Enable optional publishing",
         body: "The Arkiv integration is implemented. It uses Rabdi and the merchant's local-account signing key; a generic KMS signer does not automatically enable publishing. Configure an Arkiv access key and fund that merchant address with the Arkiv test gas token. The SDK does not provision either. The public format is defined in arkiv/schema.md in the repository.",
-        code: "import { Sableye, fileStore, fileOrderStore } from '@sableye/server'\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  orderStore: fileOrderStore('.sableye/orders.json'),\n  outbox: { path: '.sableye/outbox.json' },\n  arkiv: { accessKey: process.env.ARKIV_ACCESS_KEY, statePath: '.sableye/arkiv.json' },\n})\nconst indexer = sableye.indexer({ store: fileStore('.sableye/indexer.json') })\nawait indexer.start()\nconsole.log(sableye.arkiv.enabled, sableye.arkiv.status())",
+        code: "import { Sableye, fileStore, fileOrderStore } from 'sableye/server'\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  orderStore: fileOrderStore('.sableye/orders.json'),\n  outbox: { path: '.sableye/outbox.json' },\n  arkiv: { accessKey: process.env.ARKIV_ACCESS_KEY, statePath: '.sableye/arkiv.json' },\n})\nconst indexer = sableye.indexer({ store: fileStore('.sableye/indexer.json') })\nawait indexer.start()\nconsole.log(sableye.arkiv.enabled, sableye.arkiv.status())",
       },
       {
         id: "lifecycle",
@@ -401,9 +397,9 @@ export const merchantAdditions: Record<string, DocSection[]> = {
     {
       id: "client-config",
       title: "Configure an external assistant",
-      body: "Use the absolute path to the built MCP launcher in your assistant's stdio server configuration. Supply MERCHANT_KEY securely through the local process environment. The launcher loads .env from its working directory; check your assistant's working directory rather than assuming it is the repository. The agent skill and llms.txt teach integration; neither runs a model. The homepage agent conversation is a scripted demonstration, not a live MCP or AI connection.",
+      body: "Run npx sableye mcp as your assistant's stdio server. Supply MERCHANT_KEY securely through the local process environment. The launcher loads .env from its working directory; check your assistant's working directory rather than assuming it is the repository. The agent skill and llms.txt teach integration; neither runs a model. The homepage agent conversation is a scripted demonstration, not a live MCP or AI connection.",
       language: "JSON",
-      code: '{\n  "mcpServers": {\n    "sableye": {\n      "command": "node",\n      "args": ["/absolute/path/to/sableye/sdk/packages/mcp/bin/sableye-mcp.mjs"]\n    }\n  }\n}',
+      code: '{\n  "mcpServers": {\n    "sableye": {\n      "command": "npx",\n      "args": ["sableye", "mcp"]\n    }\n  }\n}',
     },
   ],
   errors: [

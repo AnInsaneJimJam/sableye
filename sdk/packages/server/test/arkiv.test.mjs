@@ -29,8 +29,8 @@ function setup(opts = {}) {
   const outbox = createOutbox({ pollMs: 0, retryDelays: [0, 0, 0] })
   let receipt = { status: 'paid', payer: '0x00000000000000000000000000000000000000b1', payout: account.address, token: '0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7', amount: 5_000_000n, refunded: 0n, paidAt: new Date(1_700_000_000_000), txHash: TX }
   const sink = attachArkiv({ writer, renewEveryMs: 0 }, outbox, {
-    merchant: account.address, account, network: 'whitechain-sepolia', chainId: 1874, businessName: 'Chai Stall',
-    getOrder: async () => ({ orderRef: 'order_7', orderId: ORDER, amount: '5', token: 'USDT', description: 'Chai', customer: { email: 'ada@example.com' }, checkoutUrl: '', createdAt: 0, expiresAt: 0 }),
+    merchant: account.address, account, network: 'whitechain-sepolia', chainId: 1874, businessName: 'Acme Coffee',
+    getOrder: async () => ({ orderRef: 'order_7', orderId: ORDER, amount: '5', token: 'USDT', description: 'Coffee', customer: { email: 'ada@example.com' }, checkoutUrl: '', createdAt: 0, expiresAt: 0 }),
     receipt: async () => receipt,
   })
   return { calls, outbox, sink, setReceipt: (r) => (receipt = { ...receipt, ...r }) }
@@ -54,7 +54,7 @@ test('a safe payment is published once: public on-chain facts in the clear, off-
   assert.ok(!JSON.stringify(inv.values, (_, v) => (typeof v === 'bigint' ? String(v) : v)).includes('ada@example.com'))
   const key = viewKeyFromSignature(await account.signMessage({ message: VIEW_KEY_MESSAGE }))
   const details = await decryptPrivate(key, hexToBytes(val(inv.values.private)))
-  assert.deepEqual(details, { orderRef: 'order_7', description: 'Chai', customer: { email: 'ada@example.com' } })
+  assert.deepEqual(details, { orderRef: 'order_7', description: 'Coffee', customer: { email: 'ada@example.com' } })
   assert.equal(await sink.arkiv.viewKey(), key)
   assert.equal(sink.arkiv.status().published, 1)
 })
@@ -116,7 +116,7 @@ test('a server with fresh local state adopts records already on Arkiv instead of
   const outbox = createOutbox({ pollMs: 0, retryDelays: [0] })
   const onArkiv = { invoice: '0xexistinginvoice', profile: '0xexistingprofile' }
   const sink = attachArkiv({ writer, renewEveryMs: 0, finder: async (kind, orderId, txHash) => (kind === 'invoice' && txHash === TX ? onArkiv.invoice : kind === 'profile' ? onArkiv.profile : undefined) }, outbox, {
-    merchant: account.address, account, network: 'whitechain-sepolia', chainId: 1874, businessName: 'Chai Stall', getOrder: async () => undefined,
+    merchant: account.address, account, network: 'whitechain-sepolia', chainId: 1874, businessName: 'Acme Coffee', getOrder: async () => undefined,
     receipt: async () => ({ status: 'paid', payer: account.address, payout: account.address, token: account.address, amount: 1n, refunded: 0n, paidAt: new Date(), txHash: TX }),
   })
   sink.onEvent(ev('invoice.safe'))

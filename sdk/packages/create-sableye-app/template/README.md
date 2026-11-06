@@ -1,6 +1,6 @@
 # Sableye store
 
-A USDT store on Whitechain Sepolia, scaffolded by `create-whitechain-checkout`.
+A USDT store on Whitechain Sepolia, scaffolded by `npx sableye create`.
 
 ```sh
 npm install

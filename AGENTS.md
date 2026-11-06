@@ -42,18 +42,18 @@ Target tracks: **Whitechain Operate** (checkout, invoices, subscriptions, refund
 ```
  Merchant server                        Browser                              Whitechain
  ───────────────                        ───────                              ──────────
- @sableye/server
+ sableye/server
   invoices.create() ── EIP-712 sign ──► SignedInvoice (JSON / link #fragment)
-                                        @sableye/react <Checkout/>
+                                        sableye/react <Checkout/>
                                           connect → switch chain → approve ─► PaymentProcessor.pay(invoice, sig)
                                                                                payer ──USDT──► payout (direct)
   verifyPayment(orderId) ◄──────────────────────────── reads receipt + InvoicePaid log
 ```
 
 **Packages** (`sdk/packages/`):
-- `@sableye/core`: browser-safe. Network/token config, ABI, EIP-712 types, payment-link encoding, typed errors, and the headless checkout engine (`createCheckout`), which runs the capability ladder.
-- `@sableye/server`: holds the merchant key. `invoices.create`, `verifyPayment`; in Level 2 also the indexer, webhooks, reconcile and CSV.
-- `@sableye/react`: `<Checkout/>`.
+- `sableye`: browser-safe. Network/token config, ABI, EIP-712 types, payment-link encoding, typed errors, and the headless checkout engine (`createCheckout`), which runs the capability ladder.
+- `sableye/server`: holds the merchant key. `invoices.create`, `verifyPayment`; in Level 2 also the indexer, webhooks, reconcile and CSV.
+- `sableye/react`: `<Checkout/>`.
 
 **Contracts** (`sdk/contracts/`): `PaymentProcessor.sol`, with its interface in `IPaymentProcessor.sol`.
 
@@ -89,7 +89,7 @@ Invoice(bytes32 orderId,address merchant,address payout,address token,uint256 am
 
 **Server (≤20-line integration)**
 ```ts
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia' })
 
 // create (server route) → send `inv` to the browser, or redirect to inv.checkoutUrl
@@ -136,7 +136,7 @@ await sableye.subscriptions.cancel(subId) // merchant; the payer can also cancel
 ```
 Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `past_due` (it doesn't revert) and retries; after 3 consecutive failures it's `cancelled`. Use a 120 s interval for the demo.
 
-**MCP server** (#49, `@sableye/mcp`): `claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye-mcp`
+**MCP server** (#49, `sableye/mcp`): `claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye mcp`
 - Read tools: `get_invoice`, `list_invoices`, `stats`, `export_csv`, `doctor`. Create tools: `create_invoice`, `create_payment_link`. Both only ever move money *in*.
 - `prepare_refund` returns the **unsigned** transaction(s) in order (an exact-amount approval first, if needed) plus a summary; the merchant signs them. Agents never move money out. The SDK equivalent is `sableye.refunds.prepare()`.
 
@@ -224,11 +224,12 @@ sdk/packages/core/      @sableye/core
 sdk/packages/server/    @sableye/server (+ test/e2e on anvil)
 sdk/packages/react/     @sableye/react
 sdk/packages/checkout/  static checkout page (payment links, #40)
-sdk/packages/create-whitechain-checkout/  scaffolder (#43)
+sdk/packages/create-sableye-app/  scaffolder (#43)
+sdk/packages/sableye/   the ONE published npm package: assembles core/server/react/mcp + CLI + scaffolder (build.mjs)
 frontend/               landing page + the Sableye Sandbox (/sandbox) and hosted /pay page
 project-docs/           project docs (Markdown): VERIFICATION, THREAT_MODEL, PROJECT, …
 frontend/src/app/docs/  docs website, served at /docs by the same frontend app
-skills/whitechain-pay/  Agent Skill (#42)
+skills/sableye/  Agent Skill (#42)
 llms.txt                SDK docs for AI agents (#37): update it when an API changes
 scripts/                gen-abi, check-sdk-lines
 ```

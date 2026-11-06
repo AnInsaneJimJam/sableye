@@ -12,7 +12,7 @@ import * as core from '@sableye/core'
 const require = createRequire(import.meta.url)
 const pages = [
   '../../../../frontend/src/app/pay/page.tsx',
-  '../../create-whitechain-checkout/template/app/pay/page.tsx',
+  '../../create-sableye-app/template/app/pay/page.tsx',
 ]
 
 test('every hosted checkout accepts phone query links and existing fragment links', async () => {
@@ -23,12 +23,13 @@ test('every hosted checkout accepts phone query links and existing fragment link
     }).outputText
     const module = { exports: {} }
     new Function('require', 'module', 'exports', js)((name) => {
-      if (name === '@sableye/core') return core
-      if (name === '@sableye/react') return {
+      if (name === '@sableye/core' || name === 'sableye') return core
+      if (name === '@sableye/react' || name === 'sableye/react') return {
         Checkout: ({ invoice }) => createElement('div', { 'data-test-invoice': invoice }),
       }
       if (name === 'next/link') return ({ children }) => createElement('a', null, children)
       if (name.endsWith('.css')) return {}
+      if (name.startsWith('@/')) return new Proxy({}, { get: () => () => null }) // frontend-only UI (logo etc.)
       return require(name)
     }, module, module.exports)
 

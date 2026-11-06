@@ -1,0 +1,90 @@
+{
+  "name": "sableye",
+  "version": "0.1.0",
+  "description": "Stripe-style USDT checkout on Whitechain: signed invoices, hosted and React checkout, gasless payments, refunds, subscriptions, webhooks, emails, and merchant-owned records. Non-custodial.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "whitechain",
+    "usdt",
+    "stablecoin",
+    "payments",
+    "checkout",
+    "eip-712",
+    "web3",
+    "stripe"
+  ],
+  "homepage": "https://sableye.xyz",
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "default": "./dist/mcp/index.js"
+    }
+  },
+  "bin": {
+    "sableye": "./bin/sableye.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "create"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@arkiv-network/sdk": "1.0.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "nodemailer": "^7.0.13",
+    "pdf-lib": "1.17.1",
+    "qrcode-generator": "^2.0.4",
+    "zod": "^3.25.0"
+  },
+  "peerDependencies": {
+    "viem": "^2.30.0",
+    "react": ">=18",
+    "@walletconnect/universal-provider": "^2.20.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@walletconnect/universal-provider": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@sableye/core": "workspace:*",
+    "@sableye/server": "workspace:*",
+    "@sableye/react": "workspace:*",
+    "@sableye/mcp": "workspace:*",
+    "create-sableye-app": "workspace:*",
+    "viem": "^2.57.16",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnInsaneJimJam/sableye.git",
+    "directory": "sdk/packages/sableye"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
