@@ -114,10 +114,10 @@ pnpm --filter @sableye/server test     # end to end on anvil: deploy → create 
 pnpm --filter @sableye/react test      # <Checkout/> in a DOM, clicking through a real payment on anvil
 pnpm --filter @sableye/checkout test   # the built payment-link page
 pnpm --filter create-whitechain-checkout test
-pnpm --filter store dev                # demo shop on :3000
+cd frontend && pnpm dev                # landing page + Sandbox on :3000/sandbox
 ```
 
-Full demo setup, including the dashboard password, email and a public URL: [docs/DEMO.md](docs/DEMO.md).
+The demo is the **Sableye Sandbox** (`/sandbox`): every product live on Whitechain Sepolia, next to its code and the Stripe equivalent.
 
 **Testnet funds:**
 1. Get WBT for gas from https://faucet.testnet.whitechain.io (2 WBT/day).

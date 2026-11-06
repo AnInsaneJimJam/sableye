@@ -183,8 +183,7 @@ None ──pay──► Paid ──refund(part)──► PartiallyRefunded ─�
 | `@sableye/react` | browser | `<Checkout/>`: connect, add/switch chain, approve or permit or gasless, pay, success/error |
 | `sdk/contracts` | Whitechain | `PaymentProcessor.sol` (+ `SubscriptionManager.sol` in Level 3) |
 | `sdk/packages/checkout` | static site | Payment-link checkout page; it'll be hosted on Swarm in Phase 3 |
-| `demo/store` | Next.js | Demo shop that shows the ≤20 SDK lines highlighted |
-| `demo/books` | Next.js | Phase 2: an independent accountant app that reads merchant records from Arkiv |
+| `frontend` | Next.js | Landing page + the **Sableye Sandbox** (`/sandbox`): every product live, with its code and the Stripe equivalent |
 
 ### 4.6 Network facts (measured or verified)
 
@@ -211,7 +210,7 @@ None ──pay──► Paid ──refund(part)──► PartiallyRefunded ─�
 - `@sableye/core`: chain and token config, ABI, typed errors with a remedy, bigint amounts. ✅ #28
 - `@sableye/server`: `invoices.create` and `verifyPayment`. ✅ #29
 - `@sableye/react`: `<Checkout/>` covering wallet connect, add/switch chain, approve, pay and result states, built on a headless checkout engine in core. ✅ #35
-- Demo store: the merchant sees invoices, and the customer gets a receipt page. #36
+- Demo: the Sableye Sandbox (`frontend/`, `/sandbox`), where every product runs live next to its code.
 - **Qualification:** deploy and verify on Whitechain Sepolia (#27); one real USDT payment; README; video (#38); pitch script (#47).
 - **AI-friendly developer experience:** typed API with TSDoc, a copy-paste quickstart, `llms.txt`, and errors that carry a remedy. #37
 
@@ -406,7 +405,7 @@ That one moment proves the Arkiv thesis, and it's the core of the CROPS "C" (cen
 2. `@sableye/server` gets an Arkiv sink: an outbox, then writes at `safe`, then renewal.
 3. Encryption plus `viewKey()` in core (shared by server and browser).
 4. Dashboard reads from Arkiv.
-5. Build `demo/books`, the independent reader with on-chain verification and CSV.
+5. Build an independent accountant app (planned as `demo/books`), the reader with on-chain verification and CSV.
 6. A seed script for demo data, then the five `arkiv/*.md` files.
 7. Measure and document costs: GLM per record, and renewal cost per year.
 
@@ -538,8 +537,7 @@ WHITECHAIN_FEEDBACK.md    required by Whitechain
 arkiv/                    Arkiv judging files (Phase 2/3)
 sdk/contracts/            Foundry: PaymentProcessor, tests, deploy script
 sdk/packages/core|server|react|checkout
-demo/store                demo shop (Phase 1)
-demo/books                accountant app (Phase 2)
+frontend/                 landing page + Sableye Sandbox (/sandbox)
 scripts/                  gen-abi (contract → TS ABI), check-sdk-lines (≤20-line rule)
 .github/workflows/        forge test + Slither in CI
 ```
@@ -549,7 +547,7 @@ scripts/                  gen-abi (contract → TS ABI), check-sdk-lines (≤20-
 pnpm install && pnpm build
 cd sdk/contracts && forge test                  # contract tests
 pnpm --filter @sableye/server test               # end to end on a local anvil chain
-pnpm check:sdk-lines                             # demo stays ≤20 SDK lines
+cd frontend && pnpm dev                          # landing page + Sandbox on :3000
 (cd sdk/contracts && forge build) && node scripts/gen-abi.mjs   # after any contract change
 ```
 
@@ -571,7 +569,7 @@ Phase 1 is built. What's left is making the demo ready to show and submitting it
 - **Contracts:** `PaymentProcessor` and `SubscriptionManager`, deployed and verified on Whitechain Sepolia (addresses in `AGENTS.md`).
 - **Real USDT payments:** the first is linked in the README. Gasless `payWithAuthorization` and a refund have also run on the live chain.
 - **SDK:** `@sableye/core`, `server`, `react` and `mcp`, plus the static checkout page and the scaffolder, with tests on anvil.
-- **Demo store:** shop, hosted checkout, merchant dashboard, invoices, PDFs, email, payment links and subscriptions. Setup is in [DEMO.md](DEMO.md).
+- **Sableye Sandbox** (`frontend/`, `/sandbox`): every product live on Whitechain Sepolia, with its code and the Stripe equivalent.
 - **Assurance:** Foundry unit, fuzz and invariant tests, Medusa stateful fuzzing, Slither in CI, and a threat model.
 - **Docs:** README, `llms.txt`, Agent Skill, AI integration eval, pitch script and `WHITECHAIN_FEEDBACK.md`.
 

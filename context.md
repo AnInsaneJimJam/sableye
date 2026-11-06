@@ -90,8 +90,8 @@ None ──pay──► Paid ──refund(part)──► PartiallyRefunded ─�
 | `@sableye/react` | The browser | `<Checkout/>` and `useCheckout`: connect, add or switch chain, approve or permit or gasless, pay, then success or error |
 | `sdk/contracts` | Whitechain | `PaymentProcessor.sol`, plus `SubscriptionManager.sol` in Level 3 |
 | `sdk/packages/checkout` | A static site | The payment-link checkout page. Phase 3 hosts it on Swarm |
-| `demo/store` | Next.js | The demo shop. It shows the 20 SDK lines highlighted |
-| `demo/books` | Next.js | Phase 2. An independent accountant app that reads merchant records from Arkiv |
+| `frontend` | Next.js | Landing page + the Sableye Sandbox (`/sandbox`): every product live |
+| `demo/books` (planned) | Next.js | Phase 2. An independent accountant app that reads merchant records from Arkiv |
 | `frontend` | Next.js | The Sableye marketing site |
 
 ### 1.6 Network facts
