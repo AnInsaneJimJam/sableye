@@ -220,3 +220,16 @@ test('deep links and hosted URLs', async () => {
   assert.equal(isLocalUrl('http://localhost:3000/pay'), true)
   assert.equal(isLocalUrl('https://shop.example/pay'), false)
 })
+
+test('walletConnectProjectId adds a WalletConnect option; without it there is none', async () => {
+  const inv = JSON.parse(JSON.stringify(await sableye.invoices.create({ amount: '1.00', orderId: `o${++order}` })))
+  const withWc = await mount({ invoice: inv, provider: await makeWallet(), walletConnectProjectId: 'test-project' })
+  await until(() => withWc.status() === 'ready')
+  const toggle = withWc.host.querySelector('[data-sableye-walletconnect-toggle]')
+  assert.ok(toggle, 'WalletConnect button shown')
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  const without = await mount({ invoice: inv, provider: await makeWallet() })
+  await until(() => without.status() === 'ready')
+  assert.equal(without.host.querySelector('[data-sableye-walletconnect-toggle]'), null)
+  await act(async () => { withWc.root.unmount(); without.root.unmount() })
+})

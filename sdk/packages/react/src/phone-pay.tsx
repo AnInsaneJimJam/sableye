@@ -2,9 +2,10 @@
 // "Pay with a phone wallet": a QR code that deep-links the hosted checkout into a mobile wallet's in-app browser.
 // Hidden behind an icon until the customer asks for it. While it's open, the desktop checkout keeps polling the
 // chain, so it turns to "Paid" on its own once the phone pays.
-import { isLocalUrl, mobileWallets, walletDeepLink, type DeepLinkWalletId, type MobileWalletId } from '@sableye/core'
+import { isLocalUrl, isMobileBrowser, mobileWallets, walletDeepLink, type DeepLinkWalletId, type MobileWalletId, type WalletProvider } from '@sableye/core'
 import qrcode from 'qrcode-generator'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { connectWalletConnect, type WalletConnectProvider } from './walletconnect.js'
 
 /** QR code as crisp SVG (one path), no canvas, no network. */
 export function QrCode({ value, size = 184, title }: { value: string; size?: number; title?: string }) {
@@ -38,7 +39,7 @@ export function QrToggle({ open, onClick }: { open: boolean; onClick: () => void
 }
 
 /** QR + wallet picker. `payUrl` is the hosted checkout URL carrying this invoice. */
-export function PhonePay({ payUrl, onPoll, intervalMs = 4000 }: { payUrl: string; onPoll: () => void; intervalMs?: number }) {
+export function PhonePay({ payUrl, onPoll, intervalMs = 4000, walletConnect }: { payUrl: string; onPoll: () => void; intervalMs?: number; walletConnect?: ReactNode }) {
   const [wallet, setWallet] = useState<MobileWalletId>('metamask')
   const chosen = mobileWallets.find((w) => w.id === wallet)!
   const name = chosen.name
@@ -62,10 +63,12 @@ export function PhonePay({ payUrl, onPoll, intervalMs = 4000 }: { payUrl: string
           <QrCode value={link} title={`Scan with ${name} to pay`} />
           <p data-sableye-phone-hint>Scan with your phone&apos;s camera. It opens this payment in <b>{name}</b>.</p>
         </>
+      ) : walletConnect ? (
+        walletConnect
       ) : (
         <p data-sableye-phone-hint role="note">
-          <b>{name}</b> doesn&apos;t offer a link that opens a payment page inside it; it connects to apps through WalletConnect,
-          which this checkout doesn&apos;t support yet. Pick another wallet for now.
+          <b>{name}</b> connects through WalletConnect, which this site hasn&apos;t enabled (it needs a Reown project id).
+          Pick another wallet for now.
         </p>
       )}
       {isLocalUrl(payUrl) && (
@@ -83,6 +86,41 @@ export function OpenInWallet({ payUrl }: { payUrl: string }) {
       {mobileWallets.filter((w) => w.deepLink).map((w) => (
         <a key={w.id} href={walletDeepLink(w.id as DeepLinkWalletId, payUrl)} data-sableye-wallet-link>Open in {w.name}</a>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Pay from any WalletConnect wallet (Whitewallet, MetaMask Mobile, Trust, …): shows the pairing QR, and once the
+ * customer approves the connection in their wallet, hands the provider to the checkout, which then runs as usual.
+ */
+export function WalletConnectPay({ projectId, chainId, rpcUrl, onConnected }: { projectId: string; chainId: number; rpcUrl: string; onConnected: (p: WalletProvider) => void }) {
+  const [uri, setUri] = useState<string>()
+  const [error, setError] = useState<string>()
+  const provider = useRef<WalletConnectProvider | undefined>(undefined)
+  const done = useRef(onConnected)
+  done.current = onConnected
+  useEffect(() => {
+    let live = true
+    connectWalletConnect({ projectId, chainId, rpcUrl, onUri: (u) => live && setUri(u) })
+      .then((p) => {
+        provider.current = p
+        if (live) done.current(p)
+      })
+      .catch((e: Error & { remedy?: string }) => live && setError(`${e.message}${e.remedy ? ` ${e.remedy}` : ''}`))
+    return () => {
+      live = false
+    }
+  }, [projectId, chainId, rpcUrl])
+  if (error) return <p data-sableye-error role="alert">{error}</p>
+  if (!uri) return <p data-sableye-progress role="status">Starting WalletConnect…</p>
+  return (
+    <div data-sableye-walletconnect>
+      <QrCode value={uri} title="Scan with your wallet to connect" />
+      <p data-sableye-phone-hint>
+        Scan with <b>Whitewallet</b> or any WalletConnect wallet, then approve the payment there.
+      </p>
+      {isMobileBrowser() && <a href={uri} data-sableye-wallet-link>Open your wallet</a>}
     </div>
   )
 }
