@@ -356,16 +356,21 @@ export class Indexer {
     if (!this.state.emitted.includes(id)) await this.emit(type, l, id)
   }
 
-  private async emit(type: WebhookEventType, l: StoredLog, id: string) {
-    const s = this.state
-    const event: WebhookEvent = {
-      id, type, created: Math.floor(Date.now() / 1000),
+  /** The webhook body for one log. Shared by live emission and {@link events}, so a replay is identical. */
+  private eventBody(type: WebhookEventType, l: StoredLog, id: string, created: number): WebhookEvent {
+    return {
+      id, type, created,
       data: {
-        orderId: l.orderId, orderRef: s.orderRefs[l.orderId], txHash: l.txHash, blockNumber: String(l.blockNumber),
+        orderId: l.orderId, orderRef: this.state.orderRefs[l.orderId], txHash: l.txHash, blockNumber: String(l.blockNumber),
         ...(l.payer && { payer: l.payer }), ...(l.token && { token: l.token }), ...(l.amount && { amount: l.amount }),
         ...(l.payout && { payout: l.payout }), ...(l.totalRefunded && { refunded: l.totalRefunded }),
       },
     }
+  }
+
+  private async emit(type: WebhookEventType, l: StoredLog, id: string) {
+    const s = this.state
+    const event = this.eventBody(type, l, id, Math.floor(Date.now() / 1000))
     s.emitted.push(id)
     const endpoints = (this.opts.webhooks ?? []).filter((e) => !e.events || e.events.includes(type))
     if (endpoints.length) {
@@ -406,6 +411,42 @@ export class Indexer {
     const live = new Set(s.deliveries.map((d) => d.eventId))
     for (const id of Object.keys(s.outbox)) if (!live.has(id)) delete s.outbox[id]
     await this.store.save(s)
+  }
+
+  /**
+   * Past events, rebuilt from the indexed logs (newest first): the same ids and bodies that were delivered.
+   * `created` is the block time. Events for logs a reorg removed aren't listed (their `invoice.reorged` was sent).
+   */
+  events(opts: { type?: WebhookEventType; limit?: number } = {}): WebhookEvent[] {
+    const out: WebhookEvent[] = []
+    const emitted = new Set(this.state.emitted)
+    for (const l of this.state.logs) {
+      const types: WebhookEventType[] = l.kind === 'paid' ? ['invoice.paid', 'invoice.safe', 'invoice.final'] : [l.kind === 'refunded' ? 'invoice.refunded' : 'invoice.cancelled']
+      for (const type of types) {
+        const id = this.idFor(l, type)
+        if (emitted.has(id) && (!opts.type || opts.type === type)) out.push(this.eventBody(type, l, id, l.timestamp))
+      }
+    }
+    return out.reverse().slice(0, opts.limit ?? 100)
+  }
+
+  /**
+   * Deliver a past event again, with the same id (receivers that de-duplicate by id ignore it if they already
+   * processed it). Default: to every endpoint subscribed to its type; `url` picks one. Returns how many were queued.
+   */
+  async resend(eventId: string, opts: { url?: string } = {}): Promise<number> {
+    await this.load()
+    await this.inFlight?.catch(() => {}) // don't mutate state under a sync that might roll back
+    const event = this.events({ limit: Infinity }).find((e) => e.id === eventId)
+    if (!event) throw new Error(`No event ${eventId} in the indexed history.`)
+    const endpoints = (this.opts.webhooks ?? []).filter((e) => (!e.events || e.events.includes(event.type)) && (!opts.url || e.url === opts.url))
+    for (const e of endpoints) this.state.deliveries.push({ eventId, url: e.url, attempt: 0, nextAttemptAt: 0 })
+    if (endpoints.length) {
+      this.state.outbox[eventId] = event
+      await this.store.save(this.state)
+      await this.deliver()
+    }
+    return endpoints.length
   }
 
   /** Pending and failed webhook deliveries (failed ones have exhausted retries). */

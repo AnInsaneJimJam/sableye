@@ -148,6 +148,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
         greeting(order), '',
         `${deps.businessName} sent you an invoice.`, '',
         ...(what(order) ? [`For: ${what(order)}`] : []),
+        ...(order.coupon ? [`Subtotal: ${order.subtotal} ${token}`, `Discount (${order.coupon}): -${order.discount} ${token}`] : []),
         `Amount: ${order.amount} ${token}`,
         `Pay by: ${new Date(order.expiresAt).toUTCString()}`, '',
         `Pay here: ${order.checkoutUrl}`, '',
@@ -225,7 +226,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
     emails,
     /** After `invoices.create`: email the invoice if the order has a customer email. */
     onInvoiceCreated(order: OrderDetails) {
-      if (order.customer?.email) queue(`invoice:${order.orderId}`, { kind: 'invoice', orderId: order.orderId })
+      if (order.customer?.email) queue(`invoice:${order.orderId}`, { kind: 'invoice', orderId: order.orderId, to: order.customer.email })
     },
     /** Indexer events → receipts, merchant notices, refund confirmations. Keys make replays and reorgs harmless. */
     async onEvent(e: WebhookEvent) {
@@ -233,10 +234,11 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
       const orderId = e.data.orderId as Hex
       if (e.type === 'invoice.paid') {
         const order = await deps.getOrder(orderId)
-        if (order?.customer?.email) queue(`receipt:${orderId}`, { kind: 'receipt', orderId })
-        queue(`notice:${orderId}`, { kind: 'merchant_notice', orderId, ours: !!order })
+        if (order?.customer?.email) queue(`receipt:${orderId}`, { kind: 'receipt', orderId, to: order.customer.email })
+        queue(`notice:${orderId}`, { kind: 'merchant_notice', orderId, ours: !!order, to: notifyTo() })
       } else if (e.type === 'invoice.refunded') {
-        queue(`refund:${e.data.txHash}`, { kind: 'refund', orderId, txHash: e.data.txHash as Hex, amount: e.data.amount })
+        const order = await deps.getOrder(orderId)
+        queue(`refund:${e.data.txHash}`, { kind: 'refund', orderId, txHash: e.data.txHash as Hex, amount: e.data.amount, to: order?.customer?.email })
       }
     },
   }

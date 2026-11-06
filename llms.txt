@@ -31,7 +31,7 @@ import { Sableye } from '@sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
 ```
 
-### sableye.invoices.create({ amount, token?, orderId?, expiresIn?, payout?, customer?, description?, items? })
+### sableye.invoices.create({ amount, token?, orderId?, expiresIn?, payout?, customer?, description?, items?, coupon? })
 Signs an invoice. No transaction, no gas. Returns `{ invoice, signature, chainId, processor, relayUrl?, orderRef, checkoutUrl }`. Safe to send to the browser, and works with `Response.json()`.
 `customer: { email?, name? }`, `description` and `items: { name, quantity?, amount? }[]` stay off-chain in the order store. With a customer email and email configured, the invoice is emailed with a PDF; the receipt follows on payment.
 Defaults: `token: 'USDT'`, `orderId`: random, `expiresIn: 1800` seconds, `payout`: the merchant address.
@@ -61,6 +61,19 @@ if (paid) fulfil()
 Refunds all remaining funds by default, or the decimal-string `amount`. When payout is the merchant wallet and allowance is insufficient, it approves exactly that amount before refunding. Existing sufficient allowances are reused. A different payout wallet must approve the processor itself. Returns `{ txHash, amount, approvalTxHash? }`.
 `refunds.prepare()` sends nothing: it returns a summary and unsigned `transactions` in execution order. Agents must leave signing to the merchant. `refunds.enable()` remains an optional unlimited pre-approval.
 
+### Coupons and promo codes
+Applied on your server before signing, so the signed invoice (and the contract) only ever sees the final amount. A customer can't change the discount.
+
+```ts
+await sableye.coupons.create({ code: 'WELCOME10', percentOff: 10 })                                   // or amountOff: '2.00'
+await sableye.coupons.create({ code: 'LAUNCH', amountOff: '1', maxRedemptions: 100, minAmount: '5', expiresAt: Date.now() + 7 * 86_400_000 })
+const inv = await sableye.invoices.create({ amount: '5.00', coupon: 'welcome10' })                    // signed for 4.50
+await sableye.coupons.quote('WELCOME10', '5.00')                                                      // { code, subtotal, discount, total }, uses nothing
+await sableye.coupons.deactivate('LAUNCH')
+```
+
+A code that doesn't apply throws `CouponError` with `code` set to one of `coupon_not_found`, `coupon_inactive`, `coupon_expired`, `coupon_exhausted`, `coupon_min_amount` or `coupon_free_order`, each with a remedy. An open invoice reserves a redemption until it expires; the redemption is counted when the indexer sees the payment. Use `couponStore: fileCouponStore()` (or your DB) to keep coupons across restarts.
+
 ### Emails and PDFs
 Once email is configured (`npx sableye init --email`, or `SMTP_USER` + `SMTP_PASS`) and an indexer runs, these go out automatically: the invoice on create, a receipt plus a "you got paid" notice on `invoice.paid` (verified on-chain first), and a refund confirmation on `invoice.refunded`. Every email goes through a keyed outbox, so a replay or reorg never sends twice and an SMTP failure never affects a payment.
 
@@ -83,7 +96,11 @@ sableye.arkiv.status()          // { published, pending, failed, lastError? }
 ### Revenue analytics
 `indexer.stats()` returns `{ count, volume, refunded, refundRate, created, conversion }`. `indexer.revenue({ bucket: 'day'|'week'|'month', from?, to? })` returns one series per token: `{ token, bucket, points: [{ start, gross, refunded, net, count }], gross, refunded, net, count, averageOrder }`. Refunds count in the period they happened (cash basis); empty periods are included. `sableye.subscriptions.stats()` returns `{ mrr, churnRate, failedChargeRate, active, pastDue, … }`.
 
+### Event replay
+`indexer.events({ type?, limit? })` lists past events, rebuilt from the indexed logs with the same ids and bodies that were delivered. `await indexer.resend(eventId, { url? })` delivers one again with the same id; receivers that deduplicate by id ignore it if they already processed it.
+
 ### CLI
+`npx sableye listen --forward-to http://localhost:3000/api/webhook [--secret whsec_…] [--since BLOCKS]` watches your payments and forwards signed webhooks to a dev server, like `stripe listen`. It prints the signing secret to set as `SABLEYE_WEBHOOK_SECRET`; `--since` replays past blocks first.
 `npx sableye init` runs first-time setup: merchant key, business name, email (logs in and sends a test email before saving), Arkiv access key. It writes `.env`. `npx sableye init --email` reruns only the email step. `npx sableye doctor` checks the chain setup and the SMTP login. `npx sableye view-key` prints the Arkiv view key.
 
 ### sableye.subscriptions.keeper(options?)
@@ -108,6 +125,8 @@ The QR icon offers phone-wallet links; `qr={false}` hides it. `payUrl` overrides
 ```tsx
 <Checkout invoice={inv} onSuccess={({ txHash }) => confirm(txHash)} onError={(e) => console.log(e.remedy)} />
 ```
+
+`walletConnectProjectId` (free from cloud.reown.com, public) adds a WalletConnect option: the customer scans a QR code with Whitewallet or any WalletConnect wallet and pays from it. It needs `@walletconnect/universal-provider` installed (an optional peer dependency, loaded only when used). With it, Whitewallet also works from the phone-wallet QR panel. `connectWalletConnect({ projectId, chainId, rpcUrl, onUri })` returns the same EIP-1193 provider for custom UIs.
 
 ### useCheckout(invoice, options?)
 For your own UI. Returns `{ state, wallets, pay, refresh }`; `refresh()` reloads on-chain status without prompting the wallet.
