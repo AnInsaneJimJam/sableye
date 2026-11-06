@@ -148,6 +148,7 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
         greeting(order), '',
         `${deps.businessName} sent you an invoice.`, '',
         ...(what(order) ? [`For: ${what(order)}`] : []),
+        ...(order.coupon ? [`Subtotal: ${order.subtotal} ${token}`, `Discount (${order.coupon}): -${order.discount} ${token}`] : []),
         `Amount: ${order.amount} ${token}`,
         `Pay by: ${new Date(order.expiresAt).toUTCString()}`, '',
         `Pay here: ${order.checkoutUrl}`, '',

@@ -3,19 +3,26 @@ import { clientKey, merchant, newOrderRef } from "@/lib/sandbox/merchant";
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 
-/** POST { amount, expiresIn?, email?, name?, description? } → a signed invoice (no gas, no transaction). With an email, it's also emailed with a PDF. */
+type Body = {
+  amount?: string;
+  expiresIn?: number;
+  email?: string;
+  name?: string;
+  description?: string;
+  coupon?: string;
+};
+
+/**
+ * POST { amount, expiresIn?, email?, name?, description?, coupon? } → a signed invoice (no gas, no transaction).
+ * With a promo code it's signed for the discounted total; with an email it's also emailed with a PDF.
+ */
 export const POST = (req: Request) =>
   handle(async () => {
-    const body = (await req.json()) as {
-      amount?: string;
-      expiresIn?: number;
-      email?: string;
-      name?: string;
-      description?: string;
-    };
+    const body = (await req.json()) as Body;
     const { sableye, mailLimiter } = merchant();
     const email = body.email?.trim();
-    if (email && !EMAIL.test(email))
+    const coupon = body.coupon?.trim().slice(0, 32);
+    if (email && !EMAIL.test(email)) {
       return json(
         {
           error: "invalid_email",
@@ -23,7 +30,8 @@ export const POST = (req: Request) =>
         },
         { status: 400 },
       );
-    if (email && !mailLimiter.allow(clientKey(req)))
+    }
+    if (email && !mailLimiter.allow(clientKey(req))) {
       return json(
         {
           error: "rate_limited",
@@ -31,8 +39,10 @@ export const POST = (req: Request) =>
         },
         { status: 429 },
       );
+    }
+    const amount = body.amount ?? "1.00";
     const invoice = await sableye.invoices.create({
-      amount: body.amount ?? "1.00",
+      amount,
       orderId: newOrderRef(),
       expiresIn: Math.min(Math.max(Number(body.expiresIn) || 1800, 60), 86_400),
       ...(email && {
@@ -44,9 +54,11 @@ export const POST = (req: Request) =>
       ...(body.description?.trim() && {
         description: body.description.trim().slice(0, 200),
       }),
+      ...(coupon && { coupon }),
     });
     return json({
       ...JSON.parse(JSON.stringify(invoice)),
       emailed: !!email && sableye.emails.enabled,
+      ...(coupon && { coupon: coupon.toUpperCase(), subtotal: amount }),
     });
   });

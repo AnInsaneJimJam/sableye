@@ -23,9 +23,13 @@ export interface OrderDetails {
   orderRef: string
   /** The bytes32 on-chain order id. */
   orderId: Hex
-  /** Decimal string, e.g. "5.00". */
+  /** Decimal string, e.g. "5.00": what the customer pays (after any coupon). */
   amount: string
   token: string
+  /** With a coupon: the price before it, the discount, and the code. Decimal strings. */
+  subtotal?: string
+  discount?: string
+  coupon?: string
   customer?: Customer
   description?: string
   items?: LineItem[]

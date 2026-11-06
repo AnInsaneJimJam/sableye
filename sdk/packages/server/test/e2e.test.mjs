@@ -89,3 +89,16 @@ test('default network config is intact without overrides', () => {
   assert.equal(s.network.chain.id, 1874)
   assert.equal(s.network.tokens.USDT.decimals, 6)
 })
+
+test('coupon: the invoice is signed for the discounted total, pays on-chain, and a single-use code is reserved', async () => {
+  await sableye.coupons.create({ code: 'welcome10', percentOff: 10, maxRedemptions: 1 })
+  const inv = await sableye.invoices.create({ amount: '5.00', orderId: 'order_coupon', coupon: 'WELCOME10' })
+  assert.equal(inv.invoice.amount, 4_500_000n)
+  assert.deepEqual(await sableye.coupons.quote('welcome10', '5.00').catch((e) => e.code), 'coupon_exhausted') // reserved by the open invoice
+  await assert.rejects(sableye.invoices.create({ amount: '5.00', coupon: 'welcome10' }), (e) => e.code === 'coupon_exhausted')
+  await payer.waitForTransactionReceipt({ hash: await payer.writeContract({ address: processor, abi: paymentProcessorAbi, functionName: 'pay', args: [inv.invoice, inv.signature] }) })
+  const v = await sableye.verifyPayment('order_coupon')
+  assert.equal(v.amount, 4_500_000n)
+  const pdf = Buffer.from(await sableye.documents.invoicePdf('order_coupon'))
+  assert.equal(pdf.subarray(0, 4).toString(), '%PDF')
+})
