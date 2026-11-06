@@ -18,12 +18,18 @@ const { paid } = await sableye.verifyPayment('order_123') // fulfil only after t
 
 ## Quickstart
 
-In a blank Next.js app (`npx create-next-app@latest --ts --app`), or skip all this with `npx create-whitechain-checkout --name my-store --framework next`.
+**The packages aren't on npm yet**, so install from a clone of this repo. You need Node 24, which is what this was tested on, and pnpm (`corepack enable`). This scaffolds a working store with the SDK packed into it:
 
 ```sh
-npm install @sableye/server @sableye/react viem
-echo 'MERCHANT_KEY=0x<a fresh testnet key>' >> .env.local
+pnpm install && pnpm build
+node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk
+cd my-store && npm install
+cp .env.example .env     # set MERCHANT_KEY to a fresh testnet key
+npx sableye doctor       # every check should pass before you sell anything
+npm run dev
 ```
+
+The integration it generates is these three files:
 
 ```ts
 // app/api/invoice/route.ts
@@ -55,8 +61,6 @@ export default function Page() {
   return invoice ? <Checkout invoice={invoice} /> : 'Loading…'
 }
 ```
-
-> **Current status:** the packages aren't on npm yet, and until the contract is deployed (#27) `invoices.create` returns `processor_not_deployed`. Pass your own `processor` to both `Sableye` and `<Checkout/>` to run against a local deployment.
 
 For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skills/whitechain-pay`](skills/whitechain-pay/SKILL.md) is an installable Agent Skill.
 
@@ -90,6 +94,17 @@ The browser picks the best payment path by itself, falling back automatically: g
 | `create-whitechain-checkout` | Scaffolds a working store |
 | `sdk/contracts` | `PaymentProcessor.sol`: OpenZeppelin `SignatureChecker` (EOA + ERC-1271 / Safe), `SafeERC20`, reentrancy guard |
 
+## Gasless relayer: who pays and why it can't be drained (Scale track)
+
+The customer only signs; the **business's own server** submits the transaction and pays the WBT gas, about 0.0001 WBT per payment. The relayer is just the merchant key inside `@sableye/server` (`export const POST = sableye.relayHandler()`), and the merchant tops it up with WBT from the faucet (testnet) or an exchange (mainnet). `npx sableye doctor` warns when the balance runs low.
+
+**Why a stranger can't drain it:**
+1. **It only relays its own invoices.** Anything not signed by this merchant is rejected before any RPC call.
+2. **Each invoice can be paid exactly once on-chain**, so there's at most one sponsored transaction per invoice. Concurrent requests for the same invoice share one submission.
+3. **Every request is simulated first.** Anything that would revert is refused, so no gas is spent.
+4. **Gas is capped per transaction**, and requests are **rate-limited per IP**.
+5. **The customer's authorization is bound to the invoice hash.** A relayer can't reuse it for another invoice or redirect the funds; the contract enforces this.
+
 ## Setup
 
 ```sh
@@ -102,6 +117,8 @@ pnpm --filter create-whitechain-checkout test
 pnpm --filter store dev                # demo shop on :3000
 ```
 
+Full demo setup, including the dashboard password, email and a public URL: [docs/DEMO.md](docs/DEMO.md).
+
 **Testnet funds:**
 1. Get WBT for gas from https://faucet.testnet.whitechain.io (2 WBT/day).
 2. Swap WBT for USDT on https://testnet.yetitrade.fi.
@@ -111,10 +128,14 @@ pnpm --filter store dev                # demo shop on :3000
 
 | Network | PaymentProcessor | Explorer |
 |---|---|---|
-| Whitechain Sepolia (1874) | _pending (#27)_ | |
+| Whitechain Sepolia (1874) | PaymentProcessor `0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5` · SubscriptionManager `0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78` | [processor ✅ verified](https://explorer.testnet.whitechain.io/address/0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5) · [subscriptions ✅ verified](https://explorer.testnet.whitechain.io/address/0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78) |
 | Whitechain mainnet (1875) | _pending; official USDT isn't on mainnet yet_ | |
 
-**Real USDT payment:** _link pending (#38)_
+**Real USDT payment:** 1 USDT for order `chai_order_3`, paid through the hosted checkout with `payWithPermit` (one transaction, no approve): [0x4229f7de…c4e9](https://explorer.testnet.whitechain.io/tx/0x4229f7de327de2a1c9e48660cc225483cba6430e3ec5ee51152ed4a99149c4e9). Payer `0x3Cf8…897a` → merchant `0xF9B1…EE08`; the processor's balance stayed 0.
+
+## AI integration
+
+An AI agent given only our Agent Skill and `llms.txt` integrated Sableye into a blank Next.js app in **3/3 trials** (about 2 min and ~$0.50 each). Every trial passed seven automatic checks, including server-side signing and verification, key safety, a successful build and `sableye doctor`. Details and reproduction: [docs/AI_EVAL.md](docs/AI_EVAL.md).
 
 ## Security
 
@@ -127,6 +148,8 @@ pnpm --filter store dev                # demo shop on :3000
 - Slither runs clean in CI. Each suppressed finding has its justification written next to it in the code.
 - Fee-on-transfer tokens are rejected.
 - The merchant key never leaves the server: the SDK throws `secret_in_client` if it's used in a browser.
+
+Full threat model and contract spec: [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ## Limitations
 

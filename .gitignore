@@ -8,3 +8,7 @@ sdk/contracts/out/
 sdk/contracts/cache/
 sdk/contracts/broadcast/*/31337/
 *.tsbuildinfo
+sdk/packages/*/src/**/*.js
+sdk/packages/*/src/**/*.d.ts
+medusa-corpus/
+crytic-export/

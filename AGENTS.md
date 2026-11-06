@@ -104,6 +104,41 @@ const { paid } = await sableye.verifyPayment('order_123')
 - **Config:** `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, checkoutUrl? }`. `signer` is any `{ address, signTypedData }`, so a KMS can be plugged in.
 - **Payment link:** `checkoutUrl = <checkoutUrl>#<base64url(JSON SignedInvoice)>` (`encodeSignedInvoice` / `decodeSignedInvoice` in core). It contains no secrets.
 
+**Level 2 server APIs** (#32, #33, #45, #34)
+```ts
+// Refunds (on-chain, capped). One-time approve from the payout wallet first:
+await sableye.refunds.enable()                                   // payout == merchant key
+await sableye.refunds.create({ orderId: 'order_123', amount: '2.00' }) // default: everything left
+
+// Gasless relayer (Scale track). Next.js: app/api/relay/route.ts
+export const POST = sableye.relayHandler()   // + OPTIONS for CORS; set relayUrl in the Sableye config
+
+// Indexer: cursor + backfill + reorg rollback; pending → safe → final; signed idempotent webhooks
+const indexer = sableye.indexer({ store: fileStore('.sableye/state.json'), webhooks: [{ url, secret }] })
+indexer.on('invoice.paid', (e) => …)          // also invoice.safe | .final | .refunded | .cancelled | .reorged
+await indexer.start()
+indexer.invoices(); indexer.stats(); indexer.exportCsv(); await indexer.reconcile()
+
+// Receiving a webhook
+const event = verifyWebhook(rawBody, req.headers.get('sableye-signature'), secret) // dedupe on event.id
+```
+- **CLI:** `npx sableye doctor` checks the RPC, chain, key + gas, processor, the SDK-vs-contract EIP-712 hash, and token decimals/capabilities/domain.
+- **New error codes:** `refunds_not_enabled`, `refund_exceeds_paid`, `not_refundable`, `rate_limited`, `not_our_invoice`, `invalid_signature`, `gasless_unsupported`, `invoice_expired`, `would_revert`, `gas_cap`, `webhook_signature_invalid`.
+
+**Subscriptions** (#46, contract `SubscriptionManager`)
+```ts
+const offer = await sableye.subscriptions.createPlan({ planId: 'pro', amount: '5', interval: 2592000 }) // signed, no gas
+// browser: approve(cap) then SubscriptionManager.subscribe(offer.plan, offer.signature, cap); first cycle is charged now
+await sableye.subscriptions.runDue()      // keeper: charge every due sub once (chain time); call on a timer
+await sableye.subscriptions.get(subId)    // status: active | past_due | cancelled, charged, cap, nextChargeAt
+await sableye.subscriptions.cancel(subId) // merchant; the payer can also cancel on-chain
+```
+Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `past_due` (it doesn't revert) and retries; after 3 consecutive failures it's `cancelled`. Use a 120 s interval for the demo.
+
+**MCP server** (#49, `@sableye/mcp`): `claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye-mcp`
+- Read tools: `get_invoice`, `list_invoices`, `stats`, `export_csv`, `doctor`. Create tools: `create_invoice`, `create_payment_link`. Both only ever move money *in*.
+- `prepare_refund` returns an **unsigned** transaction plus a summary; the merchant signs it. Agents never move money out. The SDK equivalent is `sableye.refunds.prepare()`.
+
 **React**
 ```tsx
 <Checkout invoice={signedInvoice} onSuccess={({ txHash }) => …} onError={(e) => console.log(e.remedy)} />
@@ -133,13 +168,16 @@ const { paid } = await sableye.verifyPayment('order_123')
 | Faster RPC | Free Ankr RPC, 1,500 req/s for 7 days: https://www.ankr.com/rpc/?utm_referral=Whitechain2026 |
 | AI quick start | https://docs.whitechain.io/learn/get-started/start-with-ai |
 | Finality | `safe` lags the tip by ~19 min and `finalized` by ~48 min (measured). Expose pending/safe/final states and let the merchant choose. |
-| PaymentProcessor | not deployed yet (#27) |
+| PaymentProcessor (1874) | `0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5` (verified) |
+| SubscriptionManager (1874) | `0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78` (verified) |
 
 ## 6. Demo highlight rule (demo/store)
 
 - Every SDK call sits between `// <sableye>` and `// </sableye>` markers.
 - The UI shows a **"⚡ Powered by Sableye"** badge plus a panel that renders those exact lines and their count.
 - `pnpm check:sdk-lines` fails above **20** lines.
+- Customer names, emails and items stay in the merchant's store (`.sableye/`), never on-chain. Public routes can be reached by on-chain order id, so they never show customer details.
+- Every `/admin` page and server action checks `requireAdmin()` itself. Setup: `docs/DEMO.md`.
 
 ## 7. Conventions
 
@@ -164,7 +202,7 @@ sdk/packages/server/    @sableye/server (+ test/e2e on anvil)
 sdk/packages/react/     @sableye/react
 sdk/packages/checkout/  static checkout page (payment links, #40)
 sdk/packages/create-whitechain-checkout/  scaffolder (#43)
-demo/store/             Next.js demo shop
+demo/store/             Next.js demo shop (setup: docs/DEMO.md)
 demo/books/             Phase 2 (Arkiv reader); untouched in Phase 1
 skills/whitechain-pay/  Agent Skill (#42)
 llms.txt                SDK docs for AI agents (#37): update it when an API changes

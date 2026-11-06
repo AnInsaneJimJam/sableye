@@ -2,8 +2,9 @@
 
 > Non-custodial USDT checkout on Whitechain. The merchant's server signs an EIP-712 invoice (no gas). The customer pays on-chain and funds go directly to the merchant's address. A typical integration is under 20 lines.
 
-Install: `npm install @sableye/server @sableye/react viem`
-Scaffold a store: `npx create-whitechain-checkout --name my-store --framework next`
+Install: not on npm yet. From a clone of the repo, after `pnpm install && pnpm build`, scaffold a store with the SDK packed in:
+`node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk`
+Once published: `npm install @sableye/server @sableye/react viem`, or `npx create-whitechain-checkout --name my-store --framework next`
 Agent recipes and guardrails: skills/whitechain-pay/SKILL.md
 
 Rules:

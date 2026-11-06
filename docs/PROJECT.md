@@ -3,7 +3,7 @@
 > **Read this first.** It explains what Sableye is, why it exists, how it works, what's built, and the plan for all four phases.
 > It's written for friends, new teammates and AI coding agents. For the day-to-day engineering rules, see [`AGENTS.md`](../AGENTS.md).
 >
-> Last updated: **Nov 5, 2026**, during ETHGlobal Mumbai.
+> Last updated: **Nov 6, 2026**, during ETHGlobal Mumbai.
 
 ---
 
@@ -565,30 +565,27 @@ pnpm check:sdk-lines                             # demo stays ≤20 SDK lines
 
 ## 11. Current status, blockers and next steps
 
-### Done ✅ (as of Nov 5 evening)
-- **Contract:** `PaymentProcessor` with:
-  - `pay`, `payWithPermit` and gasless `payWithAuthorization`;
-  - capped `refund`, `cancelInvoice` and `bumpNonce`;
-  - ERC-1271, SafeERC20, a reentrancy guard and fee-on-transfer rejection.
-- **Contract tests:** 23 Foundry unit and fuzz tests (1,000 runs each). Slither is clean, and CI runs both.
-- **`@sableye/core`:** config, ABI, EIP-712, amounts, payment links, typed errors; mainnet config.
-- **`@sableye/server`:** `invoices.create` and `verifyPayment`, with a pluggable signer (KMS-ready).
-- **End-to-end tests** on anvil: deploy → create → pay → verify, plus the error and remedy paths. Server + checkout: 23 passing.
-- **Part B:** headless checkout engine in `@sableye/core`, which implements the capability ladder (EIP-3009, then permit, then approve), plus `<Checkout/>` and `useCheckout` in `@sableye/react` (6 tests passing).
-- **Docs:** README (B2B2C pitch, why on-chain, security, limitations), `WHITECHAIN_FEEDBACK.md` (8 findings) and `AGENTS.md`.
+Phase 1 is built. What's left is making the demo ready to show and submitting it. Open work is tracked in issues #58–#71.
 
-### Blockers ⛔
-1. **Testnet WBT.** The merchant/deployer wallet `0xF9B1a7c3374ca8d2AC63aca87D9664aa2E0bEE08` needs WBT from https://faucet.testnet.whitechain.io (GitHub login required) to deploy (#27).
-2. **Test USDT.** Swap WBT for USDT on https://testnet.yetitrade.fi, for the required real payment. (Whitechain confirmed `0xcedf…` is the only USDT that counts.)
-3. **The repo is private.** It must be **public** before submission.
+### Done ✅
+- **Contracts:** `PaymentProcessor` and `SubscriptionManager`, deployed and verified on Whitechain Sepolia (addresses in `AGENTS.md`).
+- **Real USDT payments:** the first is linked in the README. Gasless `payWithAuthorization` and a refund have also run on the live chain.
+- **SDK:** `@sableye/core`, `server`, `react` and `mcp`, plus the static checkout page and the scaffolder, with tests on anvil.
+- **Demo store:** shop, hosted checkout, merchant dashboard, invoices, PDFs, email, payment links and subscriptions. Setup is in [DEMO.md](DEMO.md).
+- **Assurance:** Foundry unit, fuzz and invariant tests, Medusa stateful fuzzing, Slither in CI, and a threat model.
+- **Docs:** README, `llms.txt`, Agent Skill, AI integration eval, pitch script and `WHITECHAIN_FEEDBACK.md`.
 
-### Next steps (in order)
-1. Deploy + verify (#27), then one real USDT payment.
-2. Part B: the demo store (#36), now that `<Checkout/>` (#35) is done. Level 1 is then done.
-3. Part A: indexer (#32), webhooks + CSV (#33), relayer (#45). Then Level 2 (refund + CSV in the demo) and the Scale track.
-4. Subscriptions (#46).
-5. Phase 2 (Arkiv) → Phase 3 (Swarm) → Phase 4 (formal verification), as time allows.
-6. Pitch rehearsal (#47) and video (#38) before the deadline.
+### Still to verify 🟡
+- A full click-through with a real wallet (#58). **Subscriptions have not run on the live chain yet.**
+- Real Gmail delivery (#62) and a phone QR scan through a tunnel (#64).
+
+### Blockers before submission ⛔
+1. **The repo is private.** It must be **public** before submission (#70).
+2. **The demo video** isn't recorded yet (#69).
+3. **The SDK isn't on npm**, so the quickstart installs from a clone (#71).
+
+### After the hackathon
+Phase 2 (Arkiv) → Phase 3 (Swarm) → Phase 4 (formal verification, #57).
 
 ---
 

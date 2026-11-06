@@ -14,7 +14,8 @@ What we ran into while building Sableye at ETHGlobal Mumbai 2026. We hope it hel
 5. **RPC method support isn't listed.** `eth_getLogs` and the `safe`/`finalized` block tags work, but they aren't documented (only `eth_subscribe` is mentioned).
 6. **Finality numbers would help payments builders.** We measured `safe` lagging the tip by about 1,150 blocks (about 19 minutes) and `finalized` by about 2,900 (about 48 minutes). For checkout UX, a recommended confirmation depth would help.
 7. **Mainnet status is inconsistent.** The docs say mainnet has been live since 26 Oct; the whitechain.io roadmap still says "Q4 2026 targeted". Mainnet USDT is "in later releases", with no date.
-8. **No mainnet verifier URL.** Only the testnet Blockscout `/api/` path is documented.
+8. **`eth_getLogs` is capped at a 10,000-block range, undocumented.** At 1-second blocks that's under 3 hours of history per query; anything wider fails with `-32602 query exceeds max block range 10000`. We only found it in manual testing, after our subscription listing started failing ~3 h after deployment. Please document it next to the rate limits.
+9. **No mainnet verifier URL.** Only the testnet Blockscout `/api/` path is documented.
 
 ## Things that worked well
 

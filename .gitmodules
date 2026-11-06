@@ -4,3 +4,6 @@
 [submodule "sdk/contracts/lib/openzeppelin-contracts"]
 	path = sdk/contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "sdk/contracts/lib/chimera"]
+	path = sdk/contracts/lib/chimera
+	url = https://github.com/Recon-Fuzz/chimera

@@ -4,6 +4,12 @@
   "packageManager": "pnpm@10.24.0",
   "scripts": {
     "build": "pnpm -r build",
-    "check:sdk-lines": "node scripts/check-sdk-lines.mjs"
+    "check:sdk-lines": "node scripts/check-sdk-lines.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm -r build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.1"
   }
 }

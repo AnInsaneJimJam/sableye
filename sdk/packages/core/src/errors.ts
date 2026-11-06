@@ -105,8 +105,13 @@ export class UserRejectedError extends SableyeError {
 
 /** The payer does not hold enough of the invoice's token. */
 export class InsufficientBalanceError extends SableyeError {
-  constructor(need: string, have: string, symbol: string) {
-    super('insufficient_balance', `This wallet holds ${have} ${symbol}, and the invoice needs ${need} ${symbol}.`, `Add ${symbol} to this wallet or connect another one.`)
+  constructor(need: string, have: string, symbol: string, wallet?: string) {
+    const who = wallet ? `Wallet ${wallet.slice(0, 6)}…${wallet.slice(-4)}` : 'This wallet'
+    super(
+      'insufficient_balance',
+      `${who} holds ${have} ${symbol}, and the invoice needs ${need} ${symbol}.`,
+      `Add ${symbol} to this wallet, or switch your wallet extension to the account that holds it and try again.`,
+    )
   }
 }
 
@@ -159,5 +164,16 @@ export class PaymentFailedError extends SableyeError {
 export class SignerCannotTransactError extends SableyeError {
   constructor() {
     super('signer_cannot_transact', 'This signer cannot send transactions.', 'Add `signTransaction` to your custom signer, or use `privateKey`.')
+  }
+}
+
+/** The SubscriptionManager is not deployed on this network yet (or the address is wrong). */
+export class SubscriptionsNotDeployedError extends SableyeError {
+  constructor(network: string) {
+    super(
+      'subscriptions_not_deployed',
+      `No SubscriptionManager address configured for ${network}.`,
+      'Pass `subscriptions` in the Sableye config, or upgrade @sableye/core once it is deployed.',
+    )
   }
 }

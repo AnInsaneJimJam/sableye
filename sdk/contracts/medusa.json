@@ -1,0 +1,25 @@
+{
+  "fuzzing": {
+    "workers": 8,
+    "timeout": 120,
+    "testLimit": 200000,
+    "callSequenceLength": 64,
+    "corpusDirectory": "medusa-corpus",
+    "targetContracts": ["CryticTester"],
+    "targetContractsBalances": ["0"],
+    "deployerAddress": "0x30000",
+    "senderAddresses": ["0x10000", "0x20000", "0x30000"],
+    "blockNumberDelayMax": 60480,
+    "blockTimestampDelayMax": 604800,
+    "testing": {
+      "stopOnFailedTest": false,
+      "assertionTesting": { "enabled": false },
+      "propertyTesting": { "enabled": true, "testPrefixes": ["property_"] },
+      "optimizationTesting": { "enabled": false }
+    }
+  },
+  "compilation": {
+    "platform": "crytic-compile",
+    "platformConfig": { "target": ".", "solcVersion": "", "exportDirectory": "", "args": ["--foundry-compile-all"] }
+  }
+}

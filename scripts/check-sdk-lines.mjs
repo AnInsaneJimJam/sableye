@@ -13,8 +13,9 @@ let count = 0
 for (const file of walk('demo/store')) {
   let inside = false
   for (const line of readFileSync(file, 'utf8').split('\n')) {
-    if (line.includes('// </sableye>')) inside = false
-    else if (line.includes('// <sableye>')) inside = true
+    // Markers: `// <sableye>` in TS, `{/* <sableye> */}` in JSX. `<sableye:extra>` (Level 2+ features) isn't counted.
+    if (/(\/\/|\/\*) <\/sableye>/.test(line)) inside = false
+    else if (/(\/\/|\/\*) <sableye>/.test(line)) inside = true
     else if (inside && line.trim()) count++
   }
 }

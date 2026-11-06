@@ -99,7 +99,7 @@ contract Handler is Test {
     function refund(uint256 orderSeed, uint256 amount) external {
         bytes32 id = orderIds[orderSeed % orderIds.length];
         IPaymentProcessor.Receipt memory r = pp.getReceipt(merchant, id);
-        amount = bound(amount, 0, r.amount + 1); // sometimes over the cap
+        amount = bound(amount, 0, r.amount + 1); // sometimes over the cap, sometimes zero (both must revert)
         vm.prank(merchant);
         try pp.refund(id, amount) {
             ghostRefunded += amount;
