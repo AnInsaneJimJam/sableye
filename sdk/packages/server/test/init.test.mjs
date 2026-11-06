@@ -82,4 +82,7 @@ test('agent setup in a repo: detects the app, writes AGENTS.md / CLAUDE.md / ski
   assert.match(prompt, /node_modules\/sableye\/docs/)
   assert.match(prompt, /Pro plan, 9\.99 USDT/)
   assert.doesNotMatch(prompt, /0x[0-9a-f]{64}/i)
+  const inferred = agentPrompt({ framework: 'node', ts: false })
+  assert.match(inferred, /work it out from the app/)
+  assert.doesNotMatch(inferred, /\[describe/)
 })

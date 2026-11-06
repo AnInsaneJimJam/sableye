@@ -92,7 +92,7 @@ export function agentPrompt({ framework, ts, sells, envFile = '.env' }) {
   return [
     `Use the sableye skill (.claude/skills/sableye/SKILL.md) and the Sableye section of AGENTS.md to add USDT payments to this ${app} app.`,
     '',
-    `What customers pay for: ${sells || '[describe it: product, price, where the Pay button goes]'}`,
+    `What customers pay for: ${sells || 'work it out from the app. If it already has a payment step (even a simulated one), replace it with Sableye; otherwise pick the natural place (pricing, cart, invoices). Use the app\'s own prices, and tell me what you chose.'}`,
     '',
     `- Before writing payment code, read the matching guide in node_modules/sableye/docs/ (the APIs are newer than your training data).`,
     `- ${SHAPE[framework] ?? SHAPE.node}`,
