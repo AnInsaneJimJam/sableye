@@ -2,7 +2,8 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Hero } from "@/components/sections/hero";
 import { ProductStory } from "@/components/sections/product-story";
-import { GlassFold } from "@/components/ui/glass-fold";
+import { ThemeSwitch } from "@/components/ui/theme-switch";
+import { ThemedGlassFold } from "@/components/ui/themed-glass-fold";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata = createMetadata({
@@ -18,14 +19,7 @@ export default function HomePage() {
         Skip to content
       </a>
       <div className="landing-background" aria-hidden="true">
-        <GlassFold
-          color1="#2563eb"
-          color2="#080f1f"
-          color3="#60a5fa"
-          speed={0.3}
-          scale={1}
-          noise={0.1}
-        />
+        <ThemedGlassFold />
       </div>
       <div className="landing-scrim" aria-hidden="true" />
       <SiteHeader />
@@ -34,6 +28,7 @@ export default function HomePage() {
         <ProductStory />
       </main>
       <SiteFooter />
+      <ThemeSwitch />
     </div>
   );
 }

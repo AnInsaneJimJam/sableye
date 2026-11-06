@@ -5,26 +5,26 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "server-setup",
       title: "Shared server setup",
-      body: "Examples in the server guides use this lib/sableye.ts module. Import it only from server routes or workers. Use the generated store for a complete application.",
-      code: "import { Sableye, SableyeError } from '@sableye/server'\nexport const sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  checkoutUrl: 'https://shop.example/pay',\n})\nexport function errorResponse(error: unknown) {\n  const known = error instanceof SableyeError\n  return Response.json({\n    code: known ? error.code : 'server_error',\n    remedy: known ? error.remedy : 'Check the server logs.',\n  }, { status: 500 })\n}",
+      body: "Examples in the server guides use this lib/sableye.ts module. Import it only from server routes or workers. The helper is lazy so importing a route does not construct the client during next build. In snippets without an import, getSableye refers to this helper. Standalone workers may construct their client at startup.",
+      code: "import { Sableye, SableyeError } from '@sableye/server'\nlet client: Sableye | undefined\nexport function getSableye(): Sableye {\n  return client ??= new Sableye({\n    privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n    network: 'whitechain-sepolia',\n    checkoutUrl: 'https://shop.example/pay',\n  })\n}\nexport function errorResponse(error: unknown) {\n  const known = error instanceof SableyeError\n  return Response.json({\n    code: known ? error.code : 'server_error',\n    remedy: known ? error.remedy : 'Check the server logs.',\n  }, { status: 500 })\n}",
     },
     {
       id: "invoice-route",
       title: "Invoice route",
       body: "Place this at app/api/invoice/route.ts. The price is selected on the server; persist the generated orderRef with your own order record.",
-      code: "import { sableye, errorResponse } from '../../../lib/sableye'\nexport async function POST() {\n  try {\n    return Response.json(await sableye.invoices.create({ amount: '5.00' }))\n  } catch (error) { return errorResponse(error) }\n}",
+      code: "import { getSableye, errorResponse } from '../../../lib/sableye'\nexport async function POST() {\n  try {\n    return Response.json(await getSableye().invoices.create({ amount: '5.00' }))\n  } catch (error) { return errorResponse(error) }\n}",
     },
     {
       id: "client-handoff",
       title: "Browser JSON handoff",
-      body: "Place this at app/page.tsx. CreatedInvoice serializes its bigint fields for Response.json; Checkout accepts that serialized form. A success callback is only a signal to request server verification.",
-      code: "'use client'\nimport { useEffect, useState } from 'react'\nimport { Checkout } from '@sableye/react'\nimport type { SerializedSignedInvoice } from '@sableye/core'\nexport default function Page() {\n  const [invoice, setInvoice] = useState<SerializedSignedInvoice>()\n  const [error, setError] = useState('')\n  useEffect(() => {\n    fetch('/api/invoice', { method: 'POST' })\n      .then(async (r) => { if (!r.ok) throw new Error('Invoice unavailable'); return r.json() })\n      .then(setInvoice).catch((e: unknown) => setError(String(e)))\n  }, [])\n  return error ? <p>{error}</p> : invoice ? <Checkout invoice={invoice} /> : <p>Loading\u2026</p>\n}",
+      body: "Place this at app/page.tsx. CreatedInvoice serializes its bigint fields for Response.json; Checkout accepts that serialized form. The success callback requests server verification and updates the UI. Actual fulfilment must be an idempotent server operation tied to your authenticated order; this example only displays verified payment status.",
+      code: "'use client'\nimport { useEffect, useState } from 'react'\nimport { Checkout } from '@sableye/react'\nimport type { SerializedSignedInvoice } from '@sableye/core'\nexport default function Page() {\n  const [invoice, setInvoice] = useState<SerializedSignedInvoice & { orderRef: string }>()\n  const [error, setError] = useState('')\n  const [verified, setVerified] = useState(false)\n  async function checkPayment(orderRef: string) {\n    try {\n      const response = await fetch('/api/verify?orderId=' + encodeURIComponent(orderRef))\n      if (!response.ok) throw new Error('Verification unavailable')\n      const result = await response.json()\n      setVerified(result.paid === true)\n    } catch (error) { setError(String(error)) }\n  }\n  useEffect(() => {\n    fetch('/api/invoice', { method: 'POST' })\n      .then(async (r) => { if (!r.ok) throw new Error('Invoice unavailable'); return r.json() })\n      .then(setInvoice).catch((e: unknown) => setError(String(e)))\n  }, [])\n  return error ? <p>{error}</p> : verified ? <p>Payment verified</p> : invoice ? <Checkout invoice={invoice} onSuccess={() => { void checkPayment(invoice.orderRef) }} /> : <p>Loading…</p>\n}",
     },
     {
       id: "verification-route",
       title: "Verification route",
       body: "Place this at app/api/verify/route.ts. This endpoint reports payment state; fulfilment belongs in authenticated application code with an idempotent order update and your finality policy.",
-      code: "import { sableye, errorResponse } from '../../../lib/sableye'\nexport async function GET(request: Request) {\n  const orderId = new URL(request.url).searchParams.get('orderId')\n  if (!orderId) return Response.json({ error: 'missing_order_id' }, { status: 400 })\n  try { return Response.json(await sableye.verifyPayment(orderId)) }\n  catch (error) { return errorResponse(error) }\n}",
+      code: "import { getSableye, errorResponse } from '../../../lib/sableye'\nexport async function GET(request: Request) {\n  const orderId = new URL(request.url).searchParams.get('orderId')\n  if (!orderId) return Response.json({ error: 'missing_order_id' }, { status: 400 })\n  try { return Response.json(await getSableye().verifyPayment(orderId)) }\n  catch (error) { return errorResponse(error) }\n}",
     },
   ],
   configuration: [
@@ -154,8 +154,8 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "relay-route",
       title: "Complete relay route",
-      body: "Use the shared server setup from Quickstart with relayUrl set to this endpoint. Create the handler once; constructing it on every request resets its in-memory limiter.",
-      code: "import { sableye } from '../../../lib/sableye'\nconst handler = sableye.relayHandler({ perMinute: 10, maxGas: 400_000n })\nexport const POST = handler\nexport const OPTIONS = handler",
+      body: "Use the shared server setup from Quickstart with relayUrl set to this endpoint. Lazily cache the handler; constructing it on every request resets its in-memory limiter.",
+      code: "import { getSableye } from '../../../lib/sableye'\nlet handler: ReturnType<ReturnType<typeof getSableye>['relayHandler']> | undefined\nexport async function POST(request: Request) {\n  handler ??= getSableye().relayHandler({ perMinute: 10, maxGas: 400_000n })\n  return handler(request)\n}\nexport const OPTIONS = POST",
     },
     {
       id: "http",
@@ -175,12 +175,12 @@ export const additions: Record<string, DocSection[]> = {
       id: "api",
       title: "Reusable link API",
       body: "All calls below use the shared server client from Quickstart. Signer must support signMessage. Deactivation returns void and only prevents new invoices.",
-      code: "import { sableye } from './lib/sableye'\nconst link = await sableye.paymentLinks.create({\n  amount: '5.00', token: 'USDT', name: 'Coffee',\n  expiresIn: 86400, invoiceExpiresIn: 1800,\n})\nconst opened = await sableye.paymentLinks.open(link.url)\nconsole.log(opened.link.id, opened.invoice.orderRef)\nawait sableye.paymentLinks.deactivate(link.id)",
+      code: "import { getSableye } from './lib/sableye'\nconst sableye = getSableye()\nconst link = await sableye.paymentLinks.create({\n  amount: '5.00', token: 'USDT', name: 'Coffee',\n  expiresIn: 86400, invoiceExpiresIn: 1800,\n})\nconst opened = await sableye.paymentLinks.open(link.url)\nconsole.log(opened.link.id, opened.invoice.orderRef)\nawait sableye.paymentLinks.deactivate(link.id)",
     },
     {
       id: "storage-handler",
       title: "Storage and HTTP handler",
-      body: "create returns id, amount string, token symbol, optional name/expiresAt, invoiceExpiresIn, merchant, url. open accepts the full URL or l parameter and returns {link,invoice}. Each visit creates a unique order. Export GET = sableye.paymentLinks.handler() from the configured route; valid links redirect with 303 and no-store. Invalid/expired/deactivated links return HTML errors; expiry/deactivation use 410. LinkStore requires isDeactivated(id):Promise<boolean> and deactivate(id):Promise<void>. Only memoryLinkStore is supplied by the SDK; the demo has its own file adapter.",
+      body: "create returns id, amount string, token symbol, optional name/expiresAt, invoiceExpiresIn, merchant, url. open accepts the full URL or l parameter and returns {link,invoice}. Each visit creates a unique order. Inside the GET request handler, call getSableye().paymentLinks.handler()(request); valid links redirect with 303 and no-store. Invalid/expired/deactivated links return HTML errors; expiry/deactivation use 410. LinkStore requires isDeactivated(id):Promise<boolean> and deactivate(id):Promise<void>. Only memoryLinkStore is supplied by the SDK; the demo has its own file adapter.",
     },
   ],
   "subscriptions/keeper": [
@@ -188,12 +188,12 @@ export const additions: Record<string, DocSection[]> = {
       id: "scheduler",
       title: "Persistent scheduler",
       body: "The keeper begins scheduling immediately. It aligns due times to chain timestamps, discovers new subscriptions incrementally, and applies wall-clock backoff to failures. Track a newly observed ID to include it immediately.",
-      code: "import { sableye } from './lib/sableye'\nconst keeper = sableye.subscriptions.keeper({\n  retryAfterSeconds: 3600, discoverEverySeconds: 60, maxSleepSeconds: 3600,\n  onResult: (result) => console.log(result.subId, result.result, result.error),\n})\nprocess.once('SIGTERM', () => keeper.stop())",
+      code: "import { getSableye } from './lib/sableye'\nconst sableye = getSableye()\nconst keeper = sableye.subscriptions.keeper({\n  retryAfterSeconds: 3600, discoverEverySeconds: 60, maxSleepSeconds: 3600,\n  onResult: (result) => console.log(result.subId, result.result, result.error),\n})\nprocess.once('SIGTERM', () => keeper.stop())",
     },
     {
       id: "methods",
       title: "Keeper API",
-      body: "track(subId):Promise<void>, tick():Promise<KeeperResult[]>, nextRunAt:Date|undefined, watching:number, stop():void. Result has subId, result, optional txHash and error. Throws from charge become per-subscription failed attempts with backoff. cap_reached/inactive are removed from the watch set. stop clears scheduling but does not cancel a transaction already running. Sableye currently does not wire the lower-level finalized discovery hook.",
+      body: "track(subId):Promise<void>, tick():Promise<KeeperResult[]>, nextRunAt:Date|undefined, watching:number, stop():void. Result has subId, result, optional txHash and error. Throws from charge become per-subscription failed attempts with backoff. cap_reached/inactive are removed from the watch set. stop clears scheduling but does not cancel a transaction already running. Sableye wires finalized-block discovery so unfinalized ranges are rescanned; if the RPC rejects finalized, discovery falls back to head. Retry state is in memory and resets on restart.",
     },
     {
       id: "cron-stats",
@@ -328,7 +328,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "flags",
       title: "CLI flags and environment",
-      body: "Only doctor is implemented. Flags: --network (default whitechain-sepolia), --rpc, --processor. Loads ./.env. CLI --rpc/--processor override SABLEYE_RPC/SABLEYE_PROCESSOR; MERCHANT_KEY provides the account. Programmatic doctor(options) returns DoctorCheck[] with name/status/detail/remedy? (status is ok, warn, or fail); printDoctor(checks) logs and returns an exit status.",
+      body: "Implemented commands are init [--email], doctor, listen and view-key. Doctor flags: --network (default whitechain-sepolia), --rpc, --processor. Loads ./.env. CLI --rpc/--processor override SABLEYE_RPC/SABLEYE_PROCESSOR; MERCHANT_KEY provides the account. Programmatic doctor(options) returns DoctorCheck[] with name/status/detail/remedy? (status is ok, warn, or fail); printDoctor(checks) logs and returns an exit status.",
       code: "node sdk/packages/server/bin/sableye.mjs doctor --network whitechain-sepolia\nnode sdk/packages/server/bin/sableye.mjs doctor --rpc https://rpc.testnet.whitechain.io",
     },
   ],
@@ -371,7 +371,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "limitations",
       title: "Mobile integration details",
-      body: "walletDeepLink supports metamask/trust/coinbase; Whitewallet is listed without a deep link and WalletConnect is not implemented. hostedPayUrl uses ?i= so redirects preserve the payload. isLocalUrl flags localhost/127.0.0.1/0.0.0.0/.local; it is a usability check, not an exhaustive network safety validator. React refresh returns void. See the component polling implementation before changing polling cadence.",
+      body: "walletDeepLink supports metamask/trust/coinbase; Whitewallet has no wallet-specific deep link; enable walletConnectProjectId and install @walletconnect/universal-provider for its WalletConnect path. hostedPayUrl uses ?i= so redirects preserve the payload. isLocalUrl flags localhost/127.0.0.1/0.0.0.0/.local; it is a usability check, not an exhaustive network safety validator. React refresh returns void. See the component polling implementation before changing polling cadence.",
     },
   ],
 };
@@ -431,11 +431,11 @@ additions.refunds.push({
   id: "server-example",
   title: "Prepare and submit from the server",
   body: "This uses the server module from Quickstart. Choose either preparation for wallet review or SDK submission; do not submit the same refund twice. Both methods default to the unrefunded balance when amount is omitted.",
-  code: "import { sableye } from './lib/sableye'\nexport async function prepareRefund(orderId: string) {\n  return sableye.refunds.prepare({ orderId, amount: '2.00' })\n}\nexport async function submitRefund(orderId: string) {\n  return sableye.refunds.create({ orderId, amount: '2.00' })\n}",
+  code: "import { getSableye } from './lib/sableye'\nexport async function prepareRefund(orderId: string) {\n  return getSableye().refunds.prepare({ orderId, amount: '2.00' })\n}\nexport async function submitRefund(orderId: string) {\n  return getSableye().refunds.create({ orderId, amount: '2.00' })\n}",
 });
 additions.indexer.push({
   id: "worker-example",
   title: "Persistent worker example",
   body: "Use the shared server setup from Quickstart. Run this module in a persistent Node process, attach before creating invoices, and keep the state file on durable storage. Use poll rather than start for a single scheduled pass.",
-  code: "import { fileStore } from '@sableye/server'\nimport { sableye } from './lib/sableye'\nconst indexer = sableye.indexer({ store: fileStore('.sableye/state.json'), wsUrl: false })\nindexer.on('invoice.safe', (event) => console.log(event.id, event.data.orderRef))\nawait indexer.start()\nprocess.once('SIGTERM', () => indexer.stop())\nconsole.log(indexer.stats(), await indexer.reconcile())\nconst csv = indexer.exportCsv({ from: 0 })\nconsole.log(csv)",
+  code: "import { fileStore } from '@sableye/server'\nconst sableye = getSableye()\nimport { getSableye } from './lib/sableye'\nconst indexer = sableye.indexer({ store: fileStore('.sableye/state.json'), wsUrl: false })\nindexer.on('invoice.safe', (event) => console.log(event.id, event.data.orderRef))\nawait indexer.start()\nprocess.once('SIGTERM', () => indexer.stop())\nconsole.log(indexer.stats(), await indexer.reconcile())\nconst csv = indexer.exportCsv({ from: 0 })\nconsole.log(csv)",
 });

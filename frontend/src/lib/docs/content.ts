@@ -1,4 +1,5 @@
 import { additions, newPages } from "./content/details";
+import { merchantAdditions, merchantPages } from "./content/merchant";
 /** A documentation section; its ID also drives the page outline. */
 export type DocSection = {
   id: string;
@@ -32,6 +33,7 @@ export const navigation: { title: string; items: NavItem[] }[] = [
         title: "Quickstart",
         slug: "quickstart",
       },
+      { title: "Choose your integration", slug: "packages" },
       {
         title: "How it works",
         slug: "how-it-works",
@@ -64,6 +66,7 @@ export const navigation: { title: string; items: NavItem[] }[] = [
             title: "Mobile wallets",
             slug: "checkout/mobile",
           },
+          { title: "WalletConnect", slug: "checkout/walletconnect" },
           {
             title: "Hosted checkout",
             slug: "checkout/hosted",
@@ -104,6 +107,11 @@ export const navigation: { title: string; items: NavItem[] }[] = [
   {
     title: "Manage Payments",
     items: [
+      { title: "Coupons and discounts", slug: "coupons" },
+      { title: "Emails and notifications", slug: "emails" },
+      { title: "Invoice and receipt PDFs", slug: "documents" },
+      { title: "Orders and storage", slug: "storage" },
+      { title: "Arkiv records and privacy", slug: "arkiv" },
       {
         title: "Refunds",
         slug: "refunds",
@@ -163,6 +171,8 @@ export const navigation: { title: string; items: NavItem[] }[] = [
         title: "Installation",
         slug: "cli/installation",
       },
+      { title: "Merchant setup", slug: "cli/setup" },
+      { title: "Local webhook listener", slug: "cli/listen" },
       {
         title: "Doctor",
         slug: "cli/doctor",
@@ -211,7 +221,7 @@ const introductoryPages: DocPage[] = [
         title: "Create your store",
         body: "Build the workspace, then generate a Next.js store with the local SDK included.",
         language: "Terminal",
-        code: "pnpm install\npnpm build\nnode sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk\ncd my-store\nnpm install\ncp .env.example .env",
+        code: "pnpm install\npnpm -r --filter \"./sdk/packages/*\" run build\nnode sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk\ncd my-store\nnpm install\nnpx --no-install sableye init\nnpm run dev",
       },
       {
         id: "create-an-invoice",
@@ -287,7 +297,7 @@ const introductoryPages: DocPage[] = [
         title: "Build the SDK",
         body: "From your Sableye repository checkout, install dependencies and build the packages.",
         language: "Terminal",
-        code: "corepack enable\npnpm install\npnpm build",
+        code: "corepack enable\npnpm install\npnpm -r --filter \"./sdk/packages/*\" run build",
       },
       {
         id: "scaffold",
@@ -299,9 +309,9 @@ const introductoryPages: DocPage[] = [
       {
         id: "check",
         title: "Check your environment",
-        body: "Configure the generated .env file with a testnet merchant key. Run the diagnostic command before accepting payments.",
+        body: "Run interactive setup for the merchant key, business name and optional email/Arkiv settings. Doctor checks the configured environment before you accept payments.",
         language: "Terminal",
-        code: "npx sableye doctor\nnpm run dev",
+        code: "npx --no-install sableye init\nnpx --no-install sableye doctor\nnpm run dev",
       },
     ],
   },
@@ -330,6 +340,7 @@ const introductoryPages: DocPage[] = [
             ["Merchant wallet", "Check the key and WBT gas balance"],
             ["Processor", "Confirm deployment and EIP-712 hash agreement"],
             ["Token", "Check decimals, capabilities, and signing domain"],
+            ["SMTP", "Verify login when email credentials are configured"],
           ],
         },
       },
@@ -1030,7 +1041,7 @@ const introductoryPages: DocPage[] = [
       {
         id: "roadmap",
         title: "What's next",
-        body: "Phase 1 focuses on the core SDK. Merchant-owned Arkiv records and Swarm-hosted checkout are later phases.",
+        body: "The repository implements the core payments SDK, coupons, SMTP emails, PDFs, order storage and optional merchant-owned Arkiv records. Swarm hosting remains future work. Implementation does not imply npm publication or production readiness; use the documented local installation and testnet setup.",
       },
     ],
   },
@@ -1040,11 +1051,11 @@ const introductoryPages: DocPage[] = [
 const orderedSlugs = navigation
   .flatMap((group) => group.items.flatMap((item) => item.children ?? [item]))
   .map((item) => item.slug);
-export const pages: DocPage[] = [...introductoryPages, ...newPages]
+export const pages: DocPage[] = [...introductoryPages, ...newPages, ...merchantPages]
   .sort((a, b) => orderedSlugs.indexOf(a.slug) - orderedSlugs.indexOf(b.slug))
   .map((page) => ({
     ...page,
-    sections: [...page.sections, ...(additions[page.slug] ?? [])],
+    sections: [...page.sections, ...(additions[page.slug] ?? []), ...(merchantAdditions[page.slug] ?? [])],
   }));
 
 /** Find a guide by its route, without the /docs base path. */
