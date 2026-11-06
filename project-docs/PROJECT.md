@@ -502,7 +502,7 @@ A **feed** gives each app a stable URL across new versions. An **ENS contenthash
 3. **Differential test:** a Foundry FFI or Node script comparing the TS `hashInvoice` with Solidity's over random invoices.
 4. **Gambit:** run mutation testing and report how many mutants each property kills. Review any spec that kills nothing.
 5. **Stretch:** get Certora access and port the properties to CVL.
-6. Write `docs/VERIFICATION.md`: **what was proved** (tool + bound), **what was fuzzed** (runs/depth), and **what is explicitly not covered** (e.g. the USDT token's own behavior, sequencer liveness, the TS SDK proven only by tests).
+6. Write `project-docs/VERIFICATION.md`: **what was proved** (tool + bound), **what was fuzzed** (runs/depth), and **what is explicitly not covered** (e.g. the USDT token's own behavior, sequencer liveness, the TS SDK proven only by tests).
 7. **AI caveat:** if AI drafts an invariant, a human reviews it. Mutation testing is the safety net.
 
 ---
@@ -531,7 +531,7 @@ A **feed** gives each app a stable URL across new versions. An **ENS contenthash
 ### Repo layout
 ```
 AGENTS.md                 engineering rules + frozen interfaces (read before coding)
-docs/PROJECT.md           this file
+project-docs/PROJECT.md           this file
 README.md                 judge-facing: pitch, why onchain, setup, security, limitations
 WHITECHAIN_FEEDBACK.md    required by Whitechain
 arkiv/                    Arkiv judging files (Phase 2/3)

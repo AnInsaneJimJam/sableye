@@ -1,7 +1,7 @@
 // AI integration eval (#56): can an AI agent integrate Sableye into a blank app using ONLY our Agent Skill and
 // llms.txt? Each trial: fresh blank Next.js app → `claude -p <task>` (restricted tools) → automatic grading.
 //   node scripts/ai-eval/run.mjs --trials 3 [--model sonnet]
-// Writes scripts/ai-eval/results.json and docs/AI_EVAL.md (the published pass rate).
+// Writes scripts/ai-eval/results.json and project-docs/AI_EVAL.md (the published pass rate).
 import { execFileSync, spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -116,5 +116,5 @@ A trial passes only if every check passes:
 |---|---|${names.map(() => '---|').join('')}---|---|
 ${results.map((r) => `| ${r.trial} | ${r.pass ? '✅' : '❌'} | ${names.map((n) => (r.checks[n] ? '✓' : '✗')).join(' | ')} | ${r.minutes} | ${r.turns ?? '–'} |`).join('\n')}
 `
-writeFileSync(join(REPO, 'docs/AI_EVAL.md'), md)
-console.log(`\nPass rate ${passed}/${results.length}. Wrote docs/AI_EVAL.md`)
+writeFileSync(join(REPO, 'project-docs/AI_EVAL.md'), md)
+console.log(`\nPass rate ${passed}/${results.length}. Wrote project-docs/AI_EVAL.md`)

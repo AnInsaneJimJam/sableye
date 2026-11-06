@@ -2,7 +2,7 @@
 """Gambit mutation testing for PaymentProcessor and SubscriptionManager.
 
 Generates mutants with Gambit, runs the Foundry suite (unit, fuzz, invariant, Chimera) against each in parallel
-workers, then runs Halmos on the survivors. Writes docs/mutation-report.md.
+workers, then runs Halmos on the survivors. Writes project-docs/mutation-report.md.
 Run from sdk/contracts:  python3 test/mutation/run.py   (needs gambit, forge, halmos; ~30-60 min)
 """
 import json, os, queue, re, shutil, subprocess, sys, tempfile
@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]  # sdk/contracts
-REPORT = ROOT.parents[1] / "docs" / "mutation-report.md"
+REPORT = ROOT.parents[1] / "project-docs" / "mutation-report.md"
 SOLC = Path.home() / ".local/share/svm/0.8.30/solc-0.8.30"
 CONTRACTS = ["PaymentProcessor", "SubscriptionManager"]
 WORKERS = int(os.environ.get("WORKERS", "4"))

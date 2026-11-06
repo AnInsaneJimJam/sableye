@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/docs/docs-link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Info } from "lucide-react";
-import {
-  CodeBlock,
-  PageActions,
-  TableOfContents,
-} from "@/components/article-tools";
-import { getPage, pageMarkdown, pages } from "@/lib/content";
+import { PageActions, TableOfContents } from "@/components/docs/article-tools";
+import { CodeBlock } from "@/components/docs/code-block";
+import { getPage, pageMarkdown, pages } from "@/lib/docs/content";
 
 /** Pre-render every guide while preserving real nested URLs. */
 export function generateStaticParams() {
@@ -21,7 +18,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const page = getPage((await params).slug.join("/"));
   return page
-    ? { title: page.title, description: page.description }
+    ? {
+        title: page.title,
+        description: page.description,
+        alternates: { canonical: `/docs/${page.slug}` },
+      }
     : { title: "Page not found" };
 }
 

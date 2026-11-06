@@ -1,10 +1,23 @@
 "use client";
 
-import { Bot, Code2, Layers3, Route, ShieldCheck } from "lucide-react";
+import {
+  BookOpen,
+  Bot,
+  Code2,
+  Layers3,
+  Route,
+  ShieldCheck,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { LiquidNavbar } from "@/components/ui/liquid-glass-navbar";
 
 const items = [
+  {
+    label: "Docs",
+    href: "/docs",
+    icon: <BookOpen size={16} />,
+    fx: "glow" as const,
+  },
   {
     label: "Product",
     href: "#product",
@@ -55,7 +68,9 @@ export function SiteHeader() {
       { rootMargin: "-15% 0px -60% 0px" },
     );
     for (const item of items) {
-      const section = document.querySelector(item.href);
+      const section = item.href.startsWith("#")
+        ? document.querySelector(item.href)
+        : null;
       if (section) observer.observe(section);
     }
     return () => observer.disconnect();
