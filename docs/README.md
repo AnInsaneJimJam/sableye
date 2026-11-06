@@ -44,4 +44,4 @@ async rewrites() {
 }
 ```
 
-Fonts are copied from the frontend with their licenses. Illustrations are original SVG components. The project uses the same Next.js, React, TypeScript, and icon versions as the frontend, without copying its payment dependencies or server secrets.
+Fonts are copied from the frontend with their licenses. Card illustrations and the decorative SVG background are local copies of the Mintlify reference artwork; sources are recorded in `public/illustrations/SOURCES.md`. The project uses the same Next.js, React, TypeScript, and icon versions as the frontend, without copying its payment dependencies or server secrets.

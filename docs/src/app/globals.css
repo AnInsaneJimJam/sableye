@@ -10,10 +10,6 @@
   --soft-line: #171e19;
   --green: #0cce83;
   --button: #20bd70;
-  --art-fill: #0b4d2f;
-  --art-mid: #093d26;
-  --art-dark: #042619;
-  --art-bg: #062314;
   --header-height: 50px;
   --sidebar-width: 232px;
 }
@@ -29,10 +25,6 @@ html[data-theme="light"] {
   --soft-line: #eaf0ec;
   --green: #07844d;
   --button: #16b56a;
-  --art-fill: #b0e9c7;
-  --art-mid: #c1edd1;
-  --art-dark: #e0f8e9;
-  --art-bg: #effaf3;
 }
 * {
   box-sizing: border-box;
@@ -391,59 +383,29 @@ kbd {
   margin: 0;
   color: var(--subtle);
 }
+/* Use the complete reference composition instead of independently positioned redraws. */
 .hero-art {
   position: absolute;
   pointer-events: none;
-  inset: 0 0 auto;
-  height: 550px;
+  inset: -56px 0 auto;
+  opacity: 0.8;
   overflow: hidden;
 }
-.hero-art .illustration {
-  position: absolute;
-  color: #135933;
-  opacity: 0.53;
+.hero-art img {
+  width: 100%;
+  height: auto;
 }
-.hero-art .art-fill {
-  fill: #0a2115;
+.artwork-dark {
+  display: block;
 }
-.hero-art .art-dark,
-.hero-art .art-mid {
-  fill: #091a11;
+.artwork-light {
+  display: none;
 }
-html[data-theme="light"] .hero-art {
-  opacity: 0.3;
+html[data-theme="light"] .artwork-dark {
+  display: none;
 }
-.hero-art .hero-bolt {
-  width: 510px;
-  height: 450px;
-  top: 40px;
-  left: -150px;
-  transform: rotate(-3deg);
-}
-.hero-art .hero-rocket {
-  width: 340px;
-  height: 260px;
-  top: 83px;
-  left: calc(50% - 535px);
-  transform: rotate(-12deg);
-}
-.hero-art .hero-blocks {
-  width: 570px;
-  height: 380px;
-  top: -135px;
-  left: calc(50% - 180px);
-}
-.hero-art .hero-terminal {
-  width: 440px;
-  height: 330px;
-  top: 175px;
-  right: 130px;
-}
-.hero-art .hero-small-rocket {
-  width: 250px;
-  height: 200px;
-  top: 35px;
-  right: -105px;
+html[data-theme="light"] .artwork-light {
+  display: block;
 }
 .feature-grid {
   display: grid;
@@ -459,46 +421,25 @@ html[data-theme="light"] .hero-art {
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 1.68;
+  aspect-ratio: 680 / 404;
   border-radius: 25px;
-  background-color: var(--art-bg);
-  background-image:
-    linear-gradient(to right, transparent calc(100% - 1px), #0da66322 1px),
-    linear-gradient(to bottom, transparent calc(100% - 1px), #0da66322 1px);
-  background-size: 53px 26px;
 }
-.card-art::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 38%,
-    var(--art-bg)
-  );
-  pointer-events: none;
-}
-.illustration {
-  color: #12b567;
+.illustration,
+.illustration img {
   width: 100%;
   height: 100%;
 }
-.art-fill {
-  fill: var(--art-fill);
+.illustration {
+  display: block;
 }
-.art-mid {
-  fill: var(--art-mid);
-}
-.art-dark {
-  fill: var(--art-dark);
+.illustration img {
+  object-fit: contain;
 }
 .card-art > .illustration {
   transition: transform 0.25s ease;
-  position: relative;
-  z-index: 1;
 }
 .feature-card:hover .illustration {
-  transform: translateY(-4px);
+  transform: scale(1.03);
 }
 .card-arrow {
   position: absolute;
@@ -983,13 +924,6 @@ html[data-theme="light"] pre {
   .learn-menu > summary {
     padding: 9px 12px;
   }
-  .hero-art .hero-terminal {
-    right: -60px;
-  }
-  .hero-art .hero-rocket {
-    left: calc(50% - 440px);
-    opacity: 0.25;
-  }
 }
 @media (max-width: 1200px) {
   .language,
@@ -1062,9 +996,6 @@ html[data-theme="light"] pre {
   }
   .home-content {
     width: calc(100% - 64px);
-  }
-  .hero-art {
-    opacity: 0.6;
   }
   .home-heading p {
     font-size: 17px;
@@ -1155,22 +1086,6 @@ html[data-theme="light"] pre {
     font-size: 16px;
     line-height: 26px;
   }
-  .hero-art .hero-bolt {
-    left: -240px;
-    top: -60px;
-  }
-  .hero-art .hero-blocks {
-    left: 100px;
-    top: -190px;
-  }
-  .hero-art .hero-rocket,
-  .hero-art .hero-small-rocket {
-    display: none;
-  }
-  .hero-art .hero-terminal {
-    right: -220px;
-    top: 100px;
-  }
   .feature-grid {
     gap: 30px 18px;
   }
@@ -1230,9 +1145,6 @@ html[data-theme="light"] pre {
   .feature-grid {
     grid-template-columns: 1fr;
     row-gap: 30px;
-  }
-  .card-art {
-    aspect-ratio: 1.85;
   }
   .home-heading {
     padding-top: 72px;
