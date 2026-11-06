@@ -54,17 +54,11 @@ const items = [
 export function SiteHeader() {
   const [active, setActive] = useState(-1);
   const clickedTarget = useRef<number | null>(null);
-  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
   const selectSection = (index: number) => {
+    // Keep explicit navigation selected until the user starts scrolling manually.
+    // Scroll-end events can belong to an interrupted earlier animation.
     clickedTarget.current = index;
     setActive(index);
-    clearTimeout(settleTimer.current);
-    // Also release when selecting a section already in view (no scroll event).
-    settleTimer.current = setTimeout(() => {
-      clickedTarget.current = null;
-    }, 1500);
   };
   useEffect(() => {
     let frame = 0;
@@ -81,15 +75,10 @@ export function SiteHeader() {
       setActive(next);
     };
     const release = () => {
-      clearTimeout(settleTimer.current);
       clickedTarget.current = null;
     };
     const onScroll = () => {
-      if (clickedTarget.current !== null) {
-        clearTimeout(settleTimer.current);
-        settleTimer.current = setTimeout(release, 180);
-        return;
-      }
+      if (clickedTarget.current !== null) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(update);
     };
@@ -113,7 +102,6 @@ export function SiteHeader() {
     };
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("scrollend", release);
     window.addEventListener("wheel", interrupt, { passive: true });
     window.addEventListener("touchstart", interrupt, { passive: true });
     window.addEventListener("keydown", onKey);
@@ -121,7 +109,6 @@ export function SiteHeader() {
       release();
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("scrollend", release);
       window.removeEventListener("wheel", interrupt);
       window.removeEventListener("touchstart", interrupt);
       window.removeEventListener("keydown", onKey);
@@ -130,7 +117,12 @@ export function SiteHeader() {
   return (
     <>
       <header className="site-header">
-        <a href="#home" className="wordmark" aria-label="Sableye home">
+        <a
+          href="#home"
+          className="wordmark"
+          aria-label="Sableye home"
+          onClick={() => selectSection(-1)}
+        >
           <img
             src="/logo.svg"
             width={27}

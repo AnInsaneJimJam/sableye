@@ -23,7 +23,7 @@ export type LiquidNavItem = {
 export type LiquidNavbarProps = {
   items?: LiquidNavItem[];
   defaultActive?: number;
-  /** Selected item index; -1 leaves all items and the selection bubble inactive. */
+  /** Selected item index; -1 leaves all items inactive. */
   active?: number;
   onChange?: (index: number, item: LiquidNavItem) => void;
   tone?: "light" | "dark";
@@ -93,18 +93,18 @@ const NAV_CSS = `
 .nimbus-nav{--n-fg:#0b132b;--n-soft:#475569;--n-surface:rgba(248,250,252,.9);--n-line:rgba(71,85,105,.18);position:relative;display:inline-flex;align-items:center;gap:2px;padding:5px;border-radius:999px;isolation:isolate;font-family:inherit}
 .nimbus-nav[data-tone="dark"]{--n-fg:#f8fafc;--n-soft:#acbbd2;--n-surface:rgba(17,29,53,.9);--n-line:rgba(148,181,226,.2)}
 .nimbus-glass{position:absolute;inset:0;z-index:-2;border-radius:inherit;background:var(--n-surface);border:1px solid var(--n-line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,9,30,.14)}
-.nimbus-drop{position:absolute;left:0;z-index:-1;border-radius:999px;pointer-events:none;background:rgba(96,165,250,.1);border:1px solid rgba(148,181,226,.28);transition:transform .32s cubic-bezier(.22,1,.36,1),width .32s cubic-bezier(.22,1,.36,1),height .2s ease;will-change:transform,width}
 .nimbus-item{position:relative;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border:0;border-radius:999px;background:none;color:var(--n-soft);font-family:inherit;font-size:14px;font-weight:500;line-height:1;letter-spacing:-.01em;text-decoration:none;cursor:pointer;white-space:nowrap;transition:color .2s ease}
 .nimbus-item:hover,.nimbus-item[aria-current="location"]{color:var(--n-fg)}
+.nimbus-item[aria-current="location"] .nimbus-label{text-decoration:underline;text-decoration-color:#60a5fa;text-decoration-thickness:1px;text-underline-offset:6px}
 .nimbus-item:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}
 .nv-ico{display:inline-flex;flex:none}
 .nimbus-nav[data-compact="true"] .nimbus-item{padding:0 13px}
 .nimbus-nav[data-compact="true"] .nimbus-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-@media(prefers-reduced-motion:reduce){.nimbus-drop,.nimbus-item{transition:none}}
+@media(prefers-reduced-motion:reduce){.nimbus-item{transition:none}}
 @media(prefers-reduced-transparency:reduce){.nimbus-glass{background:#111d35;backdrop-filter:none;-webkit-backdrop-filter:none}}
 `;
 
-/** Quiet navigation with a thin, continuously sliding selection capsule. */
+/** Quiet navigation with active text highlighting and no moving selection bubble. */
 export function LiquidNavbar({
   items = DEFAULT_ITEMS,
   defaultActive = 0,
@@ -119,33 +119,6 @@ export function LiquidNavbar({
   const current = Math.max(-1, Math.min(active ?? inner, items.length - 1));
   const navRef = React.useRef<HTMLElement>(null);
   const itemRefs = React.useRef<(HTMLElement | null)[]>([]);
-  const [capsule, setCapsule] = React.useState({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
-
-  React.useLayoutEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const measure = () => {
-      const item = itemRefs.current[current];
-      if (!item) return;
-      setCapsule({
-        x: item.offsetLeft,
-        y: item.offsetTop + 3,
-        width: item.offsetWidth,
-        height: Math.max(0, item.offsetHeight - 6),
-      });
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(nav);
-    for (const item of itemRefs.current) if (item) observer.observe(item);
-    return () => observer.disconnect();
-  }, [current, items]);
-
   const select = (index: number) => {
     if (!items[index]) return;
     if (active === undefined) setInner(index);
@@ -178,17 +151,6 @@ export function LiquidNavbar({
     >
       <style>{NAV_CSS}</style>
       <span className="nimbus-glass" aria-hidden="true" />
-      <span
-        className="nimbus-drop"
-        aria-hidden="true"
-        style={{
-          visibility: current >= 0 ? "visible" : "hidden",
-          width: capsule.width,
-          height: capsule.height,
-          transform: `translate3d(${capsule.x}px,${capsule.y}px,0)`,
-          top: 0,
-        }}
-      />
       {items.map((item, index) => {
         const content = (
           <>
