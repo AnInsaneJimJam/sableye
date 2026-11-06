@@ -9,7 +9,7 @@ This file records what is **proved**, what is **model-checked**, what is **teste
 | Contracts | Symbolic execution | Halmos 0.3.3 + Z3 | **Proof** for every input. The contracts have no loops, so no bound is ever hit. | 17 properties proved |
 | Contracts | Model checking of arithmetic | solc 0.8.30 SMTChecker (CHC, z3) | **Proof** per verification condition | 88 proved safe, 13 unproved (triaged below), 0 counterexamples |
 | Contracts | Vacuity check | `test/halmos/vacuity.py` | Every proof can fail | 13 of 13 planted bugs caught |
-| Contracts | Mutation testing | Gambit 1.0.6 | Measures how much the tests and proofs actually check | 85% of mutants killed in run 1. All 25 survivors were test gaps, and each is now covered |
+| Contracts | Mutation testing | Gambit 1.0.6 | Measures how much the tests and proofs actually check | Run 1: 85% killed. Run 2: 97% killed, and the last 2 real survivors are now caught |
 | SDK | Protocol model checking | Quint 0.33 + Apalache | **Proof about the design**, up to a bound | Keeper: no violation up to 10 steps (see the caveat in §4) |
 | SDK | Protocol simulation | Quint simulator | Random exploration of the design | Keeper and indexer: the fixed designs hold over thousands of random traces |
 | SDK | Regression tests from counterexamples | `node:test` | Testing | One test per model-found bug |
@@ -96,9 +96,16 @@ Every unproved condition is Solidity 0.8 checked arithmetic. Its worst case is a
 
 - **Run:** `python3 sdk/contracts/test/mutation/run.py` (about 35 min). It needs `gambit` on PATH and regenerates `docs/mutation-report.md`.
 - **How it works:** it generates mutants of both contracts and runs the Foundry suite on each, in parallel workers. Halmos then runs on the mutants that survive.
-- **Run 1:** 165 mutants; 128 killed by Foundry and 12 more by Halmos (85%); 25 survived.
-- **Survivors:** every one was a real gap; none were equivalent mutants. The report records each survivor and the test or proof added for it.
-- **Spot check:** three of the worst survivors were re-planted in `vacuity.py`, and all are caught now. A full re-run would confirm the rest.
+- **Run 1:** 165 mutants, 85% killed, 25 survivors. All were test gaps, and new tests and proofs now cover them.
+- **Run 2,** after strengthening: **161 of 165 killed (97%)**.
+  - Two of the 4 survivors were false, caused by a race in the runner: two mutants could share a worker directory. Checked by hand, both are killed.
+  - The other two were real. Halmos fixes `block.timestamp` and `block.number` at 1, so a hard-coded `paidAt = 1` or `paidBlock = 1` passed. The pay proof now uses symbolic values and catches both.
+  - So every mutant from run 2 is now killed, either by the suite or by the fixed proof.
+- **Runner fixes:** the race is fixed with a queue of free workers. Halmos now runs `forge clean` first, because stale artifacts made it skip its proofs silently. A clean re-run with the fixed runner is still to do.
+- **Kills by technique in run 2** (one mutant can count for several):
+  - PaymentProcessor: unit 65, fuzz 34, Halmos 14 (Halmos counts only mutants Foundry missed).
+  - SubscriptionManager: unit 71, fuzz 48, Halmos 9.
+  - The invariant and Chimera suites killed nothing that unit and fuzz tests didn't already kill. Mutants are counted only once the full suite has run, so this means they're redundant for these mutants, not that they're useless.
 
 ## 4. SDK: Quint models
 

@@ -5,7 +5,7 @@ Generates mutants with Gambit, runs the Foundry suite (unit, fuzz, invariant, Ch
 workers, then runs Halmos on the survivors. Writes docs/mutation-report.md.
 Run from sdk/contracts:  python3 test/mutation/run.py   (needs gambit, forge, halmos; ~30-60 min)
 """
-import json, os, re, shutil, subprocess, sys, tempfile
+import json, os, queue, re, shutil, subprocess, sys, tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -44,6 +44,18 @@ def technique(test):
     if test.startswith("property") or "recon" in test.lower(): return "chimera"
     return "unit"
 
+# Each running mutant needs a worker directory of its own: two mutants sharing one would overwrite each other's src/.
+FREE = queue.Queue()
+
+def with_worker(fn):
+    def run(m):
+        i = FREE.get()
+        try:
+            return fn(i, m)
+        finally:
+            FREE.put(i)
+    return run
+
 def run_forge(i, m):
     w = workdir(i)
     target = w / "src" / f"{m['contract']}.sol"
@@ -64,7 +76,11 @@ def run_halmos(i, m):
     target = w / "src" / f"{m['contract']}.sol"
     shutil.copy(m["path"], target)
     try:
+        # forge test leaves artifacts without the AST Halmos needs (it would silently skip the proofs), so clean first.
+        subprocess.run(["forge", "clean"], cwd=w, capture_output=True)
         p = subprocess.run(["halmos", "--match-contract", "Halmos"], cwd=w, capture_output=True, text=True, timeout=1800)
+        if "No tests with" in p.stdout + p.stderr or "parsing failure" in p.stdout + p.stderr:
+            raise RuntimeError(f"halmos did not run the proofs for mutant {m['id']} of {m['contract']}")
         out = re.sub(r"\x1b\[[0-9;]*m", "", p.stdout + p.stderr)
         failed = sorted(set(re.findall(r"\[(?:FAIL|ERROR)\]\s+(check_\w+)\(", out)))
         return {**m, "halmos": failed}
@@ -74,12 +90,14 @@ def run_halmos(i, m):
 def main():
     mutants = [m for c in CONTRACTS for m in gen(c)][: int(os.environ.get("LIMIT", "100000"))]
     print(f"{len(mutants)} mutants", flush=True)
+    for i in range(WORKERS):
+        FREE.put(i)
     with ThreadPoolExecutor(WORKERS) as ex:
-        results = list(ex.map(lambda im: run_forge(im[0] % WORKERS, im[1]), enumerate(mutants)))
+        results = list(ex.map(with_worker(run_forge), mutants))
     survivors = [r for r in results if r["status"] == "survived"]
     print(f"forge: {sum(r['status'] == 'killed' for r in results)} killed, {len(survivors)} survived; running Halmos on survivors", flush=True)
     with ThreadPoolExecutor(WORKERS) as ex:
-        h = {r["id"] + r["contract"]: r for r in ex.map(lambda im: run_halmos(im[0] % WORKERS, im[1]), enumerate(survivors))}
+        h = {r["id"] + r["contract"]: r for r in ex.map(with_worker(run_halmos), survivors)}
     for r in results:
         hr = h.get(r["id"] + r["contract"])
         if hr and hr["halmos"]: r.update(status="killed", by=["halmos"], failed=hr["halmos"])
