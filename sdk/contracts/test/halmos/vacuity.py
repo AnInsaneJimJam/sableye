@@ -12,6 +12,10 @@ M = [
  ("src/SubscriptionManager.sol","        if (msg.sender != s.payer && msg.sender != s.merchant) revert NotAuthorized();\n","","SubscriptionsHalmos","onlyPartiesCancel","anyone can cancel"),
  ("src/SubscriptionManager.sol","        if (planRevoked[plan.merchant][plan.planId]) revert PlanIsRevoked();\n","","SubscriptionsHalmos","revokedPlanBlocksSubscribe","revocation ignored"),
  ("src/SubscriptionManager.sol","        if (s.status != Status.Active && s.status != Status.PastDue) revert NotActive(s.status);\n        // slither-disable-next-line timestamp -- billing","        if (s.status == Status.None) revert NotActive(s.status);\n        // slither-disable-next-line timestamp -- billing","SubscriptionsHalmos","subStatusMachine","charge revives Cancelled"),
+ # Gambit run-1 survivors, now covered:
+ ("src/PaymentProcessor.sol","        _accept(inv, merchantSig, msg.sender);\n        // try/catch","        // try/catch","ProcessorPathsHalmos","payWithPermit_noCustody","Gambit PP#3: permit path skips all checks"),
+ ("src/PaymentProcessor.sol","        rc.paidAt = uint64(block.timestamp);\n","","ProcessorHalmos","pay_noCustody_exactAmount","Gambit PP#33: paidAt not recorded"),
+ ("src/SubscriptionManager.sol","        if (msg.sender != s.payer && msg.sender != s.merchant) revert NotAuthorized();","        if (true) revert NotAuthorized();","SubscriptionsHalmos","partiesCanCancelOnce","Gambit SM#78: nobody can cancel"),
  ("src/SubscriptionManager.sol","        ok = token.trySafeTransferFrom(s.payer, s.payout, s.amount);","        ok = token.trySafeTransferFrom(s.payer, s.payout, s.amount);\n        if (ok) token.safeTransferFrom(s.payer, address(this), 0);","SubscriptionsHalmos","subStatusMachine","(equivalent control: 0-transfer)"),
 ]
 for f,a,b,c,t,name in M:

@@ -23,6 +23,7 @@ contract HToken is ERC20("Tether USD", "USDT") {
 /// so a proof can check what it was bound to. `fee` > 0 turns it into a fee-on-transfer token.
 contract HToken3009 is ERC20("Tether USD", "USDT") {
     uint256 public fee;
+    address public feeOnlyTo; // 0: every transfer pays the fee; else only transfers to this address
     bool public permitReverts;
     bytes32 public lastNonce;
     mapping(bytes32 => bool) public usedNonce;
@@ -31,8 +32,9 @@ contract HToken3009 is ERC20("Tether USD", "USDT") {
         _mint(to, amt);
     }
 
-    function setFee(uint256 f) external {
+    function setFee(uint256 f, address onlyTo) external {
         fee = f;
+        feeOnlyTo = onlyTo;
     }
 
     function setPermitReverts(bool r) external {
@@ -55,7 +57,9 @@ contract HToken3009 is ERC20("Tether USD", "USDT") {
     }
 
     function _update(address from, address to, uint256 value) internal override {
-        if (fee == 0 || from == address(0) || to == address(0)) return super._update(from, to, value);
+        if (fee == 0 || from == address(0) || to == address(0) || (feeOnlyTo != address(0) && to != feeOnlyTo)) {
+            return super._update(from, to, value);
+        }
         super._update(from, to, value - fee);
         super._update(from, address(0xFEE), fee);
     }
@@ -99,14 +103,21 @@ contract ProcessorHalmos is Test {
 
     /// P1 + P6 + liveness: a funded payer's valid payment ALWAYS succeeds, the processor holds nothing,
     /// and the payout received exactly `amount`. (Asserting success keeps the proof from passing vacuously.)
-    function check_pay_noCustody_exactAmount(bytes32 orderId, uint256 amount) public {
+    /// The payout may already hold `extra` (so the exact-delta check is exercised), and the receipt records exactly
+    /// what happened.
+    function check_pay_noCustody_exactAmount(bytes32 orderId, uint256 amount, uint256 extra) public {
+        vm.assume(amount <= type(uint128).max && extra <= type(uint128).max);
         _fund(amount);
+        token.mint(payout, extra);
         uint256 before = token.balanceOf(payout);
         vm.prank(payer);
         (bool ok,) = address(pp).call(abi.encodeCall(pp.pay, (_inv(orderId, amount, 0), "")));
         assert(ok);
         assert(token.balanceOf(address(pp)) == 0);
         assert(token.balanceOf(payout) == before + amount);
+        IPaymentProcessor.Receipt memory r = pp.getReceipt(merchant, orderId);
+        assert(r.status == IPaymentProcessor.Status.Paid && r.payer == payer && r.payout == payout && r.token == address(token));
+        assert(r.amount == amount && r.refunded == 0 && r.paidAt == block.timestamp && r.paidBlock == block.number);
     }
 
     /// P2: a paid invoice can never be paid again, by anyone, for any amount of allowance.
@@ -237,13 +248,16 @@ contract ProcessorPathsHalmos is Test {
     /// Gasless: any relayer can submit, the payment always succeeds for a funded payer, the processor ends with 0,
     /// the payout gains exactly `amount`, and the authorization's nonce is this invoice's digest (so it can't be
     /// paired with any other invoice).
-    function check_payWithAuthorization_noCustody_boundNonce(bytes32 orderId, uint256 amount, address relayer) public {
-        vm.assume(relayer != address(pp));
+    /// The processor may hold stray `dust` (someone sent tokens to it) and the payout `extra`: neither is ever touched.
+    function check_payWithAuthorization_noCustody_boundNonce(bytes32 orderId, uint256 amount, address relayer, uint256 dust, uint256 extra) public {
+        vm.assume(relayer != address(pp) && amount <= type(uint128).max && dust <= type(uint64).max && extra <= type(uint64).max);
         token.mint(payer, amount);
+        token.mint(address(pp), dust);
+        token.mint(payout, extra);
         IPaymentProcessor.Invoice memory inv = _inv(orderId, amount);
         uint256 before = token.balanceOf(payout);
         assert(_callPath(2, inv, relayer));
-        assert(token.balanceOf(address(pp)) == 0);
+        assert(token.balanceOf(address(pp)) == dust);
         assert(token.balanceOf(payout) == before + amount);
         assert(token.lastNonce() == pp.hashInvoice(inv));
         // The same invoice can't be paid twice through this path either.
@@ -263,15 +277,25 @@ contract ProcessorPathsHalmos is Test {
         assert(_callPath(1, _inv(orderId, amount), address(0)));
         assert(token.balanceOf(address(pp)) == 0);
         assert(token.balanceOf(payout) == before + amount);
-    }
-
-    /// A fee-on-transfer token can never settle an invoice, on any of the three paths, for any fee and amount.
-    function check_feeOnTransfer_alwaysReverts(bytes32 orderId, uint256 amount, uint256 fee, uint8 path, address relayer) public {
-        vm.assume(fee > 0 && relayer != address(pp));
+        assert(pp.getReceipt(merchant, orderId).status == IPaymentProcessor.Status.Paid);
+        // the permit path enforces the same checks as pay: no second payment
         token.mint(payer, amount);
         vm.prank(payer);
         token.approve(address(pp), amount);
-        token.setFee(fee);
+        assert(!_callPath(1, _inv(orderId, amount), address(0)));
+    }
+
+    /// A fee-on-transfer token can never settle an invoice, on any of the three paths, for any fee and amount.
+    /// The fee may apply to every transfer, only to transfers into the processor, or only into the payout, and the
+    /// processor may hold `dust` that a missing check would let it spend.
+    function check_feeOnTransfer_alwaysReverts(bytes32 orderId, uint256 amount, uint256 fee, uint8 path, address relayer, uint8 feeMode, uint256 dust) public {
+        vm.assume(fee > 0 && relayer != address(pp) && amount <= type(uint128).max && dust <= type(uint128).max);
+        vm.assume(feeMode % 3 != 1 || path % 3 == 2); // a fee only on transfers INTO the processor only hits the gasless path
+        token.mint(payer, amount);
+        token.mint(address(pp), dust);
+        vm.prank(payer);
+        token.approve(address(pp), amount);
+        token.setFee(fee, feeMode % 3 == 0 ? address(0) : feeMode % 3 == 1 ? address(pp) : payout);
         assert(!_callPath(path, _inv(orderId, amount), relayer));
         assert(pp.getReceipt(merchant, orderId).status == IPaymentProcessor.Status.None);
     }
@@ -279,14 +303,14 @@ contract ProcessorPathsHalmos is Test {
 
 contract SubscriptionsHalmos is Test {
     SubscriptionManager sm;
-    HToken token;
+    HToken3009 token;
     address merchant;
     address payer = address(0xCAFE);
     address payout = address(0xBEEF);
 
     function setUp() public {
         sm = new SubscriptionManager();
-        token = new HToken();
+        token = new HToken3009();
         merchant = address(new AcceptAllSigner());
     }
 
@@ -306,6 +330,7 @@ contract SubscriptionsHalmos is Test {
         (bool ok,) = address(sm).call(abi.encodeCall(sm.charge, (id)));
         SubscriptionManager.Subscription memory s = sm.getSubscription(id);
         if (elapsed < interval) assert(!ok); // too early: always reverts
+        // Liveness (a due charge within the cap goes through) is fuzzed: testFuzz_dueChargeWithinCapSucceeds.
         assert(s.charged <= s.cap);
         assert(token.balanceOf(address(sm)) == 0);
     }
@@ -413,5 +438,57 @@ contract SubscriptionsHalmos is Test {
         vm.prank(who);
         (bool ok,) = address(sm).call(abi.encodeCall(sm.subscribe, (p, "", amount)));
         assert(!ok);
+    }
+
+    /// Plans with no amount or no interval, and caps below one cycle, are rejected.
+    function check_invalidPlanRejected(uint256 amount, uint64 interval, uint256 cap) public {
+        vm.assume(amount == 0 || interval == 0 || cap < amount);
+        token.mint(payer, amount);
+        vm.prank(payer);
+        token.approve(address(sm), type(uint256).max);
+        SubscriptionManager.Plan memory p = SubscriptionManager.Plan("plan", merchant, payout, address(token), amount, interval, type(uint64).max);
+        vm.prank(payer);
+        (bool ok,) = address(sm).call(abi.encodeCall(sm.subscribe, (p, "", cap)));
+        assert(!ok);
+    }
+
+    /// Subscribing always works for a funded payer with a valid plan, and pays exactly the first cycle to the payout
+    /// (which may already hold `extra`). With a fee-on-transfer token, subscribing and later charges revert instead.
+    function check_subscribeExact_andFeeTokensRejected(uint256 amount, uint256 extra, uint256 fee, bool feeAtCharge) public {
+        vm.assume(amount > 0 && amount <= type(uint128).max && extra <= type(uint128).max && fee > 0);
+        token.mint(payout, extra);
+        token.mint(payer, 2 * amount);
+        vm.prank(payer);
+        token.approve(address(sm), type(uint256).max);
+        SubscriptionManager.Plan memory p = SubscriptionManager.Plan("plan", merchant, payout, address(token), amount, 1 days, type(uint64).max);
+        if (!feeAtCharge) token.setFee(fee, payout);
+        vm.prank(payer);
+        (bool ok,) = address(sm).call(abi.encodeCall(sm.subscribe, (p, "", 2 * amount)));
+        if (!feeAtCharge) {
+            assert(!ok);
+            return;
+        }
+        assert(ok);
+        bytes32 id = sm.subscriptionId(merchant, "plan", payer);
+        assert(token.balanceOf(payout) == extra + amount && sm.getSubscription(id).charged == amount);
+        token.setFee(fee, payout);
+        vm.warp(block.timestamp + 1 days);
+        // Reverts (fee below the amount) or records a failed charge (fee above it): never a charge that underpays.
+        (bool ok2,) = address(sm).call(abi.encodeCall(sm.charge, (id)));
+        ok2;
+        assert(sm.getSubscription(id).charged == amount);
+        assert(token.balanceOf(payout) == extra + amount);
+    }
+
+    /// The payer or the merchant can cancel an active subscription, exactly once.
+    function check_partiesCanCancelOnce(uint256 amount, bool byMerchant) public {
+        vm.assume(amount > 0 && amount <= type(uint128).max);
+        bytes32 id = _subscribe(amount, 1 days, type(uint256).max, amount);
+        vm.prank(byMerchant ? merchant : payer);
+        (bool ok,) = address(sm).call(abi.encodeCall(sm.cancel, (id)));
+        assert(ok && _status(id) == SubscriptionManager.Status.Cancelled);
+        vm.prank(byMerchant ? merchant : payer);
+        (bool again,) = address(sm).call(abi.encodeCall(sm.cancel, (id)));
+        assert(!again);
     }
 }
