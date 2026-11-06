@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/components/docs/docs-link";
+import HomeLink from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -17,7 +18,7 @@ import { navigation, pages, type NavItem } from "@/lib/docs/content";
 
 function Brand() {
   return (
-    <Link href="/" className="brand" aria-label="Sableye documentation home">
+    <HomeLink href="/" className="brand" aria-label="Sableye home">
       <img
         src="/docs/logo.svg"
         width={25}
@@ -26,7 +27,7 @@ function Brand() {
         aria-hidden="true"
       />
       <span>Sableye</span>
-    </Link>
+    </HomeLink>
   );
 }
 
