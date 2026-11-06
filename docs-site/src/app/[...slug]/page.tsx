@@ -2,11 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Info } from "lucide-react";
-import {
-  CodeBlock,
-  PageActions,
-  TableOfContents,
-} from "@/components/article-tools";
+import { PageActions, TableOfContents } from "@/components/article-tools";
+import { CodeBlock } from "@/components/code-block";
 import { getPage, pageMarkdown, pages } from "@/lib/content";
 
 /** Pre-render every guide while preserving real nested URLs. */

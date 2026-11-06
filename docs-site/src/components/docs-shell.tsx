@@ -20,19 +20,7 @@ import { navigation, pages, type NavItem } from "@/lib/content";
 function Brand() {
   return (
     <Link href="/" className="brand" aria-label="Sableye documentation home">
-      <svg
-        width="25"
-        height="27"
-        viewBox="0 0 28 30"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path d="M14 1 27 8.5v13L14 29 1 21.5v-13L14 1Z" fill="currentColor" />
-        <path
-          d="m7 10 7-4 7 4-7 4-7-4Zm0 6 7 4 7-4v5l-7 4-7-4v-5Z"
-          fill="var(--bg)"
-        />
-      </svg>
+      <img src="/docs/logo.svg" width={25} height={28} alt="" aria-hidden="true" />
       <span>sableye</span>
     </Link>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Check,
   ChevronDown,
@@ -89,9 +89,11 @@ export function PageActions({
 export function CodeBlock({
   code,
   language = "TypeScript",
+  children,
 }: {
   code: string;
   language?: string;
+  children?: ReactNode;
 }) {
   const { status, copy } = useCopy();
   return (
@@ -106,18 +108,7 @@ export function CodeBlock({
           {status === "copied" ? <Check size={14} /> : <Copy size={14} />}
         </button>
       </div>
-      <pre>
-        <code>
-          {code.split("\n").map((line, index) => (
-            <span
-              className={`code-line ${line.trim().startsWith("//") ? "code-comment" : ""}`}
-              key={index}
-            >
-              {line || "\n"}
-            </span>
-          ))}
-        </code>
-      </pre>
+      <pre>{children ?? <code>{code}</code>}</pre>
       {status === "failed" && (
         <span className="copy-error" role="status">
           Clipboard unavailable. Select the code to copy it.

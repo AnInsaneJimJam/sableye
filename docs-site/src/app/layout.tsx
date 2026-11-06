@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { DocsShell } from "@/components/docs-shell";
 import "./globals.css";
@@ -14,6 +14,16 @@ const mono = localFont({
   display: "swap",
 });
 
+const display = localFont({
+  src: "./fonts/satoshi-variable.woff2",
+  weight: "300 900",
+  variable: "--font-display",
+  display: "swap",
+});
+
+/** Browser chrome matches the frontend navy palette. */
+export const viewport: Viewport = { themeColor: "#080f1f" };
+
 /** Default search and browser metadata for the documentation site. */
 export const metadata: Metadata = {
   title: { default: "Documentation — Sableye", template: "%s — Sableye Docs" },
@@ -28,7 +38,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable} ${display.variable}`}
+    >
       <body>
         <DocsShell>{children}</DocsShell>
       </body>
