@@ -86,6 +86,14 @@ const SHAPE = {
   node: 'Add server code that creates the invoice (price set on the server) and verifies it, and a checkout UI: <Checkout> from sableye/react, or a redirect to the invoice\'s checkoutUrl.',
 }
 
+// Long-running servers also start the indexer (2 lines), so payments confirm even if the customer closes the tab.
+const INDEXER = {
+  next: '- If this app runs as a long-running server (next start on a VPS or Railway), start the Sableye indexer once at startup (AGENTS.md shows the 2 lines). On Vercel, skip it: the thank-you page\'s verifyPayment confirms the payment.',
+  server: '- Start the Sableye indexer once when the server starts, on the same Sableye instance the routes use (AGENTS.md shows the 2 lines), so payments are confirmed even if the customer closes the tab.',
+  browser: '- If the server you add is long-running (not serverless functions), start the Sableye indexer once at startup (AGENTS.md shows the 2 lines).',
+}
+const indexerLine = (f) => (f.startsWith('next') ? INDEXER.next : f === 'vite-react' ? INDEXER.browser : INDEXER.server)
+
 /** The prompt the merchant pastes into their coding agent. Holds no secrets. */
 export function agentPrompt({ framework, ts, sells, envFile = '.env' }) {
   const app = `${FRAMEWORK_NAMES[framework] ?? 'Node.js'}${ts ? ', TypeScript' : ''}`
@@ -97,6 +105,7 @@ export function agentPrompt({ framework, ts, sells, envFile = '.env' }) {
     `- Before writing payment code, read the matching guide in node_modules/sableye/docs/ (the APIs are newer than your training data).`,
     `- ${SHAPE[framework] ?? SHAPE.node}`,
     '- Fulfil an order only after the server\'s verifyPayment returns paid: true. After payment, send the customer to a thank-you page.',
+    indexerLine(framework),
     '- Pass the customer\'s email (ask for it at checkout if the app doesn\'t have it) as customer: { email, name } to invoices.create, and use fileOrderStore for orders, so Sableye emails the invoice, the receipt and my "you got paid" notice.',
     `- ${envFile} is already configured. Don't print, copy or commit its values.`,
     '- When done, run `npx sableye doctor` and the build, then tell me how to make a test payment.',

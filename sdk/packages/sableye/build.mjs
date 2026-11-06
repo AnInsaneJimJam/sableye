@@ -77,6 +77,7 @@ const RULES = [
   'Create `new Sableye(...)` inside a request handler or a lazy getter (module level breaks `next build`).',
   'Use network `whitechain-sepolia` (testnet) unless told otherwise. Don\'t hand-roll wallet calls: `<Checkout>` handles chain, gas and token approval.',
   'Errors are `SableyeError` with `code` and `remedy`: act on the remedy.',
+  'Long-running server (Express, Fastify, Hono, plain Node, `next start` on a VPS/Railway): start the indexer once at startup, on the same Sableye instance your routes use: `import { fileStore } from \'sableye/server\'` then `sableye.indexer({ store: fileStore(\'.sableye/state.json\') }).start().catch(console.error)` (don\'t await it). It confirms payments even if the customer closes the tab, so orders get marked paid and emails go out. Not on serverless (Vercel/Netlify functions): there the thank-you page\'s `verifyPayment` does it.',
   'Emails: pass `customer: { email, name }` to `invoices.create` (ask for the email at checkout if the app doesn\'t know it). With email set up in the env, Sableye then emails the invoice and, once `verifyPayment` (or the indexer) confirms payment, the receipt (PDFs) and a "you got paid" notice. Use `orderStore: fileOrderStore(\'.sableye/orders.json\')` (or your DB) so order details survive restarts.',
 ]
 const groups = navigation.map((g) => {

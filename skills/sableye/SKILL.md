@@ -17,6 +17,7 @@ The merchant's server signs an invoice (no gas). The customer pays it in one on-
 6. **Amounts are decimal strings** like `'5.00'`, never JS numbers.
 7. **Create the client inside a request handler or a lazy getter.** Creating it at module level breaks `next build` when the key isn't set. In a Next.js `GET` route, read the request before creating the client.
 8. **Pass the customer's email.** `invoices.create({ amount, customer: { email, name } })` (ask for it at checkout if needed), with `orderStore: fileOrderStore('.sableye/orders.json')` in the `Sableye` config. With email configured, Sableye then sends the invoice, the receipt and the merchant's "you got paid" notice by itself, once `verifyPayment` confirms the payment. No indexer needed.
+9. **Start the indexer on a long-running server** (Express, Fastify, Hono, plain Node, `next start` on a VPS/Railway). Two lines, once at startup, on the same `Sableye` instance the routes use: `import { fileStore } from 'sableye/server'` and `sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)` (don't await it). Payments are then confirmed, and emails sent, even if the customer closes the tab. Skip it on serverless (Vercel, Netlify functions).
 
 ## Fastest start
 
@@ -63,17 +64,21 @@ export default function Page() {
 
 ```js
 import express from 'express'
-import { Sableye } from 'sableye/server'
+import { Sableye, fileOrderStore, fileStore } from 'sableye/server'
 
-const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia' })
+const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia', orderStore: fileOrderStore('.sableye/orders.json') })
 const app = express()
 
-app.post('/invoice', async (_req, res) => res.json(await sableye.invoices.create({ amount: '5.00' })))
+app.post('/invoice', express.json(), async (req, res) =>
+  res.json(await sableye.invoices.create({ amount: '5.00', customer: { email: req.body.email } })))
 
 app.get('/orders/:ref/paid', async (req, res) => {
   const { paid } = await sableye.verifyPayment(req.params.ref)
   res.json({ paid })
 })
+
+// Confirms payments even if the customer closes the tab (receipts, "you got paid", webhooks):
+sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(console.error)
 
 app.listen(3000)
 ```

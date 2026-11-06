@@ -124,3 +124,34 @@ test('emails without an indexer: verifyPayment on a paid order queues the receip
   assert.match(sent.find((m) => /Receipt/.test(m.subject)).subject, /Receipt from Acme Coffee: 2 USDT/)
   assert.match(sent.find((m) => m.to === 'owner@example.com').subject, /You got paid: 2 USDT/)
 })
+
+test('the 2-line indexer from the agent instructions confirms a payment by itself: emails go out with no verifyPayment call', async () => {
+  const { mkdtempSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const { fileStore } = await import('../dist/index.js')
+  const nodemailer = (await import('nodemailer')).default
+  const sent = []
+  const transport = nodemailer.createTransport({ jsonTransport: true })
+  const send = transport.sendMail.bind(transport)
+  transport.sendMail = async (m) => { sent.push(m); return send(m) }
+  const dir = mkdtempSync(join(tmpdir(), 'sableye-idx-'))
+  const sableye2 = new Sableye({
+    privateKey: MERCHANT_KEY, network: 'local', chain, processor, rpcUrl: RPC,
+    tokens: { USDT: { symbol: 'USDT', address: usdt, decimals: 6 } },
+    email: { user: 'shop@example.com', pass: 'x', transport, notify: 'owner@example.com' },
+  })
+  // exactly what the AGENTS.md block tells the agent to add:
+  const indexer = sableye2.indexer({ store: fileStore(join(dir, 'state.json')), fromBlock: 0n, pollIntervalMs: 200 })
+  indexer.start().catch(console.error)
+  const created = await sableye2.invoices.create({ amount: '3.00', orderId: 'order_closed_tab', customer: { email: 'bob@example.com' } })
+  await payer.waitForTransactionReceipt({ hash: await payer.writeContract({ address: processor, abi: paymentProcessorAbi, functionName: 'pay', args: [created.invoice, created.signature] }) })
+  const done = () => sent.some((m) => m.to === 'owner@example.com' && /You got paid: 3 USDT/.test(m.subject)) && sent.some((m) => m.to === 'bob@example.com' && /Receipt/.test(m.subject))
+  for (let i = 0; i < 150 && !done(); i++) {
+    await new Promise((r) => setTimeout(r, 100))
+    await sableye2.emails.flush()
+  }
+  indexer.stop()
+  assert.ok(sent.some((m) => m.to === 'owner@example.com' && /You got paid: 3 USDT/.test(m.subject)), 'merchant notice')
+  assert.ok(sent.some((m) => m.to === 'bob@example.com' && /Receipt/.test(m.subject)), 'receipt')
+})
