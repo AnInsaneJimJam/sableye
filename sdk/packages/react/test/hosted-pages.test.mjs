@@ -12,7 +12,6 @@ import * as core from '@sableye/core'
 const require = createRequire(import.meta.url)
 const pages = [
   '../../../../frontend/src/app/pay/page.tsx',
-  '../../../../demo/store/app/pay/page.tsx',
   '../../create-whitechain-checkout/template/app/pay/page.tsx',
 ]
 

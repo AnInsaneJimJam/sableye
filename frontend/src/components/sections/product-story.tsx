@@ -286,7 +286,7 @@ export function ProductStory() {
             A cup of chai. A monthly membership. Your next online order. Give
             customers a familiar checkout and keep ownership of every payment.
           </p>
-          <a className="action-text" href={`${repo}/tree/main/demo/store`}>
+          <a className="action-text" href="/sandbox">
             Explore the demo shop code <ArrowUpRight size={17} />
           </a>
         </div>

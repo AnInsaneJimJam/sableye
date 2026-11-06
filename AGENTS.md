@@ -178,13 +178,11 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 | PaymentProcessor (1874) | `0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5` (verified) |
 | SubscriptionManager (1874) | `0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78` (verified) |
 
-## 6. Demo highlight rule (demo/store)
+## 6. Demo: the Sandbox (`frontend/`)
 
-- Every SDK call sits between `// <sableye>` and `// </sableye>` markers.
-- The UI shows a **"⚡ Powered by Sableye"** badge plus a panel that renders those exact lines and their count.
-- `pnpm check:sdk-lines` fails above **20** lines.
-- Customer names, emails and items stay in the merchant's store (`.sableye/`), never on-chain. Public routes can be reached by on-chain order id, so they never show customer details.
-- Every `/admin` page and server action checks `requireAdmin()` itself. Setup: `docs/DEMO.md`.
+- The demo is the **Sableye Sandbox** at `/sandbox` in the `frontend/` app: one page per product, each with a live "Try it" panel running the real SDK, a Sableye vs Stripe code toggle, and how it works.
+- Product copy and code live in `frontend/src/lib/sandbox/products.ts`; the merchant's server side is `frontend/src/app/api/sandbox/`.
+- It's a public sandbox on a real testnet key: refunds and cancels only work on sandbox orders (`sbx_` / `plink_`), and gas-spending actions are rate-limited.
 
 ## 7. Conventions
 
@@ -198,7 +196,7 @@ Rules: one charge per interval; total ≤ cap; a failed transfer marks the sub `
 - **Tests:**
   - `forge test` in `sdk/contracts`;
   - `pnpm --filter @sableye/server test` (end to end on anvil);
-  - `pnpm check:sdk-lines`.
+  - `pnpm -r --filter "./sdk/packages/*" test` (every SDK package).
 
 ## Repo layout
 
@@ -209,8 +207,7 @@ sdk/packages/server/    @sableye/server (+ test/e2e on anvil)
 sdk/packages/react/     @sableye/react
 sdk/packages/checkout/  static checkout page (payment links, #40)
 sdk/packages/create-whitechain-checkout/  scaffolder (#43)
-demo/store/             Next.js demo shop (setup: docs/DEMO.md)
-demo/books/             Phase 2 (Arkiv reader); untouched in Phase 1
+frontend/               landing page + the Sableye Sandbox (/sandbox) and hosted /pay page
 skills/whitechain-pay/  Agent Skill (#42)
 llms.txt                SDK docs for AI agents (#37): update it when an API changes
 scripts/                gen-abi, check-sdk-lines
