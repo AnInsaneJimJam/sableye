@@ -2,9 +2,15 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["@sableye/core", "@sableye/server", "@sableye/react", "@sableye/mcp"]],
+  "fixed": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@sableye/checkout", "store", "books"]
+  "ignore": [
+    "@sableye/checkout"
+  ],
+  "privatePackages": {
+    "version": false,
+    "tag": false
+  }
 }

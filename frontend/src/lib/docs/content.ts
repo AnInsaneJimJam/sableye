@@ -219,23 +219,23 @@ const introductoryPages: DocPage[] = [
       {
         id: "create-your-store",
         title: "Create your store",
-        body: "Build the workspace, then generate a Next.js store with the local SDK included.",
+        body: "Generate a Next.js store with Sableye installed.",
         language: "Terminal",
-        code: "pnpm install\npnpm -r --filter \"./sdk/packages/*\" run build\nnode sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk\ncd my-store\nnpm install\nnpx --no-install sableye init\nnpm run dev",
+        code: "npx sableye create --name my-store\ncd my-store\nnpm install\nnpx sableye init\nnpm run dev",
       },
       {
         id: "create-an-invoice",
         title: "Create an invoice",
         body: "Set MERCHANT_KEY on your server. Choose the amount on the server and sign an invoice for your order. Signing does not cost gas.",
         language: "server.ts",
-        code: "import { Sableye } from '@sableye/server'\n\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n})\n\nconst invoice = await sableye.invoices.create({\n  amount: '5.00',\n  orderId: 'order_123',\n})",
+        code: "import { Sableye } from 'sableye/server'\n\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n})\n\nconst invoice = await sableye.invoices.create({\n  amount: '5.00',\n  orderId: 'order_123',\n})",
       },
       {
         id: "show-checkout",
         title: "Show checkout",
         body: "Send the signed invoice to the browser. The checkout component handles wallet connection, network switching, and payment.",
         language: "checkout.tsx",
-        code: "import { Checkout } from '@sableye/react'\n\n<Checkout invoice={invoice} onSuccess={({ txHash }) => {\n  // Ask your server to verify the order before fulfilling it.\n  console.log(txHash)\n}} />",
+        code: "import { Checkout } from 'sableye/react'\n\n<Checkout invoice={invoice} onSuccess={({ txHash }) => {\n  // Ask your server to verify the order before fulfilling it.\n  console.log(txHash)\n}} />",
       },
       {
         id: "verify-and-fulfil",
@@ -294,17 +294,17 @@ const introductoryPages: DocPage[] = [
     sections: [
       {
         id: "install",
-        title: "Build the SDK",
-        body: "From your Sableye repository checkout, install dependencies and build the packages.",
+        title: "Install",
+        body: "One package for the server, the checkout and the CLI. Node 22 or newer.",
         language: "Terminal",
-        code: "corepack enable\npnpm install\npnpm -r --filter \"./sdk/packages/*\" run build",
+        code: "npm install sableye viem",
       },
       {
         id: "scaffold",
         title: "Scaffold a store",
-        body: "The scaffolder packages your local SDK into a working store with invoice creation, verification, and checkout routes.",
+        body: "The scaffolder creates a working store with invoice creation, verification, and checkout routes.",
         language: "Terminal",
-        code: "node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk\ncd my-store\nnpm install",
+        code: "npx sableye create --name my-store\ncd my-store\nnpm install",
       },
       {
         id: "check",
@@ -405,7 +405,7 @@ const introductoryPages: DocPage[] = [
         title: "Render checkout",
         body: "Pass the signed invoice returned by your server. Never create the merchant signer in a client component.",
         language: "checkout.tsx",
-        code: "'use client'\nimport { Checkout } from '@sableye/react'\n\n<Checkout\n  invoice={signedInvoice}\n  onSuccess={({ txHash }) => console.log(txHash)}\n  onError={(error) => console.log(error.remedy)}\n/>",
+        code: "'use client'\nimport { Checkout } from 'sableye/react'\n\n<Checkout\n  invoice={signedInvoice}\n  onSuccess={({ txHash }) => console.log(txHash)}\n  onError={(error) => console.log(error.remedy)}\n/>",
       },
       {
         id: "props",
@@ -446,7 +446,7 @@ const introductoryPages: DocPage[] = [
         id: "create",
         title: "Create the engine",
         body: "The browser-safe core package owns payment validation and the capability ladder.",
-        code: "import { createCheckout } from '@sableye/core'\n\nconst checkout = createCheckout({ invoice: signedInvoice })\nconst unsubscribe = checkout.subscribe(() => {\n  console.log(checkout.getState())\n})\nawait checkout.load()",
+        code: "import { createCheckout } from 'sableye'\n\nconst checkout = createCheckout({ invoice: signedInvoice })\nconst unsubscribe = checkout.subscribe(() => {\n  console.log(checkout.getState())\n})\nawait checkout.load()",
       },
       {
         id: "pay",
@@ -484,7 +484,7 @@ const introductoryPages: DocPage[] = [
         id: "read-invoice",
         title: "Read the invoice",
         body: "Hosted checkout pages support both the query parameter and fragment link formats.",
-        code: "import { invoiceFromLocation } from '@sableye/core'\n\nconst invoice = invoiceFromLocation(window.location)",
+        code: "import { invoiceFromLocation } from 'sableye'\n\nconst invoice = invoiceFromLocation(window.location)",
       },
       {
         id: "wallets",
@@ -760,7 +760,7 @@ const introductoryPages: DocPage[] = [
         id: "verify",
         title: "Verify the signature",
         body: "Verify the raw request body before parsing or acting on the event.",
-        code: "import { verifyWebhook } from '@sableye/server'\n\nconst event = verifyWebhook(\n  rawBody,\n  req.headers.get('sableye-signature'),\n  secret,\n)",
+        code: "import { verifyWebhook } from 'sableye/server'\n\nconst event = verifyWebhook(\n  rawBody,\n  req.headers.get('sableye-signature'),\n  secret,\n)",
       },
       {
         id: "events",
@@ -785,7 +785,7 @@ const introductoryPages: DocPage[] = [
         id: "start",
         title: "Start tracking events",
         body: "Create an indexer with persisted state and start following the processor.",
-        code: "import { fileStore } from '@sableye/server'\n\nconst indexer = sableye.indexer({\n  store: fileStore('.sableye/state.json'),\n})\nindexer.on('invoice.paid', (event) => console.log(event))\nawait indexer.start()",
+        code: "import { fileStore } from 'sableye/server'\n\nconst indexer = sableye.indexer({\n  store: fileStore('.sableye/state.json'),\n})\nindexer.on('invoice.paid', (event) => console.log(event))\nawait indexer.start()",
       },
       {
         id: "history",
@@ -873,7 +873,7 @@ const introductoryPages: DocPage[] = [
         id: "configuration",
         title: "Configure Sableye",
         body: "Create the SDK only on the merchant server. Use a private key or a custom signer.",
-        code: "import { Sableye } from '@sableye/server'\n\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  checkoutUrl: 'https://shop.example/pay',\n  relayUrl: 'https://shop.example/api/relay',\n})",
+        code: "import { Sableye } from 'sableye/server'\n\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  checkoutUrl: 'https://shop.example/pay',\n  relayUrl: 'https://shop.example/api/relay',\n})",
       },
       {
         id: "invoices",
@@ -927,7 +927,7 @@ const introductoryPages: DocPage[] = [
       {
         id: "integration",
         title: "Integrate with an agent",
-        body: "Give your coding agent llms.txt and the skills/whitechain-pay instructions from this repository. They describe the API, key boundaries, and server verification requirements.",
+        body: "Give your coding agent llms.txt and the skills/sableye instructions from this repository. They describe the API, key boundaries, and server verification requirements.",
       },
       {
         id: "read",
@@ -1041,7 +1041,7 @@ const introductoryPages: DocPage[] = [
       {
         id: "roadmap",
         title: "What's next",
-        body: "The repository implements the core payments SDK, coupons, SMTP emails, PDFs, order storage and optional merchant-owned Arkiv records. Swarm hosting remains future work. Implementation does not imply npm publication or production readiness; use the documented local installation and testnet setup.",
+        body: "The repository implements the core payments SDK, coupons, SMTP emails, PDFs, order storage and optional merchant-owned Arkiv records. Swarm hosting remains future work. It is testnet software: use Whitechain Sepolia until the contracts are audited.",
       },
     ],
   },

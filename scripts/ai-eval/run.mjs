@@ -14,7 +14,7 @@ const REPO = new URL('../../', import.meta.url).pathname
 const TASK = `This is a blank Next.js (App Router) app for a coffee shop.
 Add a USDT checkout with Sableye so a customer can buy "Masala chai" for 1.00 USDT on Whitechain Sepolia:
 a Buy button that shows the Sableye checkout, and a receipt page that confirms the payment on the server.
-Use only the Sableye Agent Skill in .claude/skills/whitechain-pay and the docs in docs/llms.txt.
+Use only the Sableye Agent Skill in .claude/skills/sableye and the docs in docs/llms.txt.
 The SDK isn't on npm yet: install @sableye/core, @sableye/server and @sableye/react from the tarballs in ./.sableye-sdk/.
 Read the merchant key from the MERCHANT_KEY environment variable. Make sure \`npm run build\` passes. Don't ask questions; just do it.`
 
@@ -30,8 +30,8 @@ function blankApp(dir) {
   writeFileSync(join(dir, 'app/page.tsx'), `export default function Home() {\n  return <main><h1>Coffee shop</h1></main>\n}\n`)
   writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2022', lib: ['dom', 'esnext'], strict: true, module: 'esnext', moduleResolution: 'bundler', jsx: 'preserve', noEmit: true, skipLibCheck: true, isolatedModules: true, esModuleInterop: true, resolveJsonModule: true, plugins: [{ name: 'next' }], allowJs: false, incremental: true }, include: ['**/*.ts', '**/*.tsx', 'next-env.d.ts', '.next/types/**/*.ts'], exclude: ['node_modules'] }, null, 2))
   // The only Sableye knowledge the agent gets:
-  mkdirSync(join(dir, '.claude/skills/whitechain-pay'), { recursive: true })
-  cpSync(join(REPO, 'skills/whitechain-pay/SKILL.md'), join(dir, '.claude/skills/whitechain-pay/SKILL.md'))
+  mkdirSync(join(dir, '.claude/skills/sableye'), { recursive: true })
+  cpSync(join(REPO, 'skills/sableye/SKILL.md'), join(dir, '.claude/skills/sableye/SKILL.md'))
   mkdirSync(join(dir, 'docs'))
   cpSync(join(REPO, 'llms.txt'), join(dir, 'docs/llms.txt'))
   mkdirSync(join(dir, '.sableye-sdk'))
@@ -92,7 +92,7 @@ const names = Object.keys(results[0]?.checks ?? {})
 const md = `# AI integration eval
 
 Can an AI coding agent integrate Sableye into a **blank** Next.js app using only our Agent Skill
-(\`skills/whitechain-pay\`) and \`llms.txt\`? Harness: \`scripts/ai-eval/run.mjs\` (re-run it to reproduce).
+(\`skills/sableye\`) and \`llms.txt\`? Harness: \`scripts/ai-eval/run.mjs\` (re-run it to reproduce).
 
 **Pass rate: ${passed}/${results.length} (${results.length ? Math.round((100 * passed) / results.length) : 0}%)**. Run on ${new Date().toISOString().slice(0, 10)} with Claude Code (\`claude -p\`, edit + npm/npx tools only).
 

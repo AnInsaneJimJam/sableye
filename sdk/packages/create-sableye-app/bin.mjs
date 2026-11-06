@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Non-interactive scaffolder: npx create-whitechain-checkout --name my-store --framework next
+// Non-interactive scaffolder: npx sableye create --name my-store --framework next
 import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -20,11 +20,11 @@ try {
     options: { name: { type: 'string' }, framework: { type: 'string', default: 'next' }, 'local-sdk': { type: 'boolean', default: false } },
   }))
 } catch (e) {
-  fail(e.message, 'Run: npx create-whitechain-checkout --name my-store --framework next')
+  fail(e.message, 'Run: npx sableye create --name my-store --framework next')
 }
 const { name, framework } = values
 
-if (!name) fail('Missing --name.', 'Run: npx create-whitechain-checkout --name my-store --framework next')
+if (!name) fail('Missing --name.', 'Run: npx sableye create --name my-store --framework next')
 if (!/^[a-z0-9][a-z0-9._-]*$/.test(name)) fail(`Invalid name "${name}".`, 'Use lowercase letters, digits, dots, dashes or underscores, starting with a letter or digit.')
 if (!FRAMEWORKS.includes(framework)) fail(`Unknown framework "${framework}".`, `Use one of: ${FRAMEWORKS.join(', ')}.`)
 
@@ -37,22 +37,16 @@ renameSync(resolve(target, 'gitignore'), resolve(target, '.gitignore'))
 const manifest = resolve(target, 'package.json')
 writeFileSync(manifest, readFileSync(manifest, 'utf8').replace('"__NAME__"', JSON.stringify(name)))
 
-// --local-sdk: until @sableye/* is on npm, pack this repo's SDK into the new app and point package.json at it.
+// --local-sdk: pack this repo's `sableye` package into the new app instead of installing it from npm.
 if (values['local-sdk']) {
-  const packages = fileURLToPath(new URL('..', import.meta.url))
-  if (!existsSync(resolve(packages, 'server/package.json'))) fail('--local-sdk only works from the Sableye repo.', 'Run the scaffolder from sdk/packages/create-whitechain-checkout in the repo.')
+  const pkg = fileURLToPath(new URL('../sableye', import.meta.url))
+  if (!existsSync(resolve(pkg, 'package.json'))) fail('--local-sdk only works from the Sableye repo.', 'Run the scaffolder from sdk/packages/create-sableye-app in the repo.')
+  if (!existsSync(resolve(pkg, 'dist'))) fail('sdk/packages/sableye is not built.', 'Run `pnpm -r build` in the repo first.')
   const out = resolve(target, '.sableye-sdk')
   mkdirSync(out, { recursive: true })
-  const tarballs = {}
-  for (const pkg of ['core', 'server', 'react']) {
-    const dir = resolve(packages, pkg)
-    if (!existsSync(resolve(dir, 'dist'))) fail(`sdk/packages/${pkg} is not built.`, 'Run `pnpm -r build` in the repo first.')
-    const file = execFileSync('pnpm', ['pack', '--pack-destination', out], { cwd: dir, encoding: 'utf8' }).trim().split('\n').pop()
-    tarballs[`@sableye/${pkg}`] = `file:./.sableye-sdk/${file.split('/').pop()}`
-  }
+  const file = execFileSync('pnpm', ['pack', '--pack-destination', out], { cwd: pkg, encoding: 'utf8' }).trim().split('\n').pop()
   const m = JSON.parse(readFileSync(manifest, 'utf8'))
-  for (const [dep, spec] of Object.entries(tarballs)) if (m.dependencies[dep]) m.dependencies[dep] = spec
-  m.overrides = { '@sableye/core': tarballs['@sableye/core'] } // server/react depend on core by version
+  m.dependencies.sableye = `file:./.sableye-sdk/${file.split('/').pop()}`
   writeFileSync(manifest, JSON.stringify(m, null, 2) + '\n')
 }
 

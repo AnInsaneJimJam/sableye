@@ -4,11 +4,11 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { siteConfig } from "@/lib/site";
 
 const repo = siteConfig.links.github;
-const report = `${repo}/blob/main/docs/FORMAL_VERIFICATION.md`;
+const report = `${repo}/blob/main/project-docs/VERIFICATION.md`;
 const processor =
   "https://explorer.testnet.whitechain.io/address/0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5";
 
-/** Results from docs/FORMAL_VERIFICATION.md. Keep in sync with it. */
+/** Results from project-docs/VERIFICATION.md. Keep in sync with it. */
 const guarantees = [
   "Your money goes straight to you.",
   "No invoice is paid twice.",

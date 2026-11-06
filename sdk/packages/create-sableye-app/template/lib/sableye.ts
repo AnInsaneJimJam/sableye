@@ -1,4 +1,4 @@
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 import type { Address, Hex } from 'viem'
 
 let client: Sableye | undefined

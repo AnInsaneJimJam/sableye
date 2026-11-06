@@ -157,7 +157,7 @@ export function InvoicesDemo() {
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Masala chai x2"
+              placeholder="Coffee beans x2"
               maxLength={200}
             />
           </label>

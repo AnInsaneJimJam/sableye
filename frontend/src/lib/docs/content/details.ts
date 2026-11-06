@@ -6,7 +6,7 @@ export const additions: Record<string, DocSection[]> = {
       id: "server-setup",
       title: "Shared server setup",
       body: "Examples in the server guides use this lib/sableye.ts module. Import it only from server routes or workers. The helper is lazy so importing a route does not construct the client during next build. In snippets without an import, getSableye refers to this helper. Standalone workers may construct their client at startup.",
-      code: "import { Sableye, SableyeError } from '@sableye/server'\nlet client: Sableye | undefined\nexport function getSableye(): Sableye {\n  return client ??= new Sableye({\n    privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n    network: 'whitechain-sepolia',\n    checkoutUrl: 'https://shop.example/pay',\n  })\n}\nexport function errorResponse(error: unknown) {\n  const known = error instanceof SableyeError\n  return Response.json({\n    code: known ? error.code : 'server_error',\n    remedy: known ? error.remedy : 'Check the server logs.',\n  }, { status: 500 })\n}",
+      code: "import { Sableye, SableyeError } from 'sableye/server'\nlet client: Sableye | undefined\nexport function getSableye(): Sableye {\n  return client ??= new Sableye({\n    privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n    network: 'whitechain-sepolia',\n    checkoutUrl: 'https://shop.example/pay',\n  })\n}\nexport function errorResponse(error: unknown) {\n  const known = error instanceof SableyeError\n  return Response.json({\n    code: known ? error.code : 'server_error',\n    remedy: known ? error.remedy : 'Check the server logs.',\n  }, { status: 500 })\n}",
     },
     {
       id: "invoice-route",
@@ -18,7 +18,7 @@ export const additions: Record<string, DocSection[]> = {
       id: "client-handoff",
       title: "Browser JSON handoff",
       body: "Place this at app/page.tsx. CreatedInvoice serializes its bigint fields for Response.json; Checkout accepts that serialized form. The success callback requests server verification and updates the UI. Actual fulfilment must be an idempotent server operation tied to your authenticated order; this example only displays verified payment status.",
-      code: "'use client'\nimport { useEffect, useState } from 'react'\nimport { Checkout } from '@sableye/react'\nimport type { SerializedSignedInvoice } from '@sableye/core'\nexport default function Page() {\n  const [invoice, setInvoice] = useState<SerializedSignedInvoice & { orderRef: string }>()\n  const [error, setError] = useState('')\n  const [verified, setVerified] = useState(false)\n  async function checkPayment(orderRef: string) {\n    try {\n      const response = await fetch('/api/verify?orderId=' + encodeURIComponent(orderRef))\n      if (!response.ok) throw new Error('Verification unavailable')\n      const result = await response.json()\n      setVerified(result.paid === true)\n    } catch (error) { setError(String(error)) }\n  }\n  useEffect(() => {\n    fetch('/api/invoice', { method: 'POST' })\n      .then(async (r) => { if (!r.ok) throw new Error('Invoice unavailable'); return r.json() })\n      .then(setInvoice).catch((e: unknown) => setError(String(e)))\n  }, [])\n  return error ? <p>{error}</p> : verified ? <p>Payment verified</p> : invoice ? <Checkout invoice={invoice} onSuccess={() => { void checkPayment(invoice.orderRef) }} /> : <p>Loading…</p>\n}",
+      code: "'use client'\nimport { useEffect, useState } from 'react'\nimport { Checkout } from 'sableye/react'\nimport type { SerializedSignedInvoice } from 'sableye'\nexport default function Page() {\n  const [invoice, setInvoice] = useState<SerializedSignedInvoice & { orderRef: string }>()\n  const [error, setError] = useState('')\n  const [verified, setVerified] = useState(false)\n  async function checkPayment(orderRef: string) {\n    try {\n      const response = await fetch('/api/verify?orderId=' + encodeURIComponent(orderRef))\n      if (!response.ok) throw new Error('Verification unavailable')\n      const result = await response.json()\n      setVerified(result.paid === true)\n    } catch (error) { setError(String(error)) }\n  }\n  useEffect(() => {\n    fetch('/api/invoice', { method: 'POST' })\n      .then(async (r) => { if (!r.ok) throw new Error('Invoice unavailable'); return r.json() })\n      .then(setInvoice).catch((e: unknown) => setError(String(e)))\n  }, [])\n  return error ? <p>{error}</p> : verified ? <p>Payment verified</p> : invoice ? <Checkout invoice={invoice} onSuccess={() => { void checkPayment(invoice.orderRef) }} /> : <p>Loading…</p>\n}",
     },
     {
       id: "verification-route",
@@ -31,7 +31,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "options",
       title: "SableyeConfig",
-      body: "Import Sableye from @sableye/server. All server snippets use the shared setup in Quickstart. Read operations use rpcUrl; wallet transactions use the configured signer.",
+      body: "Import Sableye from sableye/server. All server snippets use the shared setup in Quickstart. Read operations use rpcUrl; wallet transactions use the configured signer.",
       table: {
         headers: ["Field / method", "Behavior"],
         rows: [
@@ -105,7 +105,7 @@ export const additions: Record<string, DocSection[]> = {
       id: "state-errors",
       title: "State and failure contract",
       body: "load() and pay() resolve CheckoutState, including errors in state.error. Check status rather than relying on catch. Statuses: loading, ready, connecting, switching_chain, checking, signing, approving, paying, confirming, success, error. Optional fields: summary, account, path, txHash, explorerUrl, error. summary includes merchant/payout/token, symbol, bigint amount, amountFormatted, expiresAt Date and chainName.",
-      code: "import { createCheckout, type SignedInvoice } from '@sableye/core'\nexport async function connectCheckout(invoice: SignedInvoice, button: HTMLButtonElement) {\n  const checkout = createCheckout({ invoice })\n  const unsubscribe = checkout.subscribe(() => {\n    const state = checkout.getState()\n    button.textContent = state.status === 'error' ? state.error!.remedy : state.status\n  })\n  await checkout.load()\n  button.onclick = () => { void checkout.pay() }\n  return () => { unsubscribe(); button.onclick = null }\n}",
+      code: "import { createCheckout, type SignedInvoice } from 'sableye'\nexport async function connectCheckout(invoice: SignedInvoice, button: HTMLButtonElement) {\n  const checkout = createCheckout({ invoice })\n  const unsubscribe = checkout.subscribe(() => {\n    const state = checkout.getState()\n    button.textContent = state.status === 'error' ? state.error!.remedy : state.status\n  })\n  await checkout.load()\n  button.onclick = () => { void checkout.pay() }\n  return () => { unsubscribe(); button.onclick = null }\n}",
     },
     {
       id: "options",
@@ -216,7 +216,7 @@ export const additions: Record<string, DocSection[]> = {
       id: "browser-enrollment",
       title: "Browser enrollment with viem",
       body: "This function accepts a normalized SignedPlan, connected wallet client and public client. After JSON transport, restore plan.amount, interval and expiry with BigInt before calling. Validate the expected manager/merchant and signature before presenting approval in your application.",
-      code: "import { erc20Abi, type Address, type PublicClient, type WalletClient } from 'viem'\nimport { subscriptionManagerAbi, type SignedPlan } from '@sableye/core'\nexport async function enroll(offer: SignedPlan, payer: Address, wallet: WalletClient, client: PublicClient) {\n  if (await wallet.getChainId() !== offer.chainId) throw new Error('Wrong chain')\n  const cap = offer.plan.amount * 12n\n  const approval = await wallet.writeContract({ account: payer, chain: wallet.chain,\n    address: offer.plan.token, abi: erc20Abi, functionName: 'approve', args: [offer.subscriptions, cap] })\n  if ((await client.waitForTransactionReceipt({ hash: approval })).status !== 'success') throw new Error('Approval failed')\n  const hash = await wallet.writeContract({ account: payer, chain: wallet.chain,\n    address: offer.subscriptions, abi: subscriptionManagerAbi, functionName: 'subscribe',\n    args: [offer.plan, offer.signature, cap] })\n  return client.waitForTransactionReceipt({ hash })\n}",
+      code: "import { erc20Abi, type Address, type PublicClient, type WalletClient } from 'viem'\nimport { subscriptionManagerAbi, type SignedPlan } from 'sableye'\nexport async function enroll(offer: SignedPlan, payer: Address, wallet: WalletClient, client: PublicClient) {\n  if (await wallet.getChainId() !== offer.chainId) throw new Error('Wrong chain')\n  const cap = offer.plan.amount * 12n\n  const approval = await wallet.writeContract({ account: payer, chain: wallet.chain,\n    address: offer.plan.token, abi: erc20Abi, functionName: 'approve', args: [offer.subscriptions, cap] })\n  if ((await client.waitForTransactionReceipt({ hash: approval })).status !== 'success') throw new Error('Approval failed')\n  const hash = await wallet.writeContract({ account: payer, chain: wallet.chain,\n    address: offer.subscriptions, abi: subscriptionManagerAbi, functionName: 'subscribe',\n    args: [offer.plan, offer.signature, cap] })\n  return client.waitForTransactionReceipt({ hash })\n}",
     },
   ],
   webhooks: [
@@ -224,7 +224,7 @@ export const additions: Record<string, DocSection[]> = {
       id: "receiver",
       title: "Complete receiving route",
       body: "Set SABLEYE_WEBHOOK_SECRET to the same secret configured on the sender. Verify raw bytes before parsing. In production, atomically deduplicate event.id and apply your order update in merchant storage before acknowledging. The example acknowledges verification only; add your business handler inside the try block.",
-      code: "import { verifyWebhook } from '@sableye/server'\nexport async function POST(request: Request) {\n  const secret = process.env.SABLEYE_WEBHOOK_SECRET\n  if (!secret) return new Response('Webhook not configured', { status: 503 })\n  try {\n    const event = verifyWebhook(await request.text(), request.headers.get('sableye-signature'), secret)\n    console.log(event.id, event.type)\n    return new Response('ok')\n  } catch { return new Response('Invalid webhook', { status: 400 }) }\n}",
+      code: "import { verifyWebhook } from 'sableye/server'\nexport async function POST(request: Request) {\n  const secret = process.env.SABLEYE_WEBHOOK_SECRET\n  if (!secret) return new Response('Webhook not configured', { status: 503 })\n  try {\n    const event = verifyWebhook(await request.text(), request.headers.get('sableye-signature'), secret)\n    console.log(event.id, event.type)\n    return new Response('ok')\n  } catch { return new Response('Invalid webhook', { status: 400 }) }\n}",
     },
     {
       id: "protocol",
@@ -275,8 +275,8 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "amounts",
       title: "Amounts and identities",
-      body: "Import helpers from @sableye/core (also re-exported by server). parseAmount accepts positive decimal strings with at most token decimals; rejects JS numbers, negatives, zero, exponent notation and excess precision. formatAmount returns a decimal string. toOrderId keeps a raw 32-byte hex ID or hashes UTF-8 with keccak256.",
-      code: "import { parseAmount, formatAmount, toOrderId } from '@sableye/core'\nconst amount = parseAmount('5.00', 6) // 5000000n\nconsole.log(formatAmount(amount, 6), toOrderId('order_123'))",
+      body: "Import helpers from sableye (also re-exported by server). parseAmount accepts positive decimal strings with at most token decimals; rejects JS numbers, negatives, zero, exponent notation and excess precision. formatAmount returns a decimal string. toOrderId keeps a raw 32-byte hex ID or hashes UTF-8 with keccak256.",
+      code: "import { parseAmount, formatAmount, toOrderId } from 'sableye'\nconst amount = parseAmount('5.00', 6) // 5000000n\nconsole.log(formatAmount(amount, 6), toOrderId('order_123'))",
     },
     {
       id: "encoding",
@@ -316,7 +316,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "runtime",
       title: "Merchant runtime",
-      body: "Signing/verification routes can run on a server runtime with configured secrets and RPC access. Never expose keys via NEXT_PUBLIC_ or bundle @sableye/server into a client. Indexer and keeper timers require a persistent process or scheduled jobs; starting them in an ephemeral request does not guarantee continued execution. Persist revocations, cursor, outbox and order fulfilment state. SDK fileStore is single-process storage, not shared database coordination.",
+      body: "Signing/verification routes can run on a server runtime with configured secrets and RPC access. Never expose keys via NEXT_PUBLIC_ or bundle sableye/server into a client. Indexer and keeper timers require a persistent process or scheduled jobs; starting them in an ephemeral request does not guarantee continued execution. Persist revocations, cursor, outbox and order fulfilment state. SDK fileStore is single-process storage, not shared database coordination.",
     },
     {
       id: "operations",
@@ -336,7 +336,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "startup",
       title: "Local MCP startup",
-      body: "After building SDK packages, configure stdio using node sdk/packages/mcp/bin/sableye-mcp.mjs. It loads .env and accepts MERCHANT_KEY, SABLEYE_NETWORK, SABLEYE_RPC, SABLEYE_PROCESSOR, SABLEYE_FROM_BLOCK and SABLEYE_CHECKOUT_URL. Do not assume an npm-published binary is available. Tools: get_invoice(order_id), list_invoices(limit), stats, export_csv(from?,to?), doctor, create_invoice(amount,order_id?,token?,expires_in?), create_payment_link(amount,order_id?,token?,expires_in?), prepare_refund(order_id,amount?). create_payment_link currently creates a single-use invoice URL (default seven-day expiry), not a reusable paymentLinks.create link. list_invoices defaults to 50 (maximum 500); create_invoice defaults to USDT and 1800 seconds. Prepared refunds require merchant signatures; the configured process still holds the signing credential, so protect the process itself.",
+      body: "Configure stdio with npx sableye mcp. It loads .env and accepts MERCHANT_KEY, SABLEYE_NETWORK, SABLEYE_RPC, SABLEYE_PROCESSOR, SABLEYE_FROM_BLOCK and SABLEYE_CHECKOUT_URL. Tools: get_invoice(order_id), list_invoices(limit), stats, export_csv(from?,to?), doctor, create_invoice(amount,order_id?,token?,expires_in?), create_payment_link(amount,order_id?,token?,expires_in?), prepare_refund(order_id,amount?). create_payment_link currently creates a single-use invoice URL (default seven-day expiry), not a reusable paymentLinks.create link. list_invoices defaults to 50 (maximum 500); create_invoice defaults to USDT and 1800 seconds. Prepared refunds require merchant signatures; the configured process still holds the signing credential, so protect the process itself.",
     },
   ],
   security: [
@@ -437,5 +437,5 @@ additions.indexer.push({
   id: "worker-example",
   title: "Persistent worker example",
   body: "Use the shared server setup from Quickstart. Run this module in a persistent Node process, attach before creating invoices, and keep the state file on durable storage. Use poll rather than start for a single scheduled pass.",
-  code: "import { fileStore } from '@sableye/server'\nconst sableye = getSableye()\nimport { getSableye } from './lib/sableye'\nconst indexer = sableye.indexer({ store: fileStore('.sableye/state.json'), wsUrl: false })\nindexer.on('invoice.safe', (event) => console.log(event.id, event.data.orderRef))\nawait indexer.start()\nprocess.once('SIGTERM', () => indexer.stop())\nconsole.log(indexer.stats(), await indexer.reconcile())\nconst csv = indexer.exportCsv({ from: 0 })\nconsole.log(csv)",
+  code: "import { fileStore } from 'sableye/server'\nconst sableye = getSableye()\nimport { getSableye } from './lib/sableye'\nconst indexer = sableye.indexer({ store: fileStore('.sableye/state.json'), wsUrl: false })\nindexer.on('invoice.safe', (event) => console.log(event.id, event.data.orderRef))\nawait indexer.start()\nprocess.once('SIGTERM', () => indexer.stop())\nconsole.log(indexer.stats(), await indexer.reconcile())\nconst csv = indexer.exportCsv({ from: 0 })\nconsole.log(csv)",
 });

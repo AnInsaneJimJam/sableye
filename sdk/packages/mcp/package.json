@@ -1,5 +1,6 @@
 {
   "name": "@sableye/mcp",
+  "private": true,
   "version": "0.1.0",
   "description": "MCP server for Sableye: let AI agents read payments and create invoices/links; refunds come back unsigned",
   "license": "MIT",

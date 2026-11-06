@@ -1233,21 +1233,21 @@ export function DevelopersDemo() {
         </div>
         <div className="sbx-tile">
           <b>Scaffold a store</b>
-          <code>npx create-whitechain-checkout --name my-store</code>
+          <code>npx sableye create --name my-store</code>
           <span>
             Start with checkout and server routes ready.
           </span>
         </div>
         <div className="sbx-tile">
           <b>MCP server for agents</b>
-          <code>claude mcp add sableye -- npx sableye-mcp</code>
+          <code>claude mcp add sableye -- npx sableye mcp</code>
           <span>
             Read payments and create invoices. Refunds need your signature.
           </span>
         </div>
         <div className="sbx-tile">
           <b>Agent Skill + llms.txt</b>
-          <code>skills/whitechain-pay</code>
+          <code>skills/sableye</code>
           <span>
             Give your coding agent the integration guide.
           </span>

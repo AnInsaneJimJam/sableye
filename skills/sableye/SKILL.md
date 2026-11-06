@@ -1,5 +1,5 @@
 ---
-name: whitechain-pay
+name: sableye
 description: Add USDT payments on Whitechain to an app with the Sableye SDK. Use when asked to accept USDT or crypto payments, add a checkout, create invoices or payment links, verify a payment, or integrate Sableye, in Next.js, Express or plain HTML.
 ---
 
@@ -9,7 +9,7 @@ The merchant's server signs an invoice (no gas). The customer pays it in one on-
 
 ## Guardrails: follow these every time
 
-1. **The secret key never goes in client code.** `MERCHANT_KEY` is only read in server code. Never prefix it with `NEXT_PUBLIC_`, never import `@sableye/server` from a client component, and keep `.env` out of git.
+1. **The secret key never goes in client code.** `MERCHANT_KEY` is only read in server code. Never prefix it with `NEXT_PUBLIC_`, never import `sableye/server` from a client component, and keep `.env` out of git.
 2. **Set the price on the server.** Never accept an amount from the browser.
 3. **Verify on the server, never trust the client.** `onSuccess` is for UI only. Fulfil an order only after `verifyPayment(orderRef)` returns `paid: true`.
 4. **Check the chain ID.** Leave the SDK's checks on, and never catch and ignore `wrong_chain`. Don't hand-roll wallet calls: `<Checkout/>` handles chain switching.
@@ -19,27 +19,19 @@ The merchant's server signs an invoice (no gas). The customer pays it in one on-
 
 ## Fastest start
 
-The packages aren't on npm yet. From a clone of the Sableye repo, after `pnpm install && pnpm build`:
-
 ```sh
-node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk
-```
-
-Once they're published:
-
-```sh
-npx create-whitechain-checkout --name my-store --framework next
+npx sableye create --name my-store --framework next
 ```
 
 ## Recipe: Next.js (App Router)
 
 ```sh
-npm install @sableye/server @sableye/react viem
+npm install sableye viem
 ```
 
 ```ts
 // app/api/invoice/route.ts
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 export async function POST() {
   const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
   return Response.json(await sableye.invoices.create({ amount: '5.00' }))
@@ -48,7 +40,7 @@ export async function POST() {
 
 ```ts
 // app/api/verify/route.ts
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 export async function GET(req: Request) {
   const orderId = new URL(req.url).searchParams.get('orderId')!
   const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
@@ -59,7 +51,7 @@ export async function GET(req: Request) {
 ```tsx
 // app/page.tsx
 'use client'
-import { Checkout } from '@sableye/react'
+import { Checkout } from 'sableye/react'
 import { useEffect, useState } from 'react'
 export default function Page() {
   const [invoice, setInvoice] = useState<any>()
@@ -72,7 +64,7 @@ export default function Page() {
 
 ```js
 import express from 'express'
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia' })
 const app = express()

@@ -22,7 +22,9 @@ const usage = `Usage:
   sableye doctor             check the network, contract, token, your key and your email login
   sableye view-key           print the view key that decrypts your Arkiv records (for your accountant)
   sableye listen --forward-to http://localhost:3000/api/webhook [--secret whsec_…] [--since 5000]
-                             watch your payments and forward signed webhooks (--since replays past blocks)`
+                             watch your payments and forward signed webhooks (--since replays past blocks)
+  sableye create --name my-store   scaffold a Next.js store (in the published sableye package)
+  sableye mcp                MCP server for AI agents (in the published sableye package)`
 
 const runDoctor = async () => {
   if (existsSync('.env')) process.loadEnvFile('.env')

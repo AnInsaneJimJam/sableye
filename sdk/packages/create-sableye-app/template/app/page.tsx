@@ -1,5 +1,5 @@
 'use client'
-import { Checkout } from '@sableye/react'
+import { Checkout } from 'sableye/react'
 import { useState } from 'react'
 import type { Address } from 'viem'
 

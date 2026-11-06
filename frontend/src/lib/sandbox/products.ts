@@ -40,7 +40,7 @@ export const products: Product[] = [
     code: {
       sableye: {
         file: "app/api/invoice/route.ts",
-        code: `import { Sableye } from '@sableye/server'
+        code: `import { Sableye } from 'sableye/server'
 
 const sableye = new Sableye({
   privateKey: process.env.MERCHANT_KEY,
@@ -91,7 +91,7 @@ const final = await stripe.invoices.finalizeInvoice(invoice.id)
       sableye: {
         file: "components/pay.tsx",
         code: `'use client'
-import { Checkout } from '@sableye/react'
+import { Checkout } from 'sableye/react'
 
 export function Pay({ invoice }) {
   return (
@@ -384,16 +384,16 @@ const charges = await stripe.charges.list({ limit: 100 })
       "Check a setup in one command, scaffold a working store, let an AI agent manage invoices without spending power, and integrate with an Agent Skill that passed our AI eval 3 out of 3 times.",
     stripe: { name: "Stripe CLI, samples, agent toolkit", how: "stripe listen / trigger, stripe samples create, and an MCP server for agents." },
     differences: ["doctor checks the SDK's invoice hash against the deployed contract", "MCP refunds return an unsigned transaction: agents never move money out", "Every error carries a remedy string, for people and agents"],
-    steps: ["npx create-whitechain-checkout --name my-store", "npx sableye doctor", "claude mcp add sableye -- npx sableye-mcp", "Ship"],
+    steps: ["npx sableye create --name my-store", "npx sableye doctor", "claude mcp add sableye -- npx sableye mcp", "Ship"],
     code: {
       sableye: {
         file: "terminal",
-        code: `npx create-whitechain-checkout --name my-store
+        code: `npx sableye create --name my-store
 cd my-store && npm install
 npx sableye doctor          # RPC, chain, contract, token, key
 
 # Let an AI agent manage invoices (refunds come back unsigned)
-claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye-mcp`,
+claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye mcp`,
       },
       stripe: { file: "terminal", code: `stripe samples create accept-a-payment
 stripe login

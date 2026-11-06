@@ -7,7 +7,7 @@ Sableye is **B2B2C**: we serve the business, and the business serves its custome
 > Built at ETHGlobal Mumbai 2026 for the Whitechain **Operate** and **Scale** tracks. **New here? Read [project-docs/PROJECT.md](project-docs/PROJECT.md)** (the whole project, all four phases). Engineering rules: [AGENTS.md](AGENTS.md).
 
 ```ts
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia' })
 
 const invoice = await sableye.invoices.create({ amount: '5.00', orderId: 'order_123' }) // sign, no gas
@@ -18,11 +18,10 @@ const { paid } = await sableye.verifyPayment('order_123') // fulfil only after t
 
 ## Quickstart
 
-**The packages aren't on npm yet**, so install from a clone of this repo. You need Node 24, which is what this was tested on, and pnpm (`corepack enable`). This scaffolds a working store with the SDK packed into it:
+One package: `npm install sableye`. Needs Node 22 or newer. This scaffolds a working store:
 
 ```sh
-pnpm install && pnpm build
-node sdk/packages/create-whitechain-checkout/bin.mjs --name my-store --local-sdk
+npx sableye create --name my-store
 cd my-store && npm install
 npx sableye init         # merchant key, business name, email (SMTP), Arkiv → .env
 npx sableye doctor       # every check should pass before you sell anything (init runs it too)
@@ -33,7 +32,7 @@ The integration it generates is these three files:
 
 ```ts
 // app/api/invoice/route.ts
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 export async function POST() {
   const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
   return Response.json(await sableye.invoices.create({ amount: '5.00' })) // set the price here, never in the browser
@@ -42,7 +41,7 @@ export async function POST() {
 
 ```ts
 // app/api/verify/route.ts
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 export async function GET(req: Request) {
   const orderId = new URL(req.url).searchParams.get('orderId')!
   const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${string}`, network: 'whitechain-sepolia' })
@@ -53,7 +52,7 @@ export async function GET(req: Request) {
 ```tsx
 // app/page.tsx
 'use client'
-import { Checkout } from '@sableye/react'
+import { Checkout } from 'sableye/react'
 import { useEffect, useState } from 'react'
 export default function Page() {
   const [invoice, setInvoice] = useState<any>()
@@ -64,7 +63,7 @@ export default function Page() {
 
 **After payment:** the checkout page is yours (`checkoutUrl` points at it), so there's no `returnUrl` setting. Send the customer wherever you like from `onSuccess`, e.g. `` <Checkout invoice={invoice} onSuccess={({ txHash }) => location.assign(`/thanks?tx=${txHash}`)} /> ``, and fulfil only after `/api/verify` says `paid`.
 
-For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skills/whitechain-pay`](skills/whitechain-pay/SKILL.md) is an installable Agent Skill.
+For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skills/sableye`](skills/sableye/SKILL.md) is an installable Agent Skill.
 
 ## Why this flow needs onchain stablecoin settlement
 
@@ -88,18 +87,21 @@ A card rail (Stripe) can't do any of the following:
 
 The browser picks the best payment path by itself, falling back automatically: gasless, then permit, then approve. Before any wallet prompt it checks the merchant's signature, the expiry, and that the invoice names the official contract, so a forged payment link can't trick a customer into approving tokens to an attacker.
 
-| Package | What it does |
+One npm package, `sableye`, with an entry point per side:
+
+| Import | What it does |
 |---|---|
-| `@sableye/core` | Network/token config, ABI, EIP-712 types, payment links, typed errors with a remedy, and the framework-free checkout engine (`createCheckout`) |
-| `@sableye/server` | `invoices.create`, `invoices.cancel`, `verifyPayment` (plus indexer, webhooks, reconcile and CSV in Level 2) |
-| `@sableye/react` | `<Checkout/>` and `useCheckout`: connect → switch chain → pay → receipt |
-| `sdk/packages/checkout` | Static payment-link page: no server, host it anywhere |
-| `create-whitechain-checkout` | Scaffolds a working store |
+| `sableye` | Network/token config, ABI, EIP-712 types, payment links, typed errors with a remedy, and the framework-free checkout engine (`createCheckout`) |
+| `sableye/server` | `invoices.create`, `invoices.cancel`, `verifyPayment` (plus indexer, webhooks, reconcile and CSV in Level 2) |
+| `sableye/react` | `<Checkout/>` and `useCheckout`: connect → switch chain → pay → receipt |
+| `sableye/mcp` | MCP server for AI agents (`npx sableye mcp`) |
+| `npx sableye` | CLI: `create`, `init`, `doctor`, `view-key`, `listen`, `mcp` |
+| `sdk/packages/checkout` (repo only) | Static payment-link page: no server, host it anywhere |
 | `sdk/contracts` | `PaymentProcessor.sol`: OpenZeppelin `SignatureChecker` (EOA + ERC-1271 / Safe), `SafeERC20`, reentrancy guard |
 
 ## Gasless relayer: who pays and why it can't be drained (Scale track)
 
-The customer only signs; the **business's own server** submits the transaction and pays the WBT gas, about 0.0001 WBT per payment. The relayer is just the merchant key inside `@sableye/server` (`export const POST = sableye.relayHandler()`), and the merchant tops it up with WBT from the faucet (testnet) or an exchange (mainnet). `npx sableye doctor` warns when the balance runs low.
+The customer only signs; the **business's own server** submits the transaction and pays the WBT gas, about 0.0001 WBT per payment. The relayer is just the merchant key inside `sableye/server` (`export const POST = sableye.relayHandler()`), and the merchant tops it up with WBT from the faucet (testnet) or an exchange (mainnet). `npx sableye doctor` warns when the balance runs low.
 
 **Why a stranger can't drain it:**
 
@@ -117,7 +119,7 @@ cd sdk/contracts && forge test        # unit, fuzz, invariant and token-variant 
 pnpm --filter @sableye/server test     # end to end on anvil: deploy → create → pay → verify
 pnpm --filter @sableye/react test      # <Checkout/> in a DOM, clicking through a real payment on anvil
 pnpm --filter @sableye/checkout test   # the built payment-link page
-pnpm --filter create-whitechain-checkout test
+pnpm --filter create-sableye-app test
 cd frontend && pnpm dev                # landing page + Sandbox on :3000/sandbox
 ```
 

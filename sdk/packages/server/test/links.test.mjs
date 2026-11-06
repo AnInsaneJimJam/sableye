@@ -31,7 +31,7 @@ before(async () => {
   usdt = await deploy('PaymentProcessor.t.sol', 'MockUSDT')
   sableye = new Sableye({
     privateKey: KEY, network: 'local', chain, processor, rpcUrl: RPC, tokens: { USDT: { symbol: 'USDT', address: usdt, decimals: 6 } },
-    paymentLinkUrl: 'https://chai.example/api/pay', checkoutUrl: 'https://chai.example/pay',
+    paymentLinkUrl: 'https://shop.example/api/pay', checkoutUrl: 'https://shop.example/pay',
   })
 })
 after(() => anvil?.kill())
@@ -48,15 +48,15 @@ async function payAs(created) {
 }
 
 test('one link, many customers: each visit gets its own pay-once invoice', async () => {
-  const link = await sableye.paymentLinks.create({ amount: '1.00', name: 'Masala chai' })
-  assert.match(link.url, /^https:\/\/chai\.example\/api\/pay\?l=/)
+  const link = await sableye.paymentLinks.create({ amount: '1.00', name: 'Coffee beans' })
+  assert.match(link.url, /^https:\/\/shop\.example\/api\/pay\?l=/)
   assert.match(link.id, /^plink_[0-9a-f]{16}$/)
 
   const a = await sableye.paymentLinks.open(link.url)
   const b = await sableye.paymentLinks.open(link.url)
   assert.notEqual(a.invoice.orderRef, b.invoice.orderRef)
   assert.ok(a.invoice.orderRef.startsWith(link.id + '_'))
-  assert.equal(a.link.name, 'Masala chai')
+  assert.equal(a.link.name, 'Coffee beans')
 
   const alice = await payAs(a.invoice)
   const bob = await payAs(b.invoice)
@@ -70,7 +70,7 @@ test('route handler redirects each visit to a fresh checkout', async () => {
   const r1 = await handler(new Request(link.url))
   const r2 = await handler(new Request(link.url))
   assert.equal(r1.status, 303)
-  assert.match(r1.headers.get('location'), /^https:\/\/chai\.example\/pay#/)
+  assert.match(r1.headers.get('location'), /^https:\/\/shop\.example\/pay#/)
   assert.notEqual(r1.headers.get('location'), r2.headers.get('location'))
 })
 
@@ -80,7 +80,7 @@ test('tampering, deactivation and expiry are refused with a reason', async () =>
   const [body, sig] = l.split('.')
   const cheaper = Buffer.from(Buffer.from(body, 'base64url').toString().replace('"1.00"', '"0.01"')).toString('base64url')
   await assert.rejects(sableye.paymentLinks.open(`${cheaper}.${sig}`), (e) => e.code === 'invalid_link' && e.status === 403)
-  const page = await sableye.paymentLinks.handler()(new Request(`https://chai.example/api/pay?l=${cheaper}.${sig}`))
+  const page = await sableye.paymentLinks.handler()(new Request(`https://shop.example/api/pay?l=${cheaper}.${sig}`))
   assert.equal(page.status, 403)
   assert.match(await page.text(), /signed by this merchant/)
 

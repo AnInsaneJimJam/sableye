@@ -7,7 +7,7 @@ const examples = [
   {
     label: "Create",
     file: "app/api/invoice/route.ts",
-    code: `import { Sableye } from '@sableye/server'
+    code: `import { Sableye } from 'sableye/server'
 
 export async function POST() {
   const sableye = new Sableye({
@@ -28,8 +28,8 @@ export async function POST() {
     file: "components/payment.tsx",
     code: `'use client'
 
-import { Checkout } from '@sableye/react'
-import type { SignedInvoice } from '@sableye/core'
+import { Checkout } from 'sableye/react'
+import type { SignedInvoice } from 'sableye'
 
 export function Payment({ invoice }: {
   invoice: SignedInvoice
