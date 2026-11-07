@@ -107,6 +107,19 @@ The link contains no secrets. The page checks the signature, expiry and processo
 
 Set `relayUrl` in the `Sableye` config. `<Checkout/>` then tries gasless first (the customer holds no WBT), then permit, then approve, with no other code. Use an absolute URL if you share payment links.
 
+## Recipe: the merchant's dashboard reads Arkiv
+
+Only if the app **already has** a dashboard, admin or back-office page (don't create one), and Arkiv is on (`ARKIV_ACCESS_KEY`). Every paid invoice, refund and subscription is published to Arkiv, owned by the merchant's wallet, so the dashboard can show the merchant's own books from there:
+
+```ts
+// server side (the admin route the app already has)
+const records = await sableye.arkiv.records()   // paid invoices, newest first, private fields decrypted
+const onArkiv = sableye.arkiv.published()       // { invoices: { orderId: entityKey }, subscriptions: { subId: entityKey } }
+const issued = await sableye.invoices.list()    // every invoice issued, paid or not (from the order store)
+```
+
+Show what fits the existing page, for example an "On Arkiv ✓" mark per order, or a books/records tab. A dashboard that runs in the browser can also read Arkiv directly with `@arkiv-network/sdk`: `select().from(Invoices).ownedBy(merchant)`, with schemas from `node_modules/sableye/docs` (Arkiv guide). Always filter `ownedBy(merchant)` and check each record's `tx_hash` on Whitechain, because anyone can write lookalike entities.
+
 ## When something fails
 
 Every error is a `SableyeError` with a stable `code` and a `remedy`. Read `remedy` and act on it; don't guess.
