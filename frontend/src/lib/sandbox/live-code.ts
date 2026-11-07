@@ -22,7 +22,7 @@ export function liveCode(
   values: Fields,
 ): Product["code"] {
   let sableye = base.sableye.code;
-  let stripe = base.stripe.code;
+  let stripe = base.stripe?.code ?? "";
   const amount = String(values.amount ?? "1.00");
   if (product === "invoices") {
     const fields = [
@@ -138,6 +138,6 @@ const price = await stripe.prices.create({
   }
   return {
     sableye: { ...base.sableye, code: sableye },
-    stripe: { ...base.stripe, code: stripe },
+    ...(base.stripe && { stripe: { ...base.stripe, code: stripe } }),
   };
 }

@@ -110,6 +110,9 @@ export interface SubscriptionSnapshot {
   startedAt: Date
   nextChargeAt: Date
   lastTxHash?: Hex
+  /** Approved total and failed charges in a row (used by subscription emails). */
+  cap: bigint
+  failedCharges: number
 }
 
 export function arkivConfigFromEnv(env: NodeJS.ProcessEnv = process.env): ArkivConfig | undefined {

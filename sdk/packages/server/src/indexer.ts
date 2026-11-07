@@ -135,6 +135,8 @@ export interface IndexerOptions {
   webhooks?: WebhookEndpoint[]
   /** Block to backfill from on first start. Default: 100,000 blocks back (~28 h on Whitechain). */
   fromBlock?: bigint
+  /** Started from `sableye.indexer()` with email on: how often subscription emails are checked. Default 60 s. */
+  subscriptionEmailsMs?: number
   /** Fallback poll interval when no WebSocket is available. Default 2000 ms. */
   pollIntervalMs?: number
   /** WebSocket RPC for instant new-block triggers. Default: the network's `wss://` URL; `false` to poll only. */

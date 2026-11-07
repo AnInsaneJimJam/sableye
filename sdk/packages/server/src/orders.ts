@@ -80,3 +80,39 @@ export function fileOrderStore(path = '.sableye/orders.json'): OrderStore {
     },
   }
 }
+
+/** A subscriber's contact, recorded by the app (the chain only knows their wallet). */
+export interface SubscriberStore {
+  get(subId: Hex): Promise<Customer | undefined>
+  put(subId: Hex, customer: Customer): Promise<void>
+}
+
+export function memorySubscriberStore(): SubscriberStore {
+  const m = new Map<string, Customer>()
+  return { get: async (id) => m.get(id.toLowerCase()), put: async (id, c) => void m.set(id.toLowerCase(), c) }
+}
+
+/** JSON file store (atomic write via rename). */
+export function fileSubscriberStore(path = '.sableye/subscribers.json'): SubscriberStore {
+  let cache: Record<string, Customer> | undefined
+  const load = () => {
+    if (cache) return cache
+    try {
+      cache = JSON.parse(readFileSync(path, 'utf8')) as Record<string, Customer>
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+      cache = {}
+    }
+    return cache
+  }
+  return {
+    get: async (id) => load()[id.toLowerCase()],
+    put: async (id, c) => {
+      const all = load()
+      all[id.toLowerCase()] = c
+      mkdirSync(dirname(path), { recursive: true })
+      writeFileSync(`${path}.tmp`, JSON.stringify(all))
+      renameSync(`${path}.tmp`, path)
+    },
+  }
+}

@@ -84,6 +84,9 @@ const pdf = await sableye.documents.invoicePdf('order_123')          // Uint8Arr
 const receipt = await sableye.documents.receiptPdf('order_123')      // undefined until paid; no customer details unless { includeCustomer: true }
 ```
 
+### Subscription emails
+With email on and an indexer running, Sableye also emails subscribers and the merchant about subscriptions, each event once: **started** (confirmation + first receipt / "New subscriber"), **renewed** (receipt / "You got paid"), **failed** (past due: "Payment failed, top up" / notice), **cancelled** (by either side) and **ended** (cap used up). The chain only knows the subscriber's wallet, so record their email: `await sableye.subscriptions.setCustomer(subId, { email, name })` (the id is known before subscribing: `sableye.subscriptions.id(planId, wallet)`). Use `subscriberStore: fileSubscriberStore('.sableye/subscribers.json')` so it survives restarts. Without an indexer (serverless), call `sableye.subscriptions.checkEmails()` from a cron. History: `sableye.subscriptions.history({ subId? })`.
+
 ### Arkiv records (merchant-owned)
 With `ARKIV_ACCESS_KEY` set (and tGLM for the merchant address), the indexer publishes a `sableye.invoice.v1` entity when a payment reaches the `safe` head. It creates a `sableye.refund.v1` per refund (and patches the invoice), and patches `status: 'reorged'` on a reorg. The merchant key signs every write, so the merchant's wallet owns the records. Public columns hold only what's already on Whitechain; order ref, items and customer are AES-256-GCM encrypted with the view key. The format is in `arkiv/schema.md`.
 

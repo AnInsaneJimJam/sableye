@@ -303,6 +303,7 @@ export function SubscriptionsDemo() {
   const [provider, setProvider] = useState<WalletProvider>();
   const [account, setAccount] = useState<Address>();
   const [cycles, setCycles] = useDemoField<number>("cycles", 3);
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
   const { data: sub, reload } = useApi<Sub>(
@@ -415,6 +416,18 @@ export function SubscriptionsDemo() {
         )
       : 0;
   const subscribe = async () => {
+    // Saved before subscribing (the subscription id is known in advance), so the confirmation email can't miss it.
+    if (email.trim()) {
+      try {
+        await post("/api/sandbox/subscription/customer", {
+          payer: account,
+          period,
+          email: email.trim(),
+        });
+      } catch (e) {
+        return setError(e as ApiError);
+      }
+    }
     const allowance = await reader.readContract({
       address: plan.token,
       abi: erc20Abi,
@@ -538,6 +551,16 @@ export function SubscriptionsDemo() {
                       </option>
                     ))}
                   </select>
+                </label>
+                <label>
+                  Email for receipts (optional)
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
                 </label>
                 <label>
                   Spending cap
