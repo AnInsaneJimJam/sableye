@@ -46,11 +46,13 @@ export interface OrderDetails {
 export interface OrderStore {
   get(orderId: Hex): Promise<OrderDetails | undefined>
   put(order: OrderDetails): Promise<void>
+  /** Every stored order (optional: enables `invoices.list()`, e.g. for a merchant dashboard). */
+  list?(): Promise<OrderDetails[]>
 }
 
 export function memoryOrderStore(): OrderStore {
   const m = new Map<string, OrderDetails>()
-  return { get: async (id) => m.get(id.toLowerCase()), put: async (o) => void m.set(o.orderId.toLowerCase(), o) }
+  return { get: async (id) => m.get(id.toLowerCase()), put: async (o) => void m.set(o.orderId.toLowerCase(), o), list: async () => [...m.values()] }
 }
 
 /** JSON file store (atomic write via rename). Fine for a single server process. */
@@ -68,6 +70,7 @@ export function fileOrderStore(path = '.sableye/orders.json'): OrderStore {
   }
   return {
     get: async (id) => load()[id.toLowerCase()],
+    list: async () => Object.values(load()),
     put: async (o) => {
       const all = load()
       all[o.orderId.toLowerCase()] = o

@@ -126,3 +126,44 @@ test('a server with fresh local state adopts records already on Arkiv instead of
   await sink.renew()
   assert.deepEqual(calls.filter((c) => c.op === 'extend').map((c) => c.entityKey).sort(), ['0xexistinginvoice', '0xexistingprofile'])
 })
+
+test('subscriptions: a new one creates one record; charges and cancellation patch it; an unchanged chain writes nothing', async () => {
+  const { calls, writer } = fakeWriter()
+  const outbox = createOutbox({ pollMs: 0, retryDelays: [0, 0, 0] })
+  const SUB = '0x' + '5b'.repeat(32)
+  let snap = {
+    subId: SUB, planId: '0x' + '9a'.repeat(32), payer: '0x00000000000000000000000000000000000000b1', status: 'active',
+    token: '0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7', amount: 1_000_000n, interval: 120, charged: 1_000_000n,
+    startedAt: new Date(1_700_000_000_000), nextChargeAt: new Date(1_700_000_120_000), lastTxHash: '0x' + '01'.repeat(32),
+  }
+  const sink = attachArkiv({ writer, renewEveryMs: 0, subscriptionSyncMs: 0 }, outbox, {
+    merchant: account.address, account, network: 'whitechain-sepolia', chainId: 1874, businessName: 'Acme Coffee',
+    getOrder: async () => undefined, receipt: async () => ({ status: 'none' }), subscriptions: async () => [snap],
+  })
+  const subWrites = () => calls.filter((c) => c.schema === 'sableye.subscription.v1' || (c.op === 'patch' && 'cycles_charged' in c.set))
+
+  assert.equal(await sink.syncSubscriptions(), 1)
+  await outbox.drain()
+  const [created] = subWrites()
+  assert.equal(created.op, 'create')
+  assert.equal(val(created.values.subscription_id), SUB)
+  assert.equal(val(created.values.cycles_charged), 1n)
+  assert.equal(val(created.values.status), 'active')
+  assert.equal(val(created.values.last_tx_hash), snap.lastTxHash)
+  assert.ok(sink.arkiv.published().subscriptions[SUB.toLowerCase()])
+
+  assert.equal(await sink.syncSubscriptions(), 0, 'nothing changed on-chain: nothing written')
+
+  snap = { ...snap, charged: 3_000_000n, nextChargeAt: new Date(1_700_000_360_000), lastTxHash: '0x' + '03'.repeat(32) }
+  await sink.syncSubscriptions()
+  snap = { ...snap, status: 'cancelled' }
+  await sink.syncSubscriptions()
+  await outbox.drain()
+  const patches = subWrites().filter((c) => c.op === 'patch')
+  assert.equal(patches.length, 2)
+  assert.equal(val(patches[0].set.cycles_charged), 3n)
+  assert.equal(val(patches[0].set.total_charged), 3_000_000n)
+  assert.equal(val(patches[1].set.status), 'cancelled')
+  assert.equal(patches[0].entityKey, sink.arkiv.published().subscriptions[SUB.toLowerCase()])
+  sink.stop()
+})

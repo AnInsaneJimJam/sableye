@@ -21,6 +21,8 @@ import {
   CheckCircle2,
   Download,
   KeyRound,
+  Repeat,
+  Wallet,
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
@@ -32,6 +34,7 @@ import {
   hexToBytes,
   http,
   isAddress,
+  keccak256,
   parseAbi,
   parseEventLogs,
 } from "viem";
@@ -55,6 +58,24 @@ const Invoices = defineSchema("sableye.invoice.v1", {
   private: bytes().optional(),
 });
 
+const Subscriptions = defineSchema("sableye.subscription.v1", {
+  subscription_id: str().indexed(),
+  merchant: addr().indexed(),
+  subscriber: addr().indexed(),
+  status: str().indexed(),
+  plan_id: str(),
+  network: str(),
+  chain_id: u64(),
+  token: addr(),
+  amount: u256(),
+  interval: u64(),
+  cycles_charged: u64(),
+  total_charged: u256(),
+  started_at: u64().indexed(),
+  next_charge_at: u64(),
+  last_tx_hash: str(),
+});
+
 // ---- Whitechain, to check every record against the payment it claims ----
 const PROCESSOR = "0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5".toLowerCase(); // Sableye PaymentProcessor, Whitechain Sepolia
 const whitechain = createPublicClient({
@@ -69,6 +90,73 @@ const whitechain = createPublicClient({
 const paidEvent = parseAbi([
   "event InvoicePaid(address indexed merchant, bytes32 indexed orderId, address indexed payer, address token, uint256 amount, address payout)",
 ]);
+const SUBSCRIPTIONS =
+  "0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78".toLowerCase(); // SubscriptionManager, Whitechain Sepolia
+const chargedEvent = parseAbi([
+  "event Charged(bytes32 indexed subId, address indexed merchant, address indexed payer, uint256 amount, uint256 totalCharged, uint64 nextChargeAt)",
+]);
+
+// ---- the view key, derived in the browser from the merchant's own wallet (arkiv/schema.md) ----
+const VIEW_KEY_MESSAGE = "Sableye view key v1";
+type Eip1193 = {
+  request(args: { method: string; params?: unknown[] }): Promise<unknown>;
+};
+async function viewKeyFromWallet(merchant: string): Promise<Hex> {
+  const eth = (window as unknown as { ethereum?: Eip1193 }).ethereum;
+  if (!eth)
+    throw new Error(
+      "No browser wallet found. Install MetaMask, or paste the view key instead.",
+    );
+  const [account] = (await eth.request({
+    method: "eth_requestAccounts",
+  })) as string[];
+  if (account?.toLowerCase() !== merchant.toLowerCase())
+    throw new Error(
+      `Connect the merchant's wallet (${merchant.slice(0, 8)}…). You're connected as ${account?.slice(0, 8)}…`,
+    );
+  const message = `0x${Array.from(new TextEncoder().encode(VIEW_KEY_MESSAGE), (b) => b.toString(16).padStart(2, "0")).join("")}`;
+  const signature = (await eth.request({
+    method: "personal_sign",
+    params: [message, account],
+  })) as Hex;
+  return keccak256(signature); // signatures are deterministic (RFC 6979), so this is the same key the server derives
+}
+
+type SubRow = {
+  key: Hex;
+  subId: Hex;
+  subscriber: string;
+  status: string;
+  amount: bigint;
+  interval: bigint;
+  cycles: bigint;
+  total: bigint;
+  nextChargeAt: Date;
+  lastTx: Hex;
+  verified?: boolean;
+};
+
+async function verifySub(row: SubRow, merchant: string): Promise<boolean> {
+  try {
+    const receipt = await whitechain.getTransactionReceipt({
+      hash: row.lastTx,
+    });
+    if (receipt.status !== "success") return false;
+    const logs = parseEventLogs({
+      abi: chargedEvent,
+      logs: receipt.logs.filter(
+        (l) => l.address.toLowerCase() === SUBSCRIPTIONS,
+      ),
+    });
+    return logs.some(
+      (l) =>
+        l.args.subId.toLowerCase() === row.subId.toLowerCase() &&
+        l.args.merchant.toLowerCase() === merchant.toLowerCase(),
+    );
+  } catch {
+    return false;
+  }
+}
 
 // ---- the private column: iv(12) ‖ AES-256-GCM(viewKey, JSON) ----
 async function decrypt(viewKey: Hex, blob: Uint8Array) {
@@ -135,17 +223,22 @@ export function BooksDemo({
 }: {
   defaultMerchant?: string;
 }) {
-  const [merchant, setMerchant] = useDemoField<string>("merchant", defaultMerchant);
+  const [merchant, setMerchant] = useDemoField<string>(
+    "merchant",
+    defaultMerchant,
+  );
   const [viewKey, setViewKey] = useState("");
   useDemoCodeValues({ hasViewKey: viewKey ? 1 : 0 });
   const [rows, setRows] = useState<Row[]>();
+  const [subs, setSubs] = useState<SubRow[]>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
-  const load = async () => {
+  const load = async (keyOverride?: string) => {
     setBusy(true);
     setError(undefined);
     setRows(undefined);
+    setSubs(undefined);
     try {
       if (!isAddress(merchant))
         throw new Error("Enter the merchant's wallet address (0x…).");
@@ -161,8 +254,9 @@ export function BooksDemo({
         .orderBy(desc("paid_at"))
         .limit(100)
         .fetch();
-      const key = /^0x[0-9a-fA-F]{64}$/.test(viewKey.trim())
-        ? (viewKey.trim() as Hex)
+      const typed = (keyOverride ?? viewKey).trim();
+      const key = /^0x[0-9a-fA-F]{64}$/.test(typed)
+        ? (typed as Hex)
         : undefined;
       const out: Row[] = await Promise.all(
         res.entities.map(async (e) => {
@@ -192,6 +286,36 @@ export function BooksDemo({
         }),
       );
       setRows(out);
+      const subRes = await arkiv
+        .select()
+        .from(Subscriptions)
+        .ownedBy(merchant)
+        .orderBy(desc("started_at"))
+        .limit(100)
+        .fetch();
+      setSubs(
+        await Promise.all(
+          subRes.entities.map(async (e) => {
+            const v = e as unknown as Record<string, { value: unknown }> & {
+              $key: Hex;
+            };
+            const row: SubRow = {
+              key: v.$key,
+              subId: v.subscription_id.value as Hex,
+              subscriber: v.subscriber.value as string,
+              status: v.status.value as string,
+              amount: BigInt(v.amount.value as bigint),
+              interval: BigInt(v.interval.value as bigint),
+              cycles: BigInt(v.cycles_charged.value as bigint),
+              total: BigInt(v.total_charged.value as bigint),
+              nextChargeAt: new Date(Number(v.next_charge_at.value) * 1000),
+              lastTx: v.last_tx_hash.value as Hex,
+            };
+            row.verified = row.lastTx ? await verifySub(row, merchant) : false;
+            return row;
+          }),
+        ),
+      );
     } catch (e) {
       setError((e as Error).message);
     }
@@ -288,8 +412,26 @@ export function BooksDemo({
               type="password"
             />
           </label>
-          <Btn busy={busy} onClick={load}>
+          <Btn busy={busy} onClick={() => load()}>
             <BookOpen size={15} /> Load books
+          </Btn>
+          {/* The merchant doesn't paste anything: their wallet signs the view-key message and the key is derived here. */}
+          <Btn
+            variant="ghost"
+            onClick={async () => {
+              setError(undefined);
+              try {
+                if (!isAddress(merchant))
+                  throw new Error("Enter the merchant's wallet address (0x…).");
+                const key = await viewKeyFromWallet(merchant);
+                setViewKey(key);
+                await load(key);
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          >
+            <Wallet size={15} /> I'm the merchant: unlock with my wallet
           </Btn>
         </div>
         {error && (
@@ -396,6 +538,98 @@ export function BooksDemo({
               </tbody>
             </table>
           )}
+        </Panel>
+      )}
+      {subs && subs.length > 0 && (
+        <Panel
+          title={`${subs.length} subscription${subs.length === 1 ? "" : "s"} on Arkiv`}
+          hint="Recurring revenue, each record checked against its latest charge on Whitechain."
+        >
+          <KV
+            rows={[
+              [
+                "Monthly recurring revenue",
+                `${usdt(
+                  subs
+                    .filter(
+                      (x) =>
+                        x.verified &&
+                        x.status === "active" &&
+                        x.interval > ZERO,
+                    )
+                    .reduce(
+                      (a, x) => a + (x.amount * BigInt(2_592_000)) / x.interval,
+                      ZERO,
+                    ),
+                )} USDT`,
+              ],
+              [
+                "Charged so far",
+                `${usdt(subs.filter((x) => x.verified).reduce((a, x) => a + x.total, ZERO))} USDT`,
+              ],
+              [
+                "Active",
+                `${subs.filter((x) => x.status === "active").length} of ${subs.length}`,
+              ],
+            ]}
+          />
+          <table className="sbx-table">
+            <thead>
+              <tr>
+                <th>Subscriber</th>
+                <th>Plan</th>
+                <th>Cycles</th>
+                <th>Status</th>
+                <th>Chain</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subs.map((x) => (
+                <tr key={x.key}>
+                  <td>
+                    <code title={x.subscriber}>
+                      {x.subscriber.slice(0, 8)}…
+                    </code>
+                  </td>
+                  <td>
+                    <Repeat size={12} /> {usdt(x.amount)} USDT every{" "}
+                    {Number(x.interval) >= 86_400
+                      ? `${Number(x.interval) / 86_400} d`
+                      : `${Number(x.interval)} s`}
+                  </td>
+                  <td>
+                    {String(x.cycles)} · {usdt(x.total)} USDT
+                  </td>
+                  <td>
+                    <Pill
+                      tone={
+                        x.status === "active"
+                          ? "ok"
+                          : x.status === "cancelled"
+                            ? "bad"
+                            : "warn"
+                      }
+                    >
+                      {x.status.replace("_", " ")}
+                    </Pill>
+                  </td>
+                  <td>
+                    {x.verified ? (
+                      <a
+                        href={`https://explorer.testnet.whitechain.io/tx/${x.lastTx}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <CheckCircle2 size={15} className="ok" />
+                      </a>
+                    ) : (
+                      <XCircle size={15} aria-label="Not found on-chain" />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Panel>
       )}
     </div>

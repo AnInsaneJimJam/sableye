@@ -150,3 +150,45 @@ test('keeper: sleeps until the renewal, charges it, backs off a failed charge, d
     keeper.stop() // never leave a timer behind, even if an assertion fails
   }
 })
+
+test('Arkiv: a real subscription is published from the chain, and each renewal and the cancellation patch its record', async () => {
+  const calls = []
+  let n = 0
+  const writer = {
+    async createEntity(schema, values) { calls.push({ op: 'create', schema: schema.name, values }); return { entityKey: `0xsub${++n}`, txHash: '0xa' } },
+    async patchEntity(_schema, entityKey, changes) { calls.push({ op: 'patch', entityKey, set: changes.set }); return { txHash: '0xb' } },
+    async extendEntity() {},
+  }
+  const shop = new Sableye({
+    privateKey: KEY, network: 'local', chain, processor: sableye.network.processor, subscriptions: sm, rpcUrl: RPC,
+    tokens: { USDT: { symbol: 'USDT', address: usdt, decimals: 6 } }, email: false,
+    arkiv: { writer, renewEveryMs: 0, subscriptionSyncMs: 0 },
+  })
+  const val = (x) => (x && typeof x === 'object' && 'value' in x ? x.value : x)
+  const flush = async () => {
+    await shop.arkiv.syncSubscriptions()
+    for (let i = 0; i < 20 && shop.arkiv.status().pending; i++) await new Promise((r) => setTimeout(r, 50))
+  }
+  const offer = await shop.subscriptions.createPlan({ planId: 'arkiv_plan', amount: '2', interval: 120 })
+  const w = await customer(10_000_000n)
+  await mined(await w.writeContract({ address: sm, abi: subscriptionManagerAbi, functionName: 'subscribe', args: [offer.plan, offer.signature, 10_000_000n] }))
+  const subId = await shop.subscriptions.id('arkiv_plan', w.account.address)
+  await flush()
+  const created = calls.find((c) => c.op === 'create' && c.schema === 'sableye.subscription.v1' && val(c.values.subscription_id).toLowerCase() === subId.toLowerCase())
+  assert.ok(created, 'record created for the new subscription')
+  assert.equal(val(created.values.subscriber).toLowerCase(), w.account.address.toLowerCase())
+  assert.equal(val(created.values.cycles_charged), 1n)
+  assert.equal(val(created.values.status), 'active')
+  assert.match(val(created.values.last_tx_hash), /^0x[0-9a-f]{64}$/)
+
+  await later(121)
+  assert.equal((await shop.subscriptions.charge(subId)).result, 'charged')
+  await flush()
+  await mined((await shop.subscriptions.cancel(subId)).txHash)
+  await flush()
+  const key = shop.arkiv.published().subscriptions[subId.toLowerCase()]
+  const patches = calls.filter((c) => c.op === 'patch' && c.entityKey === key)
+  assert.equal(val(patches[0].set.cycles_charged), 2n)
+  assert.equal(val(patches[0].set.total_charged), 4_000_000n)
+  assert.equal(val(patches.at(-1).set.status), 'cancelled')
+})

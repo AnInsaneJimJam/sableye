@@ -33,7 +33,7 @@ import {
   type TokenConfig,
 } from '@sableye/core'
 import {
-  createPublicClient, createWalletClient, encodeFunctionData, erc20Abi, http, maxUint256, parseSignature, recoverTypedDataAddress,
+  createPublicClient, createWalletClient, encodeFunctionData, erc20Abi, http, maxUint256, parseSignature, recoverTypedDataAddress, zeroAddress,
   type Address, type Chain, type Hex, type LocalAccount, type PublicClient, type WalletClient,
 } from 'viem'
 import { Indexer, type IndexerOptions } from './indexer.js'
@@ -45,7 +45,7 @@ import { attachEmails, emailConfigFromEnv, type EmailConfig, type Emails } from 
 import { memoryOrderStore, type Customer, type LineItem, type OrderDetails, type OrderStore } from './orders.js'
 import { createOutbox, type Outbox, type OutboxOptions } from './outbox.js'
 import { invoicePdf, receiptPdf, type BusinessInfo } from './pdf.js'
-import { arkivConfigFromEnv, attachArkiv, type ArkivApi, type ArkivConfig } from './arkiv.js'
+import { arkivConfigFromEnv, attachArkiv, type ArkivApi, type ArkivConfig, type SubscriptionSnapshot } from './arkiv.js'
 import { formatQuote, memoryCouponStore, newCoupon, normalizeCode, quoteCoupon, redeem, type Coupon, type CouponQuote, type CouponStore } from './coupons.js'
 
 export * from '@sableye/core'
@@ -269,6 +269,7 @@ export class Sableye {
       merchant: this.merchant, account, network: this.network.name, chainId: this.network.chain.id, businessName: this.business.name,
       getOrder: (id) => this.orders.get(id),
       receipt: (id) => this.checkPayment(id),
+      ...(this.network.subscriptions && this.network.subscriptions !== zeroAddress && { subscriptions: () => this.subscriptionSnapshots() }),
     })
   }
 
@@ -313,6 +314,19 @@ export class Sableye {
     if (order) await this.orders.put({ ...order, paidHandledAt: Date.now() })
     await this.redeemCoupon(orderId)
     this.mail.onPaid(orderId, order)
+  }
+
+  /** Every subscription to this merchant's plans as the chain shows it now, for Arkiv. */
+  private async subscriptionSnapshots(): Promise<SubscriptionSnapshot[]> {
+    const from = this.network.deployBlock ?? 0n
+    const [subscribed, charged] = await Promise.all([this.eventsInChunks('Subscribed', from), this.eventsInChunks('Charged', from)])
+    const plan = new Map(subscribed.map((l) => [l.args.subId!, (l.args as { planId?: Hex }).planId ?? ('0x' as Hex)]))
+    const lastTx = new Map<Hex, Hex>()
+    for (const l of charged) lastTx.set(l.args.subId!, l.transactionHash)
+    return Promise.all([...plan.keys()].map(async (id) => {
+      const x = await this.subscriptions.get(id)
+      return { subId: id, planId: plan.get(id)!, payer: x.payer, status: x.status, token: x.token, amount: x.amount, interval: x.interval, charged: x.charged, startedAt: x.startedAt, nextChargeAt: x.nextChargeAt, lastTxHash: lastTx.get(id) }
+    }))
   }
 
   /** A paid order that used a coupon counts as one redemption (idempotent). */
@@ -412,6 +426,16 @@ export class Sableye {
      * @param orderId the `orderRef` from `create` (or the bytes32 orderId).
      * @throws {SignerCannotTransactError} when a custom `signer` has no `signTransaction`.
      */
+    /**
+     * Invoices this server issued, newest first: the order details (reference, amount, customer, description), paid
+     * or not. Needs an order store with `list()` (the built-in file and memory stores have it). Combine with the
+     * indexer (or `verifyPayment`) for on-chain status.
+     */
+    list: async (opts: { limit?: number } = {}): Promise<OrderDetails[]> => {
+      if (!this.orders.list) throw new SableyeError('not_supported', 'This order store cannot list orders.', 'Use fileOrderStore() or memoryOrderStore(), or add list() to your store.')
+      return (await this.orders.list()).sort((a, b) => b.createdAt - a.createdAt).slice(0, opts.limit ?? 100)
+    },
+
     cancel: async (orderId: string): Promise<{ txHash: Hex }> => {
       const processor = requireProcessor(this.network)
       await this.checkChain()

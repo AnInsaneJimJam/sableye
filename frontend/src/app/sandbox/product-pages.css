@@ -565,3 +565,15 @@
 .sbx-product-page .code-toolbar [role="tablist"] {
   gap: 8px;
 }
+
+/* The client view is a dashboard: give it the full width and put the code underneath. */
+.sbx-product-page[data-product="merchant"] .sbx-split {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sbx-product-page[data-product="merchant"] .sbx-side {
+  border-left: 0;
+  border-top: 1px solid var(--rule);
+}
+.sbx-table-wrap {
+  overflow-x: auto;
+}

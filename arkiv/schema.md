@@ -53,6 +53,27 @@ This is the open record format a Sableye merchant publishes to Arkiv. **Any app 
 | `created_at` | `u64` | ✅ | Unix seconds |
 | `private` | `bytes` | | Reserved (reason, notes) |
 
+## Entity: `sableye.subscription.v1` (one per subscription; patched on every charge and on cancellation)
+
+| Column | Type | Indexed | Meaning |
+|---|---|---|---|
+| `subscription_id` | `str` | ✅ | bytes32 `subId`, as in SubscriptionManager's `Subscribed` / `Charged` events |
+| `merchant` | `addr` | ✅ | |
+| `subscriber` | `addr` | ✅ | The customer's wallet (it approved the cap and is charged each cycle) |
+| `status` | `str` | ✅ | `active` · `past_due` (last charge failed) · `cancelled` |
+| `plan_id` | `str` | | bytes32 plan id |
+| `network`, `chain_id` | `str`, `u64` | | e.g. `Whitechain Sepolia`, `1874` |
+| `token` | `addr` | | ERC-20 charged |
+| `amount` | `u256` | | Per cycle, base units |
+| `interval` | `u64` | | Seconds between charges |
+| `cycles_charged` | `u64` | | Successful charges so far |
+| `total_charged` | `u256` | | Sum charged so far, base units |
+| `started_at` | `u64` | ✅ | Unix seconds |
+| `next_charge_at` | `u64` | | Unix seconds |
+| `last_tx_hash` | `str` | | The latest `Charged` transaction. Readers should check it on Whitechain |
+
+Written by the merchant's server from the chain's own state (`getSubscription` + events), so a record never claims more than the contract does. Recurring revenue (MRR) = Σ `amount × 30 days ÷ interval` over `active` records.
+
 ## Entity: `sableye.merchant.v1` (one per merchant)
 
 | Column | Type | Indexed | Meaning |
@@ -83,6 +104,8 @@ import { http } from 'viem'
 const arkiv = createPublicClient({ chain: rabdi({ accessKey }), transport: http() })
 // Every paid invoice of one merchant, newest first:
 await arkiv.select().from(Invoices).ownedBy(merchant).orderBy(desc('paid_at')).limit(100).fetch()
+// Active subscriptions (recurring revenue):
+await arkiv.select().from(Subscriptions).where(eq('status', 'active')).ownedBy(merchant).fetch()
 // Only fully refunded ones:
 await arkiv.select().from(Invoices).where(eq('status', 'refunded')).ownedBy(merchant).fetch()
 ```

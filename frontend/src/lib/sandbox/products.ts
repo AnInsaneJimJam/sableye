@@ -9,6 +9,7 @@ export type ProductSlug =
   | "events"
   | "reconcile"
   | "dashboard"
+  | "merchant"
   | "books"
   | "developers";
 
@@ -337,6 +338,37 @@ const { mrr, churnRate, failedChargeRate, active } =
       },
       stripe: { file: "n/a", code: `// Stripe: Dashboard → Home and Billing → Overview.
 // The API exposes the raw objects; analytics live in the UI.` },
+    },
+  },
+  {
+    slug: "merchant",
+    group: "Operate",
+    title: "Client view",
+    tagline: "Everything your business issued: invoices, refunds and subscriptions, in one place.",
+    summary:
+      "The merchant's own view. Every invoice the business issued, with its status read from Whitechain (open, paid, partially refunded, refunded, cancelled): refund it in full or in part, cancel an unpaid one, download the receipt. Below, every subscription with the cycles charged and the next charge. Each record shows whether it's on Arkiv, owned by the merchant's wallet.",
+    stripe: { name: "Dashboard → Payments, Invoices and Subscriptions", how: "Stripe's dashboard shows what Stripe holds: the money and the records sit in Stripe's account until payout." },
+    differences: [
+      "Status comes from the chain, not a vendor's database: a payment is paid because Whitechain says so",
+      "Refunds go from the merchant's own wallet straight back to the payer, capped on-chain at what was paid",
+      "Subscriptions are charged by the merchant's keeper against a cap the customer approved",
+      "Every paid invoice and subscription is also on Arkiv, so the books survive without this server",
+    ],
+    steps: ["Customers pay invoices and subscribe", "The indexer reads InvoicePaid, refunds and Charged events", "The merchant refunds or cancels from this view", "Paid records are published to Arkiv at Whitechain's safe head"],
+    code: {
+      sableye: {
+        file: "dashboard.ts",
+        code: `const issued = await sableye.invoices.list()          // your order records, paid or not
+const onChain = sableye.indexer().invoices()           // status from Whitechain
+await sableye.refunds.create({ orderId, amount: '2.00' }) // partial refund
+const subs = await sableye.subscriptions.list()        // cycles, next charge, status`,
+      },
+      stripe: {
+        file: "dashboard.ts",
+        code: `const charges = await stripe.charges.list({ limit: 100 })
+await stripe.refunds.create({ charge, amount: 200 })
+const subs = await stripe.subscriptions.list()`,
+      },
     },
   },
   {

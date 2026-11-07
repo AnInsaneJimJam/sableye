@@ -89,7 +89,14 @@ export function createOutbox(opts: OutboxOptions = {}): Outbox {
       save()
     }
   }
-  const drain = () => (draining ??= runDue().catch(() => {}).finally(() => (draining = undefined)))
+  // A job enqueued while a drain is finishing would otherwise wait for the next poll: loop until nothing new arrived.
+  let dirty = false
+  const drain = () => (draining ??= (async () => {
+    do {
+      dirty = false
+      await runDue()
+    } while (dirty)
+  })().catch(() => {}).finally(() => (draining = undefined)))
 
   const timer = opts.pollMs === 0 ? undefined : setInterval(() => void drain(), opts.pollMs ?? 2000)
   timer?.unref?.()
@@ -99,6 +106,7 @@ export function createOutbox(opts: OutboxOptions = {}): Outbox {
       if (jobs.some((j) => j.key === key)) return false
       jobs.push({ key, kind, payload, attempts: 0, nextAt: 0, createdAt: Date.now(), status: 'pending' })
       save()
+      dirty = true
       void drain()
       return true
     },

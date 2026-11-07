@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { CodeCompare } from "@/components/sandbox/code-compare";
 import { LiveExample } from "@/components/sandbox/live-example";
 import { BooksDemo } from "@/components/sandbox/demo-books";
+import { ClientViewDemo } from "@/components/sandbox/demo-merchant";
 import {
   CheckoutDemo,
   InvoicesDemo,
@@ -36,6 +37,7 @@ const demos: Record<ProductSlug, React.ReactNode> = {
   events: <EventsDemo />,
   reconcile: <ReconcileDemo />,
   dashboard: <DashboardDemo />,
+  merchant: <ClientViewDemo />,
   books: <BooksDemo />,
   developers: <DevelopersDemo />,
 };

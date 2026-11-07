@@ -42,6 +42,24 @@ const ArkivRefund = defineSchema('sableye.refund.v1', {
   private: bytes().optional(),
 })
 
+const ArkivSubscription = defineSchema('sableye.subscription.v1', {
+  subscription_id: str().indexed(), // bytes32 subId, as in SubscriptionManager's events
+  merchant: addr().indexed(),
+  subscriber: addr().indexed(),
+  status: str().indexed(), // active | past_due | cancelled
+  plan_id: str(),
+  network: str(),
+  chain_id: u64(),
+  token: addr(),
+  amount: u256(), // per cycle, base units
+  interval: u64(), // seconds
+  cycles_charged: u64(),
+  total_charged: u256(),
+  started_at: u64().indexed(), // unix seconds
+  next_charge_at: u64(),
+  last_tx_hash: str(), // the latest Charged transaction (verify it on Whitechain)
+})
+
 const ArkivMerchant = defineSchema('sableye.merchant.v1', {
   merchant: addr().indexed(),
   name: str(),
@@ -74,7 +92,24 @@ export interface ArkivConfig {
    * Look up a record this merchant already published (so a server with lost or fresh local state never publishes
    * twice). Default: queries Arkiv; with an injected `writer` and no finder, nothing is found.
    */
-  finder?: (kind: 'invoice' | 'refund' | 'profile', orderId?: Hex, txHash?: Hex) => Promise<Hex | undefined>
+  finder?: (kind: 'invoice' | 'refund' | 'profile' | 'subscription', orderId?: Hex, txHash?: Hex) => Promise<Hex | undefined>
+  /** How often to sync subscriptions to Arkiv. Default 2 min. 0: only when `syncSubscriptions()` is called. */
+  subscriptionSyncMs?: number
+}
+
+/** One subscription as the chain shows it now (from SubscriptionManager). */
+export interface SubscriptionSnapshot {
+  subId: Hex
+  planId: Hex
+  payer: Address
+  status: string
+  token: Address
+  amount: bigint
+  interval: number
+  charged: bigint
+  startedAt: Date
+  nextChargeAt: Date
+  lastTxHash?: Hex
 }
 
 export function arkivConfigFromEnv(env: NodeJS.ProcessEnv = process.env): ArkivConfig | undefined {
@@ -105,6 +140,10 @@ export interface ArkivApi {
   records(limit?: number): Promise<ArkivInvoiceRecord[]>
   /** Publishing progress. */
   status(): { published: number; pending: number; failed: number; lastError?: string }
+  /** What's on Arkiv: orderId → invoice record key, subId → subscription record key (lowercase ids). */
+  published(): { invoices: Record<string, Hex>; subscriptions: Record<string, Hex> }
+  /** Publish subscription changes now (it also runs on a timer). Returns how many changes were queued. */
+  syncSubscriptions(): Promise<number>
 }
 
 /** What the sink needs from the Sableye client. */
@@ -117,16 +156,21 @@ export interface ArkivDeps {
   getOrder(orderId: Hex): Promise<OrderDetails | undefined>
   /** The contract's view of the invoice right now. */
   receipt(orderId: Hex): Promise<{ status: string; payer?: Address; payout?: Address; token?: Address; amount?: bigint; refunded?: bigint; paidAt?: Date; txHash?: Hex }>
+  /** This merchant's subscriptions, from the chain. Absent: subscriptions aren't published. */
+  subscriptions?(): Promise<SubscriptionSnapshot[]>
 }
 
 interface Published {
   invoices: Record<string, { entityKey: Hex; txHash: Hex; expiresAt: number }>
   refunds: Record<string, { entityKey: Hex; expiresAt: number }>
   merchantProfile?: { entityKey: Hex; expiresAt: number }
+  /** subId → its record and the state last published (so only changes are written). */
+  subscriptions?: Record<string, { entityKey: Hex; version: string; expiresAt: number }>
 }
 
 interface ArkivJob {
-  kind: 'invoice' | 'refund' | 'reorged' | 'profile'
+  kind: 'invoice' | 'refund' | 'reorged' | 'profile' | 'subscription'
+  sub?: Omit<SubscriptionSnapshot, 'amount' | 'charged' | 'startedAt' | 'nextChargeAt'> & { amount: string; charged: string; startedAt: number; nextChargeAt: number }
   orderId?: Hex
   txHash?: Hex
   amount?: string
@@ -135,6 +179,9 @@ interface ArkivJob {
 }
 
 const DAY = 86_400_000
+/** What a subscription record reflects: a change in any of these is published. */
+const versionOf = (x: { status: string; charged: bigint | string; nextChargeAt: Date | number }) =>
+  `${x.status}:${x.charged}:${typeof x.nextChargeAt === 'number' ? x.nextChargeAt : x.nextChargeAt.getTime()}`
 
 export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: ArkivDeps) {
   const enabled = !!cfg && (!!cfg.writer || !!deps.account)
@@ -170,13 +217,15 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
   }
   const expiresAt = () => Date.now() + RECORD_DAYS * DAY
   const same = (a?: unknown, b?: string) => !!b && String(a).toLowerCase() === b.toLowerCase()
-  const find = cfg?.finder ?? (cfg?.writer ? async () => undefined : async (kind: 'invoice' | 'refund' | 'profile', orderId?: Hex, txHash?: Hex) => {
+  const find = cfg?.finder ?? (cfg?.writer ? async () => undefined : async (kind: 'invoice' | 'refund' | 'profile' | 'subscription', orderId?: Hex, txHash?: Hex) => {
     const r = reader()
     const rows = (kind === 'profile'
       ? await r.select({ $key: true }).from(ArkivMerchant).where(eq('merchant', addr(deps.merchant))).ownedBy(deps.merchant).limit(1).fetch()
-      : await r.select({ $key: true, tx_hash: true }).from(kind === 'invoice' ? ArkivInvoice : ArkivRefund).where(eq('order_id', str(orderId!))).ownedBy(deps.merchant).limit(20).fetch()
+      : kind === 'subscription'
+        ? await r.select({ $key: true }).from(ArkivSubscription).where(eq('subscription_id', str(orderId!))).ownedBy(deps.merchant).limit(1).fetch()
+        : await r.select({ $key: true, tx_hash: true }).from(kind === 'invoice' ? ArkivInvoice : ArkivRefund).where(eq('order_id', str(orderId!))).ownedBy(deps.merchant).limit(20).fetch()
     ).entities as unknown as { $key: Hex; tx_hash?: { value: string } }[]
-    return (kind === 'profile' || !txHash ? rows[0] : rows.find((e) => same(e.tx_hash?.value, txHash)))?.$key
+    return (kind === 'profile' || kind === 'subscription' || !txHash ? rows[0] : rows.find((e) => same(e.tx_hash?.value, txHash)))?.$key
   })
 
   const run = async (payload: unknown) => {
@@ -191,6 +240,28 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
       }
       const r = await w.createEntity(ArkivMerchant, { merchant: addr(deps.merchant), name: str(deps.businessName), schema_version: str('1') }, { expiration: ExpirationTime.fromDays(RECORD_DAYS) })
       state.merchantProfile = { entityKey: r.entityKey, expiresAt: expiresAt() }
+      return save()
+    }
+    if (job.kind === 'subscription') {
+      const x = job.sub!
+      const subs = (state.subscriptions ??= {})
+      const sid = x.subId.toLowerCase()
+      const fields = {
+        status: str(x.status), cycles_charged: u64(BigInt(x.amount) ? BigInt(x.charged) / BigInt(x.amount) : 0n), total_charged: u256(BigInt(x.charged)),
+        next_charge_at: u64(BigInt(Math.floor(x.nextChargeAt / 1000))), last_tx_hash: str(x.lastTxHash ?? ''),
+      }
+      const found = subs[sid] ? undefined : await find('subscription', x.subId)
+      if (found) subs[sid] = { entityKey: found, version: '', expiresAt: Date.now() }
+      if (subs[sid]) await w.patchEntity(ArkivSubscription, subs[sid].entityKey, { set: fields })
+      else {
+        const r = await w.createEntity(ArkivSubscription, {
+          subscription_id: str(x.subId), merchant: addr(deps.merchant), subscriber: addr(x.payer), plan_id: str(x.planId),
+          network: str(deps.network), chain_id: u64(BigInt(deps.chainId)), token: addr(x.token), amount: u256(BigInt(x.amount)),
+          interval: u64(BigInt(x.interval)), started_at: u64(BigInt(Math.floor(x.startedAt / 1000))), ...fields,
+        }, { expiration: ExpirationTime.fromDays(RECORD_DAYS) })
+        subs[sid] = { entityKey: r.entityKey, version: '', expiresAt: expiresAt() }
+      }
+      subs[sid].version = versionOf(x)
       return save()
     }
     const id = job.orderId!.toLowerCase()
@@ -256,7 +327,7 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
   const renew = async () => {
     const w = getWriter()
     const soon = Date.now() + RENEW_WITHIN_DAYS * DAY
-    const all = [...Object.values(state.invoices), ...Object.values(state.refunds), ...(state.merchantProfile ? [state.merchantProfile] : [])]
+    const all = [...Object.values(state.invoices), ...Object.values(state.refunds), ...Object.values(state.subscriptions ?? {}), ...(state.merchantProfile ? [state.merchantProfile] : [])]
     for (const e of all) {
       if (e.expiresAt > soon) continue
       try {
@@ -274,8 +345,27 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
   const queue = (key: string, job: ArkivJob) => enabled && outbox.enqueue('arkiv', key, job)
   if (enabled) queue('arkiv:profile', { kind: 'profile' })
 
+  // Subscriptions: compare the chain with what was last published, and queue only what changed (a new subscription,
+  // a charge, a cancellation). Keyed by subId + state, so each change is written once.
+  const syncSubscriptions = async () => {
+    if (!enabled || !deps.subscriptions) return 0
+    let queued = 0
+    for (const x of await deps.subscriptions()) {
+      const v = versionOf(x)
+      if (state.subscriptions?.[x.subId.toLowerCase()]?.version === v) continue
+      const sub = { ...x, amount: x.amount.toString(), charged: x.charged.toString(), startedAt: x.startedAt.getTime(), nextChargeAt: x.nextChargeAt.getTime() }
+      if (queue(`arkiv:sub:${x.subId}:${v}`, { kind: 'subscription', sub })) queued++
+    }
+    return queued
+  }
+  const syncTimer = enabled && deps.subscriptions && cfg?.subscriptionSyncMs !== 0
+    ? setInterval(() => void syncSubscriptions().catch(() => {}), cfg?.subscriptionSyncMs ?? 120_000)
+    : undefined
+  syncTimer?.unref?.()
+
   const api: ArkivApi = {
     enabled,
+    syncSubscriptions: () => syncSubscriptions(),
     viewKey: getViewKey,
     async records(limit = 100) {
       const res = await reader().select().from(ArkivInvoice).ownedBy(deps.merchant).orderBy(desc('paid_at')).limit(limit).fetch()
@@ -299,10 +389,14 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
         }
       }))
     },
+    published: () => ({
+      invoices: Object.fromEntries(Object.entries(state.invoices).map(([k, v]) => [k, v.entityKey])),
+      subscriptions: Object.fromEntries(Object.entries(state.subscriptions ?? {}).map(([k, v]) => [k, v.entityKey])),
+    }),
     status() {
       const jobs = outbox.jobs('arkiv')
       return {
-        published: Object.keys(state.invoices).length + Object.keys(state.refunds).length,
+        published: Object.keys(state.invoices).length + Object.keys(state.refunds).length + Object.keys(state.subscriptions ?? {}).length,
         pending: jobs.filter((j) => j.status === 'pending').length,
         failed: jobs.filter((j) => j.status === 'failed').length,
         lastError: jobs.find((j) => j.error)?.error,
@@ -313,7 +407,11 @@ export function attachArkiv(cfg: ArkivConfig | undefined, outbox: Outbox, deps: 
   return {
     arkiv: api,
     renew,
-    stop: () => clearInterval(renewTimer),
+    syncSubscriptions,
+    stop: () => {
+      clearInterval(renewTimer)
+      clearInterval(syncTimer)
+    },
     /** Indexer events → Arkiv jobs. Published at `safe`, so a reorg rarely has to be undone. */
     onEvent(e: WebhookEvent) {
       if (!enabled) return
