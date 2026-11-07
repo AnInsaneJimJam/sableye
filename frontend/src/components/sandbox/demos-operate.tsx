@@ -11,7 +11,6 @@ import {
   CircleAlert,
   Download,
   Mail,
-  Play,
   RefreshCw,
   ShieldCheck,
   Stethoscope,
@@ -382,17 +381,6 @@ export function SubscriptionsDemo() {
     }
     setBusy(undefined);
   };
-  const renew = async () => {
-    setBusy("renew");
-    setError(undefined);
-    try {
-      await post("/api/sandbox/renewals");
-      await Promise.all([reload(), reloadAll()]);
-    } catch (e) {
-      setError(e as ApiError);
-    }
-    setBusy(undefined);
-  };
 
   if (!offer)
     return (
@@ -472,6 +460,11 @@ export function SubscriptionsDemo() {
         chain: net.chain,
       }),
     );
+    // Tell the merchant's keeper now, so even a 5-second plan renews on time (otherwise it finds it within minutes).
+    await post("/api/sandbox/subscription/track", {
+      payer: account,
+      period,
+    }).catch(() => {});
   };
   return (
     <div className="sbx-stack">
@@ -526,9 +519,6 @@ export function SubscriptionsDemo() {
                   ]}
                 />
                 <div className="sbx-row">
-                  <Btn variant="ghost" busy={busy === "renew"} onClick={renew}>
-                    <Play size={14} /> Run renewals now
-                  </Btn>
                   <Btn
                     variant="ghost"
                     busy={busy === "cancel"}

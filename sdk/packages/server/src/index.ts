@@ -785,10 +785,12 @@ export class Sableye {
       for (const x of await this.subscriptionSnapshots()) {
         const cycles = x.amount ? x.charged / x.amount : 0n
         const events: [SubscriptionEvent, string][] = []
-        if (x.status === 'cancelled') events.push(['cancelled', `${x.subId}:cancelled`])
-        else if (x.status === 'past_due') events.push(['failed', `${x.subId}:failed:${x.failedCharges}`])
-        if (cycles >= 1n) events.push([cycles === 1n ? 'started' : 'renewed', `${x.subId}:charge:${x.charged}`])
-        if (x.status !== 'cancelled' && x.charged + x.amount > x.cap) events.push(['ended', `${x.subId}:ended`])
+        if (x.status === 'cancelled') events.push(['cancelled', `${x.subId}:cancelled:${x.startedAt.getTime()}`])
+        else if (x.status === 'past_due') events.push(['failed', `${x.subId}:failed:${x.startedAt.getTime()}:${x.failedCharges}`])
+        // "Confirmed" once per subscription even if fast renewals happened before this check; then one receipt per new charge level.
+        if (cycles >= 1n) events.push(['started', `${x.subId}:started:${x.startedAt.getTime()}`])
+        if (cycles >= 2n) events.push(['renewed', `${x.subId}:charge:${x.startedAt.getTime()}:${x.charged}`])
+        if (x.status !== 'cancelled' && x.charged + x.amount > x.cap) events.push(['ended', `${x.subId}:ended:${x.startedAt.getTime()}`])
         for (const [event, key] of events) {
           if (seen.has(key)) continue
           seen.add(key)

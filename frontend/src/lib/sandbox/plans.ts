@@ -2,6 +2,7 @@
 // (and keeps its original plan id, so existing subscriptions still resolve).
 export const PERIODS = [
   { id: "2m", seconds: 120, label: "Every 2 minutes (demo)" },
+  { id: "5s", seconds: 5, label: "Every 5 seconds (fast demo)" },
   { id: "10m", seconds: 600, label: "Every 10 minutes" },
   { id: "1h", seconds: 3600, label: "Hourly" },
   { id: "1d", seconds: 86_400, label: "Daily" },
