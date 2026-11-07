@@ -517,20 +517,56 @@ export function ClientViewDemo() {
                           <OnArkiv on={s.onArkiv} />
                         </td>
                         <td>
-                          <Btn
-                            variant="ghost"
-                            aria-expanded={expanded}
-                            onClick={() =>
-                              setOpen(expanded ? undefined : s.subId)
-                            }
+                          <div
+                            className="sbx-row"
+                            style={{
+                              justifyContent: "flex-end",
+                              gap: 6,
+                              flexWrap: "nowrap",
+                            }}
                           >
-                            {expanded ? (
-                              <ChevronUp size={14} />
-                            ) : (
-                              <ChevronDown size={14} />
-                            )}{" "}
-                            {s.payments.length} payments
-                          </Btn>
+                            {(st.label === "Active" ||
+                              st.label === "Past due") && (
+                              <Btn
+                                variant="ghost"
+                                busy={busy === `x${s.subId}`}
+                                onClick={() => {
+                                  if (
+                                    !window.confirm(
+                                      `Cancel ${short(s.payer)}'s subscription? No further charges will be made.`,
+                                    )
+                                  )
+                                    return;
+                                  void act(`x${s.subId}`, async () => {
+                                    const r = await post<{ txHash: string }>(
+                                      "/api/sandbox/subscription/cancel",
+                                      { subId: s.subId },
+                                    );
+                                    return {
+                                      text: `Canceled ${short(s.payer)}'s subscription. No further charges.`,
+                                      tx: r.txHash,
+                                    };
+                                  });
+                                }}
+                              >
+                                <XCircle size={14} /> Cancel
+                              </Btn>
+                            )}
+                            <Btn
+                              variant="ghost"
+                              aria-expanded={expanded}
+                              onClick={() =>
+                                setOpen(expanded ? undefined : s.subId)
+                              }
+                            >
+                              {expanded ? (
+                                <ChevronUp size={14} />
+                              ) : (
+                                <ChevronDown size={14} />
+                              )}{" "}
+                              {s.payments.length} payments
+                            </Btn>
+                          </div>
                         </td>
                       </tr>
                       {expanded && (
