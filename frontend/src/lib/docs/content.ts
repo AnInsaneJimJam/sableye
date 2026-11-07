@@ -67,6 +67,7 @@ export const navigation: { title: string; items: NavItem[] }[] = [
             slug: "checkout/mobile",
           },
           { title: "WalletConnect", slug: "checkout/walletconnect" },
+          { title: "HTML & JavaScript checkout", slug: "checkout/browser" },
           {
             title: "Hosted checkout",
             slug: "checkout/hosted",
@@ -172,6 +173,8 @@ export const navigation: { title: string; items: NavItem[] }[] = [
         slug: "cli/installation",
       },
       { title: "Merchant setup", slug: "cli/setup" },
+      { title: "Coding agent setup", slug: "cli/agents" },
+      { title: "Sandbox walkthrough", slug: "sandbox" },
       { title: "Local webhook listener", slug: "cli/listen" },
       {
         title: "Doctor",
@@ -213,8 +216,8 @@ const introductoryPages: DocPage[] = [
       {
         id: "before-you-start",
         title: "Before you start",
-        body: "Use Node.js 24, pnpm, and a wallet on Whitechain Sepolia. The merchant needs WBT to submit on-chain actions. Customers need test USDT to pay.",
-        note: "Already have an app? Run npx sableye init in its folder instead: it installs the package, sets up .env and your AI coding agent.",
+        body: "Use Node.js 22 or newer and your app's package manager. The merchant needs WBT for on-chain actions; customers need official test USDT on Whitechain Sepolia. The repository uses pnpm workspaces.",
+        note: "Already have an app? Run npx sableye init in its folder. Choose payment features, email provider, hosting and checkout appearance, then give the printed integration prompt to your coding agent.",
       },
       {
         id: "create-your-store",
@@ -233,7 +236,7 @@ const introductoryPages: DocPage[] = [
       {
         id: "show-checkout",
         title: "Show checkout",
-        body: "Send the signed invoice to the browser. The checkout component handles wallet connection, network switching, and payment.",
+        body: "Send the signed invoice to the browser. Checkout includes a light theme by default and handles wallet connection, network switching and payment. Choose night for a dark app, or none for your own CSS. For plain HTML or a non-React app, use the HTML & JavaScript checkout guide.",
         language: "checkout.tsx",
         code: "import { Checkout } from 'sableye/react'\n\n<Checkout invoice={invoice} onSuccess={({ txHash }) => {\n  // Ask your server to verify the order before fulfilling it.\n  console.log(txHash)\n}} />",
       },
@@ -430,7 +433,7 @@ const introductoryPages: DocPage[] = [
         title: "Match your brand",
         body: "The checkout is styled by default with the light theme, so it looks finished without any CSS. Use theme night on dark sites. Set variables from your own design (colorPrimary, colorPrimaryText, colorBackground, colorText, colorMuted, colorBorder, colorSuccess, colorDanger, borderRadius, fontFamily) and it matches your site. All styles are scoped to the widget and never leak into your page. theme none removes them: then style the data-sableye-* attributes yourself.",
         language: "checkout.tsx",
-        code: "<Checkout invoice={inv} appearance={{ theme: 'night' }} />\n\n<Checkout\n  invoice={inv}\n  appearance={{ variables: { colorPrimary: '#0f766e', borderRadius: '6px', fontFamily: 'Inter, sans-serif' } }}\n/>\n\n<Checkout invoice={inv} appearance={{ theme: 'none' }} /> // your own CSS",
+        code: "'use client'\nimport { Checkout, type Appearance, type CheckoutProps } from 'sableye/react'\n\nconst appearance: Appearance = {\n  theme: 'night',\n  variables: { colorPrimary: '#7c9bff', colorPrimaryText: '#081126', borderRadius: '12px' },\n}\n\nexport function Payment({ invoice }: { invoice: CheckoutProps['invoice'] }) {\n  return <Checkout invoice={invoice} appearance={appearance} />\n}\n// Use theme: 'light' for a light widget, or 'none' for your own CSS.",
       },
       {
         id: "custom-ui",
@@ -526,7 +529,7 @@ const introductoryPages: DocPage[] = [
             ["token", "Defaults to USDT"],
             ["orderId", "Your order reference; generated when omitted"],
             ["expiresIn", "Lifetime in seconds; defaults to 1800"],
-            ["payout", "Defaults to the merchant address"],
+            ["payout", "Invoice payout overrides SableyeConfig.payout, then SABLEYE_PAYOUT, then the merchant address"],
           ],
         },
       },
@@ -1050,7 +1053,7 @@ const introductoryPages: DocPage[] = [
       {
         id: "roadmap",
         title: "What's next",
-        body: "The repository implements the core payments SDK, coupons, SMTP emails, PDFs, order storage and optional merchant-owned Arkiv records. Swarm hosting remains future work. It is testnet software: use Whitechain Sepolia until the contracts are audited.",
+        body: "The checkout includes light/night appearance themes, a plain-HTML browser bundle, and the setup wizard. Email uses Resend or SMTP; verifyPayment or a running indexer can trigger payment receipts. Optional Arkiv publishing covers invoices, refunds and subscriptions. Swarm hosting remains future work. Use the configured Whitechain Sepolia testnet deployment; mainnet has no bundled processor or official USDT.",
       },
     ],
   },

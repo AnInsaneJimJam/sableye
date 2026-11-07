@@ -34,7 +34,7 @@
 - The money goes **straight into the business's own wallet** in about one second. **Sableye never holds the money.**
 - Where the token supports it, the customer pays **without needing any gas token**: the business sponsors the small network fee.
 - Refunds, cancelled invoices and revoked payment links are all handled, and enforced by a smart contract.
-- Later phases make the business's sales records **its own data** (stored on Arkiv, readable by any app the merchant allows), and put the checkout pages **beyond anyone's power to take down** (hosted on Swarm).
+- Optional Arkiv publishing is implemented: merchant-owned invoice, refund and subscription records, with independent Books reading and wallet unlocking. Swarm hosting remains future work. The phase sections below retain the original roadmap context.
 
 **Who it's for:** Sableye is **B2B2C**. We serve businesses (B2B), which serve consumers (B2C). That's the profile Whitechain says it wants to back.
 
@@ -42,7 +42,7 @@
 
 ```ts
 // server
-import { Sableye } from '@sableye/server'
+import { Sableye } from 'sableye/server'
 const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY, network: 'whitechain-sepolia' })
 const invoice = await sableye.invoices.create({ amount: '5.00', orderId: 'order_123' })
 
@@ -175,6 +175,8 @@ None ──pay──► Paid ──refund(part)──► PartiallyRefunded ─�
 ```
 
 ### 4.5 Packages
+
+The table names internal workspaces. Merchants install one public package, `sableye`, and import `sableye`, `sableye/server`, `sableye/react` or `sableye/mcp`. The public package also includes the plain HTML checkout asset and version-matched docs.
 
 | Package | Runs in | What it does |
 |---|---|---|

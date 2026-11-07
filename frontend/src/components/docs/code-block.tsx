@@ -12,6 +12,7 @@ function languageFor(code: string, label?: string): string {
   const name = label?.toLowerCase() ?? "";
   if (/terminal|bash|shell|\.sh$/.test(name)) return "bash";
   if (/json/.test(name)) return "json";
+  if (/html|markup/.test(name)) return "markup";
   if (/solidity|\.sol$/.test(name)) return "solidity";
   if (
     !name &&
