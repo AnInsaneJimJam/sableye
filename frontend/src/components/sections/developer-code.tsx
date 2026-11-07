@@ -2,6 +2,7 @@
 
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
+import { HighlightedCode } from "@/components/sandbox/highlighted-code";
 
 const examples = [
   {
@@ -129,19 +130,7 @@ export function DeveloperCode() {
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to focus and scroll the code panel.
         tabIndex={0}
       >
-        <code>
-          {example.code.split("\n").map((line, index) => (
-            <span
-              className={`code-line${line.trim().startsWith("//") ? " code-comment" : ""}`}
-              key={`${index}-${line}`}
-            >
-              <span className="line-number" aria-hidden="true">
-                {index + 1}
-              </span>
-              <span>{line || " "}</span>
-            </span>
-          ))}
-        </code>
+        <HighlightedCode code={example.code} />
       </pre>
       {(error || copied) && (
         <output className="copy-feedback" aria-live="polite">

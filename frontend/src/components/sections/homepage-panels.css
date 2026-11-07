@@ -84,3 +84,138 @@
     position: static;
   }
 }
+
+/* Match the heading, command and animation baselines in both agent panels. */
+.landing-page .agents-grid .agent-card > .relative {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+.landing-page .agents-grid .agent-card > .relative > .glass-button-wrap {
+  align-self: center;
+}
+.landing-page .agents-grid .agent-card h3 {
+  min-height: 2.6em;
+  margin: 0;
+  line-height: 1.3;
+}
+.landing-page .agents-grid .agent-command {
+  width: 100%;
+  min-height: 48px;
+  margin: 16px 0 0;
+}
+.landing-page .agent-demo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 260px;
+  padding-block: 24px;
+}
+.landing-page .agent-demo .agent-figure {
+  width: min(100%, 260px);
+  margin: 0;
+}
+.landing-page .agent-demo .agent-console {
+  width: 100%;
+  min-width: 0;
+}
+.landing-page .agent-demo .agent-console-screen {
+  border: 0;
+  padding: 20px 0;
+}
+.landing-page .agent-demo .agent-console-head {
+  justify-content: center;
+}
+.landing-page .agent-demo .agent-console-head > div:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.landing-page .agent-demo .agent-console-status {
+  justify-content: center;
+}
+@media (max-width: 480px) {
+  .landing-page .agents-grid .agent-card h3 {
+    min-height: 0;
+  }
+  .landing-page .agent-demo .agent-console-head {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  .landing-page .agent-demo .agent-console-head > [data-slot="ai-orb"] {
+    margin: 20px;
+  }
+  .landing-page .agent-demo .agent-console-status {
+    justify-content: center;
+  }
+}
+
+/* Match the docs syntax palette in all landing-page integration examples. */
+.landing-page {
+  --syntax-base: var(--palette-heading);
+  --syntax-comment: var(--palette-muted);
+  --syntax-keyword: var(--palette-active);
+  --syntax-string: var(--palette-success);
+  --syntax-function: var(--palette-motion);
+  --syntax-number: var(--palette-emphasis);
+  --syntax-type: var(--palette-type);
+  --syntax-tag: var(--palette-motion);
+  --syntax-punctuation: var(--palette-copy);
+}
+.landing-page .code-window pre {
+  color: var(--syntax-base);
+}
+.landing-page .code-window pre code {
+  font: inherit;
+  white-space: pre;
+}
+.landing-page .token.comment,
+.landing-page .token.prolog,
+.landing-page .token.doctype,
+.landing-page .token.cdata {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+.landing-page .token.keyword,
+.landing-page .token.atrule,
+.landing-page .token.boolean,
+.landing-page .token.important {
+  color: var(--syntax-keyword);
+}
+.landing-page .token.string,
+.landing-page .token.char,
+.landing-page .token.attr-value,
+.landing-page .token.template-string > .token.string {
+  color: var(--syntax-string);
+}
+.landing-page .token.function,
+.landing-page .token.function-variable,
+.landing-page .token.builtin {
+  color: var(--syntax-function);
+}
+.landing-page .token.number,
+.landing-page .token.constant,
+.landing-page .token.symbol,
+.landing-page .token.regex {
+  color: var(--syntax-number);
+}
+.landing-page .token.class-name,
+.landing-page .token.maybe-class-name,
+.landing-page .token.attr-name {
+  color: var(--syntax-type);
+}
+.landing-page .token.tag,
+.landing-page .token.selector,
+.landing-page .token.property {
+  color: var(--syntax-tag);
+}
+.landing-page .token.operator,
+.landing-page .token.punctuation {
+  color: var(--syntax-punctuation);
+}
+.landing-page .token.interpolation {
+  color: var(--syntax-base);
+}
