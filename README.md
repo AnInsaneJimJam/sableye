@@ -229,10 +229,11 @@ export default function Page() {
 
 ### Screenshots
 
-<!-- TODO: drop the PNGs into docs/readme/screenshots/ with these names -->
+![npx sableye init](docs/readme/screenshots/cli-init.png)
 
-| `npx sableye init` | `npx sableye doctor` |
-|---|---|
+<!-- TODO: add cli-doctor.png, cli-agent-prompt.png, cli-listen.png, cli-create.png and cli-view-key.png to docs/readme/screenshots/ -->
+
+---|---|
 | ![sableye init](docs/readme/screenshots/cli-init.png) | ![sableye doctor](docs/readme/screenshots/cli-doctor.png) |
 | **Agent prompt printed by `init`** | **`npx sableye listen`** |
 | ![agent prompt](docs/readme/screenshots/cli-agent-prompt.png) | ![sableye listen](docs/readme/screenshots/cli-listen.png) |
@@ -262,10 +263,13 @@ export default function Page() {
 
 ### Screenshots
 
-<!-- TODO: drop the PNGs into docs/readme/screenshots/ with these names -->
-
-| Overview | Checkout |
+| Invoices | Payment links |
 |---|---|
+| ![Invoices](docs/readme/screenshots/sandbox-invoices.png) | ![Payment links](docs/readme/screenshots/sandbox-payment-links.png) |
+
+<!-- TODO: add sandbox-overview, sandbox-checkout, sandbox-gasless, sandbox-refunds, sandbox-subscriptions, sandbox-events, sandbox-reconcile, sandbox-dashboard and sandbox-books PNGs to docs/readme/screenshots/ -->
+
+---|---|
 | ![Sandbox overview](docs/readme/screenshots/sandbox-overview.png) | ![Checkout](docs/readme/screenshots/sandbox-checkout.png) |
 | **Gasless checkout** | **Payment links + QR** |
 | ![Gasless](docs/readme/screenshots/sandbox-gasless.png) | ![Payment links](docs/readme/screenshots/sandbox-payment-links.png) |
