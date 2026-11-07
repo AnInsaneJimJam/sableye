@@ -11,8 +11,12 @@
 4. **A refund** creates a `sableye.refund.v1` entity and **patches** the invoice's `status` and `refunded` (`patchEntity`).
 5. **A reorg** that removes a published payment patches its `status` to `reorged`. Records are never deleted.
 6. A `sableye.merchant.v1` profile (the business name) is written once.
-7. **Expiry:** entities are written for 180 days, and a renewal loop calls `extendEntity` on anything within 30 days of expiry.
-8. **Failures** (Arkiv down, rate limit) retry with backoff: 5 s, 30 s, 2 min … up to 6 h.
+7. **Subscriptions:** every 2 minutes the sink compares SubscriptionManager's state (`getSubscription` plus the `Subscribed` / `Charged` events) with what it last published.
+   - A new subscription **creates** a `sableye.subscription.v1` entity, with indexed `subscription_id`, `merchant`, `subscriber`, `status` and `started_at`.
+   - Each charge or cancellation **patches** `cycles_charged`, `total_charged`, `next_charge_at`, `status` and `last_tx_hash`.
+   - Only changes are written. This runs outside the formally verified indexer path.
+8. **Expiry:** entities are written for 180 days, and a renewal loop calls `extendEntity` on anything within 30 days of expiry.
+9. **Failures** (Arkiv down, rate limit) retry with backoff: 5 s, 30 s, 2 min … up to 6 h.
 
 The view key is `keccak256(sign("Sableye view key v1"))`. It can be derived again when the signer reproduces the same signature; protect the key if you store or share it. `npx sableye view-key` prints it for the merchant to share with an accountant.
 
@@ -22,15 +26,33 @@ The view key is `keccak256(sign("Sableye view key v1"))`. It can be derived agai
   1. You enter a merchant address. It runs `select().from(Invoices).ownedBy(merchant).orderBy(desc('paid_at'))`.
   2. For each record, it fetches the Whitechain transaction and checks that the official PaymentProcessor emitted `InvoicePaid` with the same order id, merchant and amount. That's the ✅ / ❌ column.
   3. It totals gross, refunded and net, and exports CSV.
-  4. With a pasted view key or the same merchant wallet signing `Sableye view key v1`, it decrypts the private columns using its own 10-line WebCrypto function, written from `schema.md` and not imported from Sableye.
-  5. Subscription records use `sableye.subscription.v1`; the reader verifies their latest `Charged` receipt on Whitechain.
+  4. **Subscriptions:** it reads `sableye.subscription.v1`, checks each record's `last_tx_hash` for a `Charged` event from the official SubscriptionManager, and shows recurring revenue (MRR) and the total charged.
+  5. **Private fields:** use a pasted view key or connect the same merchant wallet and sign `Sableye view key v1`. The page hashes the signature into the view key and decrypts the private columns with its own WebCrypto function, written from `schema.md` and not imported from Sableye. The signature must reproduce the publisher's signature-derived key.
   6. `pnpm --filter sableye-frontend check:books` fails if this file ever imports `@sableye/*`.
+- **`/sandbox/merchant`** (the client view) marks every invoice and subscription that is already on Arkiv.
 - **`sableye.arkiv.records()`** reads invoice records on the merchant server, including decrypted details when available. It does not return subscriptions.
 - **Subscriptions:** the publisher synchronizes chain snapshots every two minutes by default (`arkiv.subscriptionSyncMs`; 0 disables the timer). `await sableye.arkiv.syncSubscriptions()` queues changed snapshots; the result is a queued count, not a delivery guarantee. `sableye.arkiv.published()` returns local invoice/subscription entity maps. Query subscription records directly using the open schema. Persist the publisher state and outbox and arrange a live worker or scheduled execution.
 
 ## The demo moment
 
 Stop the merchant's server, and Sableye's too. Open `/sandbox/books` (or any static copy of it), and type the merchant's address. The full, verified sales history is still there.
+
+## What it costs (measured on Rabdi, Nov 2026)
+
+`frontend/scripts/arkiv-seed.mjs --costs-only` writes a throwaway invoice-sized record (a short `str` plus a 200-byte `bytes` blob, like an encrypted `private` column) and reads the GLM balance around each call:
+
+| Write | GLM |
+|---|---|
+| `createEntity` (one invoice record) | 0.000110 |
+| `patchEntity` (a refund, or a subscription charge) | 0.000038 |
+| `extendEntity` by 180 days (the renewal) | 0.000234 |
+| **One paid invoice for a year** (create + one patch + one renewal) | **≈ 0.00038** |
+
+A merchant with 10,000 sales a year spends about 3.8 GLM on Arkiv. The sandbox merchant's 9.99 testnet GLM covers roughly 26,000 invoice-years.
+
+## Demo data
+
+`frontend/scripts/arkiv-seed.mjs` creates a realistic history against the live sandbox, the way real customers would. A fresh test buyer pays three invoices, one is partially refunded, and the buyer subscribes (the sandbox keeper charges each cycle). The sandbox server publishes all of it to Arkiv by itself.
 
 ## Setup
 

@@ -39,6 +39,7 @@ import {
   statusTone,
   TxLink,
 } from "./bits";
+import { cadence, duration, PERIODS } from "@/lib/sandbox/plans";
 import { useDemoField, useDemoCodeValues } from "./live-example";
 import { useNow, WalletHint } from "./demos-accept";
 import { type ApiError, post, short, usdt, useApi } from "./use-api";
@@ -293,7 +294,8 @@ type SubStats = {
 };
 
 export function SubscriptionsDemo() {
-  const { data: offer } = useApi<Offer>("/api/sandbox/plan");
+  const [period, setPeriod] = useDemoField<string>("period", "2m");
+  const { data: offer } = useApi<Offer>(`/api/sandbox/plan?period=${period}`);
   const { data: all, reload: reloadAll } = useApi<SubStats>(
     "/api/sandbox/subscriptions",
     10_000,
@@ -304,10 +306,15 @@ export function SubscriptionsDemo() {
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
   const { data: sub, reload } = useApi<Sub>(
-    account ? `/api/sandbox/subscription?payer=${account}` : null,
+    account
+      ? `/api/sandbox/subscription?payer=${account}&period=${period}`
+      : null,
     account ? 5000 : undefined,
   );
-  useDemoCodeValues({ planAmount: offer?.plan.amount ?? "1000000", planInterval: offer?.plan.interval ?? "120" });
+  useDemoCodeValues({
+    planAmount: offer?.plan.amount ?? "1000000",
+    planInterval: offer?.plan.interval ?? "120",
+  });
   const now = useNow();
 
   const connect = async (choose = false) => {
@@ -440,7 +447,7 @@ export function SubscriptionsDemo() {
     <div className="sbx-stack">
       <Panel
         title="Pro plan"
-        hint={`${formatAmount(plan.amount, 6)} USDT every ${Number(plan.interval) / 60} minutes. A demo interval so you can watch renewals.`}
+        hint={`${formatAmount(plan.amount, 6)} USDT ${cadence(Number(plan.interval))}.${Number(plan.interval) <= 600 ? " A demo interval so you can watch renewals." : " The keeper charges each period on-chain."}`}
       >
         {!account ? (
           <Btn onClick={() => void connect()}>Connect wallet</Btn>
@@ -458,8 +465,9 @@ export function SubscriptionsDemo() {
                   <div>
                     <span className="sbx-muted">Next renewal in</span>
                     <b>
-                      {Math.floor(secsLeft / 60)}:
-                      {String(secsLeft % 60).padStart(2, "0")}
+                      {secsLeft >= 3600
+                        ? duration(secsLeft)
+                        : `${Math.floor(secsLeft / 60)}:${String(secsLeft % 60).padStart(2, "0")}`}
                     </b>
                   </div>
                   <div className="sbx-bar">
@@ -518,6 +526,19 @@ export function SubscriptionsDemo() {
               </>
             ) : (
               <div className="sbx-form">
+                <label>
+                  Billing period
+                  <select
+                    value={period}
+                    onChange={(e) => setPeriod(e.target.value)}
+                  >
+                    {PERIODS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label>
                   Spending cap
                   <select
@@ -753,10 +774,7 @@ function EmailsPanel({ now }: { now?: number }) {
   const { data } = useApi<EmailLog>("/api/sandbox/emails", 5000);
   if (!data) return null;
   return (
-    <Panel
-      title="Emails sent"
-      hint="Delivery status and retries."
-    >
+    <Panel title="Emails sent" hint="Delivery status and retries.">
       {!data.enabled ? (
         <p className="sbx-muted">
           Email isn't configured on this server. Run{" "}
@@ -983,7 +1001,8 @@ function RevenueChart({
       action={
         <div className="sbx-seg" role="group" aria-label="Period">
           {(["day", "week", "month"] as const).map((b) => (
-            <SandboxButton size="default"
+            <SandboxButton
+              size="default"
               key={b}
               type="button"
               aria-pressed={bucket === b}
@@ -1219,24 +1238,20 @@ export function DevelopersDemo() {
       <div className="sbx-tiles">
         <div className="sbx-tile">
           <b>Webhooks on localhost</b>
-          <code>npx sableye listen --forward-to localhost:3000/api/webhook</code>
-          <span>
-            Forward signed payment events to your dev server.
-          </span>
+          <code>
+            npx sableye listen --forward-to localhost:3000/api/webhook
+          </code>
+          <span>Forward signed payment events to your dev server.</span>
         </div>
         <div className="sbx-tile">
           <b>First-time setup</b>
           <code>npx sableye init</code>
-          <span>
-            Configure your merchant account and check your setup.
-          </span>
+          <span>Configure your merchant account and check your setup.</span>
         </div>
         <div className="sbx-tile">
           <b>Scaffold a store</b>
           <code>npx sableye create --name my-store</code>
-          <span>
-            Start with checkout and server routes ready.
-          </span>
+          <span>Start with checkout and server routes ready.</span>
         </div>
         <div className="sbx-tile">
           <b>MCP server for agents</b>
@@ -1248,9 +1263,7 @@ export function DevelopersDemo() {
         <div className="sbx-tile">
           <b>Agent Skill + llms.txt</b>
           <code>skills/sableye</code>
-          <span>
-            Give your coding agent the integration guide.
-          </span>
+          <span>Give your coding agent the integration guide.</span>
         </div>
       </div>
     </div>

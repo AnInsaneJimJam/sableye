@@ -6,5 +6,9 @@ import { merchant } from "@/lib/sandbox/merchant";
 export const GET = (req: Request) =>
   handle(async () => {
     await connection();
-    return json(await merchant().sableye.verifyPayment(new URL(req.url).searchParams.get("order") ?? ""));
+    return json(
+      await merchant().sableye.verifyPayment(
+        new URL(req.url).searchParams.get("order") ?? "",
+      ),
+    );
   });

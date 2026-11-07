@@ -4,13 +4,16 @@
 import {
   BookOpen,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Circle,
   FileText,
   RotateCcw,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { cadence, duration } from "@/lib/sandbox/plans";
 import {
   Btn,
   ErrorNote,
@@ -20,6 +23,7 @@ import {
   statusTone,
   TxLink,
 } from "./bits";
+import { useNow } from "./demos-accept";
 import { type ApiError, post, short, usdt, useApi } from "./use-api";
 
 type Invoice = {
@@ -40,18 +44,40 @@ type Invoice = {
   confirmation?: string;
   onArkiv: boolean;
 };
+type Payment = {
+  result: "charged" | "failed";
+  amount?: string;
+  totalCharged?: string;
+  txHash: string;
+  at: string;
+};
 type Sub = {
   subId: string;
   status: string;
   payer: string;
-  amount: string; // base units
-  interval: number;
+  amount: string; // base units, per period
+  interval: number; // seconds
+  cap: string; // base units the customer approved in total
   charged: string; // base units
+  failedCharges: number;
   cycles: number;
   startedAt: string;
   nextChargeAt: string;
   onArkiv: boolean;
+  payments: Payment[]; // newest first
 };
+
+/** Billing status the way billing dashboards show it: a subscription whose cap can't cover another period has ended. */
+const billingStatus = (
+  s: Sub,
+): { label: string; tone: "ok" | "warn" | "bad" | "neutral" } =>
+  s.status === "cancelled"
+    ? { label: "Canceled", tone: "bad" }
+    : s.status === "past_due"
+      ? { label: "Past due", tone: "warn" }
+      : BigInt(s.charged) + BigInt(s.amount) > BigInt(s.cap)
+        ? { label: "Ended · cap reached", tone: "neutral" }
+        : { label: "Active", tone: "ok" };
 type View = {
   invoices: Invoice[];
   subscriptions: Sub[];
@@ -69,14 +95,6 @@ const ago = (ms: number) => {
         ? `${Math.round(s / 3600)} h ago`
         : new Date(ms).toLocaleDateString();
 };
-const every = (s: number) =>
-  s >= 86_400
-    ? `${Math.round(s / 86_400)} days`
-    : s >= 3600
-      ? `${Math.round(s / 3600)} h`
-      : s >= 60
-        ? `${Math.round(s / 60)} min`
-        : `${s} s`;
 
 function OnArkiv({ on }: { on: boolean }) {
   return on ? (
@@ -107,6 +125,8 @@ export function ClientViewDemo() {
   const [error, setError] = useState<ApiError>();
   const [ok, setOk] = useState<{ text: string; tx?: string }>();
   const [partial, setPartial] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState<string>();
+  const now = useNow() ?? Date.now();
 
   const act = async (
     key: string,
@@ -140,9 +160,16 @@ export function ClientViewDemo() {
     (a, i) => a + BigInt(i.refunded ?? "0"),
     BigInt(0),
   );
-  const active = data.subscriptions.filter(
-    (s) => s.status === "active" || s.status === "past_due",
+  const subs = data.subscriptions;
+  const active = subs.filter((s) =>
+    ["Active", "Past due"].includes(billingStatus(s).label),
   );
+  const recurring = subs.reduce((a, s) => a + BigInt(s.charged), BigInt(0));
+  const charges = subs.reduce(
+    (a, s) => a + s.payments.filter((p) => p.result === "charged").length,
+    0,
+  );
+  const churned = subs.filter((s) => s.status === "cancelled").length;
   const mrr = active.reduce(
     (a, s) =>
       a +
@@ -163,12 +190,14 @@ export function ClientViewDemo() {
       >
         <div className="sbx-stats">
           <div className="sbx-stat">
-            <b>{usdt(gross - refunded)}</b>
-            <span>Net revenue (USDT)</span>
+            <b>{usdt(gross + recurring - refunded)}</b>
+            <span>Net volume (USDT)</span>
           </div>
           <div className="sbx-stat">
-            <b>{paid.length}</b>
-            <span>Payments</span>
+            <b>{paid.length + charges}</b>
+            <span>
+              Payments ({paid.length} one-time, {charges} recurring)
+            </span>
           </div>
           <div className="sbx-stat">
             <b>{usdt(refunded)}</b>
@@ -207,8 +236,8 @@ export function ClientViewDemo() {
       <ErrorNote error={error} />
 
       <Panel
-        title="Invoices"
-        hint="Newest first. Refunds go back to the payer from the merchant's wallet, capped at what was paid."
+        title="One-time payments"
+        hint="Invoices this merchant issued, newest first. Refunds go back to the payer from the merchant's wallet, capped at what was paid."
       >
         {inv.length === 0 ? (
           <p className="sbx-muted">
@@ -383,9 +412,35 @@ export function ClientViewDemo() {
 
       <Panel
         title="Subscriptions"
-        hint="Each customer approved a spending cap; the merchant's keeper charges every cycle on-chain."
+        hint="Recurring billing. Each customer approved a spending cap once; the merchant's keeper charges every period on-chain, straight into the merchant's wallet."
       >
-        {data.subscriptions.length === 0 ? (
+        <div className="sbx-stats">
+          <div className="sbx-stat">
+            <b>{usdt(mrr)}</b>
+            <span>MRR (USDT)</span>
+          </div>
+          <div className="sbx-stat">
+            <b>{active.length}</b>
+            <span>Active subscribers</span>
+          </div>
+          <div className="sbx-stat">
+            <b>{subs.filter((s) => s.status === "past_due").length}</b>
+            <span>Past due</span>
+          </div>
+          <div className="sbx-stat">
+            <b>
+              {subs.length
+                ? `${Math.round((100 * churned) / subs.length)}%`
+                : "–"}
+            </b>
+            <span>Churn ({churned} canceled)</span>
+          </div>
+          <div className="sbx-stat">
+            <b>{usdt(recurring)}</b>
+            <span>Collected (USDT, {charges} charges)</span>
+          </div>
+        </div>
+        {subs.length === 0 ? (
           <p className="sbx-muted">
             No subscribers yet. Subscribe from the Subscriptions page with a
             test wallet.
@@ -395,44 +450,135 @@ export function ClientViewDemo() {
             <table className="sbx-table">
               <thead>
                 <tr>
-                  <th>Subscriber</th>
+                  <th>Customer</th>
                   <th>Plan</th>
-                  <th>Charged</th>
-                  <th>Next charge</th>
                   <th>Status</th>
+                  <th>Next payment</th>
+                  <th>Collected</th>
+                  <th>Started</th>
                   <th>Records</th>
+                  <th aria-label="Payments" />
                 </tr>
               </thead>
               <tbody>
-                {data.subscriptions.map((s) => {
+                {subs.map((s) => {
+                  const st = billingStatus(s);
                   const next = new Date(s.nextChargeAt).getTime();
+                  const pct = Math.min(
+                    100,
+                    (100 * Number(s.charged)) / Math.max(1, Number(s.cap)),
+                  );
+                  const expanded = open === s.subId;
                   return (
-                    <tr key={s.subId}>
-                      <td>
-                        <code title={s.payer}>{short(s.payer)}</code>
-                      </td>
-                      <td>
-                        {usdt(s.amount)} USDT every {every(s.interval)}
-                      </td>
-                      <td>
-                        {s.cycles} × · {usdt(s.charged)} USDT
-                      </td>
-                      <td>
-                        {s.status === "cancelled"
-                          ? "–"
-                          : next > Date.now()
-                            ? `in ${every(Math.round((next - Date.now()) / 1000))}`
-                            : "due now"}
-                      </td>
-                      <td>
-                        <Pill tone={statusTone(s.status)}>
-                          {s.status.replace("_", " ")}
-                        </Pill>
-                      </td>
-                      <td>
-                        <OnArkiv on={s.onArkiv} />
-                      </td>
-                    </tr>
+                    <Fragment key={s.subId}>
+                      <tr>
+                        <td>
+                          <code title={s.payer}>{short(s.payer)}</code>
+                        </td>
+                        <td>
+                          <b>{usdt(s.amount)} USDT</b>
+                          <div className="sbx-muted">{cadence(s.interval)}</div>
+                        </td>
+                        <td>
+                          <Pill tone={st.tone}>{st.label}</Pill>
+                          {s.failedCharges > 0 && (
+                            <div className="sbx-muted">
+                              {s.failedCharges} failed
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {st.label === "Active" || st.label === "Past due" ? (
+                            <>
+                              {usdt(s.amount)} USDT
+                              <div className="sbx-muted">
+                                {next > now
+                                  ? `in ${duration((next - now) / 1000)}`
+                                  : "due now"}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="sbx-muted">–</span>
+                          )}
+                        </td>
+                        <td style={{ minWidth: 130 }}>
+                          {usdt(s.charged)} / {usdt(s.cap)} USDT
+                          <div
+                            className="sbx-bar"
+                            title={`${s.cycles} payments of the approved cap`}
+                          >
+                            <span style={{ width: `${pct}%` }} />
+                          </div>
+                        </td>
+                        <td title={new Date(s.startedAt).toLocaleString()}>
+                          {ago(new Date(s.startedAt).getTime())}
+                        </td>
+                        <td>
+                          <OnArkiv on={s.onArkiv} />
+                        </td>
+                        <td>
+                          <Btn
+                            variant="ghost"
+                            aria-expanded={expanded}
+                            onClick={() =>
+                              setOpen(expanded ? undefined : s.subId)
+                            }
+                          >
+                            {expanded ? (
+                              <ChevronUp size={14} />
+                            ) : (
+                              <ChevronDown size={14} />
+                            )}{" "}
+                            {s.payments.length} payments
+                          </Btn>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr>
+                          <td colSpan={8}>
+                            <table
+                              className="sbx-table"
+                              style={{ margin: "4px 0 8px" }}
+                            >
+                              <tbody>
+                                {s.payments.map((p) => (
+                                  <tr key={p.txHash}>
+                                    <td>{new Date(p.at).toLocaleString()}</td>
+                                    <td>
+                                      {p.result === "charged"
+                                        ? `${usdt(p.amount)} USDT`
+                                        : "–"}
+                                    </td>
+                                    <td>
+                                      <Pill
+                                        tone={
+                                          p.result === "charged" ? "ok" : "bad"
+                                        }
+                                      >
+                                        {p.result === "charged"
+                                          ? "Succeeded"
+                                          : "Failed"}
+                                      </Pill>
+                                    </td>
+                                    <td>
+                                      {p.totalCharged ? (
+                                        <span className="sbx-muted">
+                                          {usdt(p.totalCharged)} USDT collected
+                                          so far
+                                        </span>
+                                      ) : null}
+                                    </td>
+                                    <td>
+                                      <TxLink hash={p.txHash} label="tx" />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>

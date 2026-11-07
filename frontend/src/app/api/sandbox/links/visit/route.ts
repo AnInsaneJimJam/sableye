@@ -6,5 +6,9 @@ export const POST = (req: Request) =>
   handle(async () => {
     const { url } = (await req.json()) as { url: string };
     const { invoice } = await merchant().sableye.paymentLinks.open(url);
-    return json({ orderRef: invoice.orderRef, checkoutUrl: invoice.checkoutUrl, signature: invoice.signature });
+    return json({
+      orderRef: invoice.orderRef,
+      checkoutUrl: invoice.checkoutUrl,
+      signature: invoice.signature,
+    });
   });

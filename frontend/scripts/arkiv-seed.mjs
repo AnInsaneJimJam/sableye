@@ -10,7 +10,7 @@
 // merchant, so the real cost is gas.
 import { createPublicClient as arkivPublic, createWalletClient as arkivWallet, ExpirationTime } from "@arkiv-network/sdk";
 import { rabdi } from "@arkiv-network/sdk/chains";
-import { defineSchema, str } from "@arkiv-network/sdk/schema";
+import { bytes, defineSchema, str } from "@arkiv-network/sdk/schema";
 import { networks, normalizeSignedInvoice, paymentProcessorAbi, subscriptionManagerAbi } from "@sableye/server";
 import { parseArgs } from "node:util";
 import { createPublicClient, createWalletClient, erc20Abi, formatEther, formatUnits, http, parseEther, parseUnits } from "viem";
@@ -78,7 +78,7 @@ async function costs() {
   const arkivChain = rabdi({ accessKey: process.env.ARKIV_ACCESS_KEY });
   const read = arkivPublic({ chain: arkivChain, transport: http() });
   const write = arkivWallet({ chain: arkivChain, transport: http(), account: merchant });
-  const Probe = defineSchema("sableye.costprobe.v1", { note: str() });
+  const Probe = defineSchema("sableye.costprobe.v1", { note: str(), blob: bytes() });
   const balance = () => read.getBalance({ address: merchant.address });
   const measure = async (what, fn) => {
     const before = await balance();
@@ -89,7 +89,8 @@ async function costs() {
   };
   let key;
   const create = await measure("create (≈ an invoice record)", async () => {
-    key = (await write.createEntity(Probe, { note: str("Sableye cost probe: an invoice-sized record ".repeat(6)) }, { expiration: ExpirationTime.fromDays(1) })).entityKey;
+    // ~200 bytes, like an invoice record's encrypted private column; str columns are capped at 128 bytes.
+    key = (await write.createEntity(Probe, { note: str("Sableye cost probe"), blob: bytes(crypto.getRandomValues(new Uint8Array(200))) }, { expiration: ExpirationTime.fromDays(1) })).entityKey;
   });
   const patch = await measure("patch (a refund / a charge)", () => write.patchEntity(Probe, key, { set: { note: str("patched") } }));
   const extend = await measure("extend by 180 days", () => write.extendEntity({ entityKey: key, expiration: ExpirationTime.fromDays(180) }));

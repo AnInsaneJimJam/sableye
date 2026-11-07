@@ -214,6 +214,7 @@ export class Sableye {
   private readonly client: PublicClient
   private readonly checkoutUrl: string
   private readonly payout?: Address
+  private readonly blockTimes = new Map<bigint, Date>()
   /** The RPC URL in use (undefined = the network's public default). */
   readonly rpcUrl?: string
   private readonly relayUrl?: string
@@ -717,18 +718,42 @@ export class Sableye {
       const subs = await this.subscriptions.list(fromBlock)
       const [charged, failed] = await Promise.all([this.eventsInChunks('Charged', fromBlock), this.eventsInChunks('ChargeFailed', fromBlock)])
       const renewals = charged.length - subs.length // the first cycle is charged on subscribe, not a renewal
+      // A subscription whose cap can't cover another period has ended: it brings no recurring revenue.
+      const ended = (x: (typeof subs)[number]) => x.charged + x.amount > x.cap
       const mrr: Record<string, bigint> = {}
       for (const x of subs) {
-        if (x.status !== 'active' && x.status !== 'past_due') continue
+        if ((x.status !== 'active' && x.status !== 'past_due') || ended(x)) continue
         mrr[x.token] = (mrr[x.token] ?? 0n) + (x.amount * 2_592_000n) / BigInt(x.interval)
       }
-      const count = (st: string) => subs.filter((x) => x.status === st).length
+      const count = (st: string) => subs.filter((x) => x.status === st && !ended(x)).length
       const attempts = Math.max(0, renewals) + failed.length
       return {
-        total: subs.length, active: count('active'), pastDue: count('past_due'), cancelled: count('cancelled'),
-        mrr, churnRate: subs.length ? count('cancelled') / subs.length : 0,
+        total: subs.length, active: count('active'), pastDue: count('past_due'), cancelled: subs.filter((x) => x.status === 'cancelled').length,
+        ended: subs.filter((x) => x.status !== 'cancelled' && ended(x)).length,
+        mrr, churnRate: subs.length ? subs.filter((x) => x.status === 'cancelled').length / subs.length : 0,
         renewals: Math.max(0, renewals), failedCharges: failed.length, failedChargeRate: attempts ? failed.length / attempts : 0,
       }
+    },
+
+    /**
+     * Payment history: every successful (`charged`) and failed (`failed`) charge to this merchant's subscriptions,
+     * oldest first, with block time and transaction. Pass `subId` for one subscription.
+     */
+    history: async (opts: { subId?: Hex; fromBlock?: bigint } = {}) => {
+      const from = opts.fromBlock ?? this.network.deployBlock ?? 0n
+      const [ok, bad] = await Promise.all([this.eventsInChunks('Charged', from), this.eventsInChunks('ChargeFailed', from)])
+      const want = (id?: Hex) => !opts.subId || id?.toLowerCase() === opts.subId.toLowerCase()
+      const logs = [...ok.map((l) => ({ l, result: 'charged' as const })), ...bad.map((l) => ({ l, result: 'failed' as const }))].filter(({ l }) => want(l.args.subId))
+      const times = this.blockTimes // a block's time never changes: fetch each one once per client
+      for (const b of new Set(logs.map(({ l }) => l.blockNumber!))) {
+        if (!times.has(b)) times.set(b, new Date(Number((await this.client.getBlock({ blockNumber: b })).timestamp) * 1000))
+      }
+      return logs
+        .map(({ l, result }) => {
+          const a = l.args as { subId?: Hex; payer?: Address; amount?: bigint; totalCharged?: bigint }
+          return { subId: a.subId!, payer: a.payer!, result, amount: a.amount, totalCharged: a.totalCharged, txHash: l.transactionHash!, block: l.blockNumber!, at: times.get(l.blockNumber!)! }
+        })
+        .sort((x, y) => Number(x.block - y.block))
     },
 
     /** Cancel on-chain as the merchant. */

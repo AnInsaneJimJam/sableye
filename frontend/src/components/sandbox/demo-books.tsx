@@ -101,19 +101,47 @@ const VIEW_KEY_MESSAGE = "Sableye view key v1";
 type Eip1193 = {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
 };
-async function viewKeyFromWallet(merchant: string): Promise<Hex> {
-  const eth = (window as unknown as { ethereum?: Eip1193 }).ethereum;
+/** The browser wallet: MetaMask via EIP-6963 when several wallets are installed, else window.ethereum. */
+async function findWallet(): Promise<Eip1193 | undefined> {
+  const found: { info: { rdns: string }; provider: Eip1193 }[] = [];
+  const onAnnounce = (e: Event) => found.push((e as CustomEvent).detail);
+  window.addEventListener("eip6963:announceProvider", onAnnounce);
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  await new Promise((r) => setTimeout(r, 300));
+  window.removeEventListener("eip6963:announceProvider", onAnnounce);
+  return (
+    (found.find((w) => w.info.rdns === "io.metamask") ?? found[0])?.provider ??
+    (window as unknown as { ethereum?: Eip1193 }).ethereum
+  );
+}
+async function viewKeyFromWallet(
+  merchant: string,
+  onStep: (s: string) => void,
+): Promise<Hex> {
+  const eth = await findWallet();
   if (!eth)
     throw new Error(
       "No browser wallet found. Install MetaMask, or paste the view key instead.",
     );
-  const [account] = (await eth.request({
+  onStep("Choose the merchant's account in your wallet…");
+  // Let the merchant pick the right account even if another one is connected.
+  await eth
+    .request({
+      method: "wallet_requestPermissions",
+      params: [{ eth_accounts: {} }],
+    })
+    .catch(() => undefined);
+  const accounts = (await eth.request({
     method: "eth_requestAccounts",
   })) as string[];
-  if (account?.toLowerCase() !== merchant.toLowerCase())
+  const account = accounts.find(
+    (a) => a.toLowerCase() === merchant.toLowerCase(),
+  );
+  if (!account)
     throw new Error(
-      `Connect the merchant's wallet (${merchant.slice(0, 8)}…). You're connected as ${account?.slice(0, 8)}…`,
+      `Only the merchant's wallet (${merchant.slice(0, 6)}…${merchant.slice(-4)}) can unlock these. Your wallet shared ${accounts.map((a) => `${a.slice(0, 6)}…${a.slice(-4)}`).join(", ") || "no account"}. Import the merchant key into your wallet, or paste the view key (npx sableye view-key).`,
     );
+  onStep("Sign the view-key message in your wallet (free, no transaction)…");
   const message = `0x${Array.from(new TextEncoder().encode(VIEW_KEY_MESSAGE), (b) => b.toString(16).padStart(2, "0")).join("")}`;
   const signature = (await eth.request({
     method: "personal_sign",
@@ -231,6 +259,7 @@ export function BooksDemo({
   useDemoCodeValues({ hasViewKey: viewKey ? 1 : 0 });
   const [rows, setRows] = useState<Row[]>();
   const [subs, setSubs] = useState<SubRow[]>();
+  const [step, setStep] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -423,17 +452,29 @@ export function BooksDemo({
               try {
                 if (!isAddress(merchant))
                   throw new Error("Enter the merchant's wallet address (0x…).");
-                const key = await viewKeyFromWallet(merchant);
+                const key = await viewKeyFromWallet(merchant, setStep);
+                setStep(undefined);
                 setViewKey(key);
                 await load(key);
               } catch (e) {
-                setError((e as Error).message);
+                setStep(undefined);
+                const err = e as { code?: number; message?: string };
+                setError(
+                  err.code === 4001
+                    ? "You declined in the wallet. Nothing was unlocked."
+                    : (err.message ?? String(e)),
+                );
               }
             }}
           >
             <Wallet size={15} /> I'm the merchant: unlock with my wallet
           </Btn>
         </div>
+        {step && (
+          <p className="sbx-hint" role="status">
+            {step}
+          </p>
+        )}
         {error && (
           <p className="sbx-hint" role="alert">
             {error}

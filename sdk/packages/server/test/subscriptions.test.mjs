@@ -192,3 +192,27 @@ test('Arkiv: a real subscription is published from the chain, and each renewal a
   assert.equal(val(patches[0].set.total_charged), 4_000_000n)
   assert.equal(val(patches.at(-1).set.status), 'cancelled')
 })
+
+test('history: every charge and failed charge, oldest first, with time and tx', async () => {
+  const all = await sableye.subscriptions.history()
+  assert.ok(all.length >= 3)
+  assert.ok(all.every((h, i) => i === 0 || h.block >= all[i - 1].block))
+  assert.ok(all.some((h) => h.result === 'failed'), 'the earlier test produced a failed charge')
+  const one = all.find((h) => h.result === 'charged')
+  assert.match(one.txHash, /^0x[0-9a-f]{64}$/)
+  assert.ok(one.at instanceof Date && one.amount > 0n)
+  const mine = await sableye.subscriptions.history({ subId: one.subId })
+  assert.ok(mine.length && mine.every((h) => h.subId.toLowerCase() === one.subId.toLowerCase()))
+})
+
+test('stats: a subscription that used up its cap has ended: not active, no MRR', async () => {
+  const offer = await sableye.subscriptions.createPlan({ planId: 'capped_plan', amount: '1', interval: 120 })
+  const w = await customer(5_000_000n)
+  await mined(await w.writeContract({ address: sm, abi: subscriptionManagerAbi, functionName: 'subscribe', args: [offer.plan, offer.signature, 1_000_000n] })) // cap = one period
+  const st = await sableye.subscriptions.stats()
+  const subId = await sableye.subscriptions.id('capped_plan', w.account.address)
+  assert.equal((await sableye.subscriptions.get(subId)).status, 'active', 'on-chain it is still "active"')
+  assert.ok(st.ended >= 1)
+  const others = (await sableye.subscriptions.list()).filter((x) => x.subId !== subId && x.status !== 'cancelled' && x.charged + x.amount <= x.cap)
+  assert.equal(st.active + st.pastDue, others.length, 'the capped one is not counted as active')
+})

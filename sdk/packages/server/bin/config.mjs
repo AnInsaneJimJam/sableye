@@ -85,7 +85,7 @@ export function setupLines(c) {
   if (f.walletConnect) lines.push('WalletConnect: on. Pass `walletConnectProjectId={process.env.NEXT_PUBLIC_REOWN_PROJECT_ID}` (or your framework\'s public env) to `<Checkout>` (docs: checkout/walletconnect.md).')
   if (c.emails !== 'none') lines.push(`Emails: on (${c.emails === 'resend' ? 'Resend' : 'SMTP'}), sent by Sableye. If the app already knows the customer's email, pass \`customer: { email, name }\` to \`invoices.create\` for the invoice and receipt; the merchant's "you got paid" notice needs nothing. Don't add an email field just for this (docs: emails.md).`)
   if (c.webhooks) lines.push(`Webhooks: on. Route \`${c.webhooks.path ?? '/api/sableye/webhook'}\` verifies the signature with \`verifyWebhook(body, header, process.env.SABLEYE_WEBHOOK_SECRET)\` before acting (docs: webhooks.md).`)
-  if (c.arkiv) lines.push('Arkiv records: on. Published automatically by the indexer; no code needed (docs: arkiv.md).')
+  if (c.arkiv) lines.push('Arkiv records: on. Paid invoices, refunds and subscriptions are published automatically, owned by the merchant\'s wallet. If the app already has a dashboard/admin page, connect it: `sableye.arkiv.records()` (decrypted paid invoices) and `sableye.arkiv.published()` (what\'s on Arkiv) on the server; don\'t create a dashboard just for this (docs: arkiv.md, skill recipe).')
   return lines
 }
 
