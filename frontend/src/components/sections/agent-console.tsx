@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AI_ORB_LABELS, AiOrb, type AiOrbState } from "@/components/ui/ai-orb";
-import { GlassButton } from "@/components/ui/glass-button";
 
 /** One example request per MCP tool. The figures are illustrative, not live data. */
 const TURNS = {
@@ -25,7 +24,6 @@ const TURNS = {
 } as const;
 
 export type McpTool = keyof typeof TURNS;
-const TOOLS = Object.keys(TURNS) as McpTool[];
 
 /** The turn, step by step: state and how long it holds, in ms. */
 const STEPS: [AiOrbState, number][] = [
@@ -36,7 +34,7 @@ const STEPS: [AiOrbState, number][] = [
   ["streaming", 1000],
 ];
 
-/** An MCP client running one Sableye tool. Hover or press a tool to watch the agent use it. */
+/** Play an illustrative billing conversation when it enters the viewport. */
 export function AgentConsole() {
   const [tool, setTool] = useState<McpTool>("create_invoice");
   const [state, setState] = useState<AiOrbState>("idle");
@@ -118,28 +116,6 @@ export function AgentConsole() {
           </div>
         </div>
       </div>
-      <p className="agent-console-hint">Interactive example</p>
-      <ul className="agent-tools" aria-label="MCP tools">
-        {TOOLS.map((t) => (
-          <li key={t}>
-            <GlassButton
-              size="sm"
-              className="agent-tool-button"
-              contentClassName="agent-tool-label"
-              data-active={t === tool || undefined}
-              aria-pressed={t === tool}
-              onMouseEnter={() => run(t)}
-              onFocus={() => run(t)}
-              onClick={() => {
-                running.current = null;
-                run(t);
-              }}
-            >
-              {t}
-            </GlassButton>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

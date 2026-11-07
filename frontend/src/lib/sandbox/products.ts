@@ -463,8 +463,7 @@ const { mrr, churnRate, failedChargeRate, active } =
     slug: "merchant",
     group: "Operate",
     title: "Client view",
-    tagline:
-      "Everything your business issued: invoices, refunds and subscriptions, in one place.",
+    tagline: "Payments and subscriptions, in your hands.",
     summary:
       "The merchant's own view. Every invoice the business issued, with its status read from Whitechain (open, paid, partially refunded, refunded, cancelled): refund it in full or in part, cancel an unpaid one, download the receipt. Below, every subscription with the cycles charged and the next charge. Each record shows whether it's on Arkiv, owned by the merchant's wallet.",
     stripe: {
@@ -503,7 +502,7 @@ const subs = await stripe.subscriptions.list()`,
     slug: "books",
     group: "Operate",
     title: "Books on Arkiv",
-    tagline: "Your sales records, owned by your wallet. Readable without us.",
+    tagline: "Your records. Your wallet. Read them anywhere.",
     summary:
       "Every paid invoice and refund is published to Arkiv, signed by your merchant key, so your wallet owns the records. Any app (your accountant's, a tax tool, a lender) can read them without our server or our permission. Amounts and tx hashes are public, because they already are on-chain; order references, items and customer details are encrypted with your view key.",
     stripe: {

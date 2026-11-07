@@ -13,9 +13,13 @@ type Segment = { text: string; types: string[] };
 export function HighlightedCode({
   code,
   shell = false,
+  inline = false,
+  className = "",
 }: {
   code: string;
   shell?: boolean;
+  inline?: boolean;
+  className?: string;
 }) {
   const lines: Segment[][] = [[]];
   function append(token: string | Prism.Token, types: string[] = []) {
@@ -34,29 +38,40 @@ export function HighlightedCode({
     Prism.languages[shell ? "bash" : "tsx"],
   ))
     append(token);
+  const renderLine = (line: Segment[]) =>
+    line.length
+      ? line.map((part, i) => (
+          <span
+            key={i}
+            className={
+              part.types.length ? `token ${part.types.join(" ")}` : undefined
+            }
+          >
+            {part.text}
+          </span>
+        ))
+      : " ";
+  const language = `language-${shell ? "bash" : "tsx"} ${className}`.trim();
+  if (inline) {
+    return (
+      <code className={language}>
+        {lines.map((line, index) => (
+          <span key={index}>
+            {index > 0 && "\n"}
+            {renderLine(line)}
+          </span>
+        ))}
+      </code>
+    );
+  }
   return (
-    <code className={`language-${shell ? "bash" : "tsx"}`}>
+    <code className={language}>
       {lines.map((line, index) => (
         <span className="code-line" key={index}>
           <span className="line-number" aria-hidden="true">
             {index + 1}
           </span>
-          <span data-code-line>
-            {line.length
-              ? line.map((part, i) => (
-                  <span
-                    key={i}
-                    className={
-                      part.types.length
-                        ? `token ${part.types.join(" ")}`
-                        : undefined
-                    }
-                  >
-                    {part.text}
-                  </span>
-                ))
-              : " "}
-          </span>
+          <span data-code-line>{renderLine(line)}</span>
         </span>
       ))}
     </code>

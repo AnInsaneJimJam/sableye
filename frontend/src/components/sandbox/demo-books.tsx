@@ -404,33 +404,32 @@ export function BooksDemo({
   };
 
   return (
-    <div className="sbx-stack">
-      <Panel
-        title="Open a merchant's books"
-        hint="Read wallet-owned records directly from Arkiv."
-      >
-        <div className="sbx-form">
-          <label>
-            Merchant wallet
-            <input
-              value={merchant}
-              onChange={(e) => setMerchant(e.target.value.trim())}
-              placeholder="0x…"
-              spellCheck={false}
-            />
-          </label>
-          {/* Convenience only: looks up the sandbox merchant's ADDRESS. The books themselves come from Arkiv. */}
-          <Btn
-            variant="ghost"
-            onClick={async () =>
-              setMerchant(
-                (await (await fetch("/api/sandbox/merchant")).json())
-                  .merchant ?? "",
-              )
-            }
-          >
-            Use the sandbox merchant
-          </Btn>
+    <div className="sbx-stack sbx-records sbx-books-view">
+      <Panel title="Open books">
+        <div className="sbx-form sbx-books-form">
+          <div className="sbx-books-merchant">
+            <label>
+              Merchant wallet
+              <input
+                value={merchant}
+                onChange={(e) => setMerchant(e.target.value.trim())}
+                placeholder="0x…"
+                spellCheck={false}
+              />
+            </label>
+            {/* Convenience only: looks up the sandbox merchant's ADDRESS. The books themselves come from Arkiv. */}
+            <Btn
+              variant="ghost"
+              onClick={async () =>
+                setMerchant(
+                  (await (await fetch("/api/sandbox/merchant")).json())
+                    .merchant ?? "",
+                )
+              }
+            >
+              Use sandbox merchant
+            </Btn>
+          </div>
           <label>
             View key (optional)
             <input
@@ -441,34 +440,39 @@ export function BooksDemo({
               type="password"
             />
           </label>
-          <Btn busy={busy} onClick={() => load()}>
-            <BookOpen size={15} /> Load books
-          </Btn>
-          {/* The merchant doesn't paste anything: their wallet signs the view-key message and the key is derived here. */}
-          <Btn
-            variant="ghost"
-            onClick={async () => {
-              setError(undefined);
-              try {
-                if (!isAddress(merchant))
-                  throw new Error("Enter the merchant's wallet address (0x…).");
-                const key = await viewKeyFromWallet(merchant, setStep);
-                setStep(undefined);
-                setViewKey(key);
-                await load(key);
-              } catch (e) {
-                setStep(undefined);
-                const err = e as { code?: number; message?: string };
-                setError(
-                  err.code === 4001
-                    ? "You declined in the wallet. Nothing was unlocked."
-                    : (err.message ?? String(e)),
-                );
-              }
-            }}
-          >
-            <Wallet size={15} /> I'm the merchant: unlock with my wallet
-          </Btn>
+          <div className="sbx-books-actions">
+            <Btn busy={busy} onClick={() => load()}>
+              <BookOpen size={15} /> Load books
+            </Btn>
+            {/* The merchant doesn't paste anything: their wallet signs the view-key message and the key is derived here. */}
+            <Btn
+              variant="ghost"
+              title="Sign a message with the merchant wallet. No transaction or approval."
+              onClick={async () => {
+                setError(undefined);
+                try {
+                  if (!isAddress(merchant))
+                    throw new Error(
+                      "Enter the merchant's wallet address (0x…).",
+                    );
+                  const key = await viewKeyFromWallet(merchant, setStep);
+                  setStep(undefined);
+                  setViewKey(key);
+                  await load(key);
+                } catch (e) {
+                  setStep(undefined);
+                  const err = e as { code?: number; message?: string };
+                  setError(
+                    err.code === 4001
+                      ? "You declined in the wallet. Nothing was unlocked."
+                      : (err.message ?? String(e)),
+                  );
+                }
+              }}
+            >
+              <Wallet size={15} /> Unlock with wallet
+            </Btn>
+          </div>
         </div>
         {step && (
           <p className="sbx-hint" role="status">
@@ -483,8 +487,8 @@ export function BooksDemo({
       </Panel>
       {rows && (
         <Panel
-          title={`${rows.length} record${rows.length === 1 ? "" : "s"} on Arkiv`}
-          hint="Only records verified on Whitechain count toward totals."
+          title="Payments"
+          hint={`${counted.length} of ${rows.length} records verified on Whitechain.`}
           action={
             rows.length > 0 && (
               <Btn variant="ghost" onClick={csv}>
@@ -498,7 +502,7 @@ export function BooksDemo({
               ["Gross", `${usdt(gross)} USDT`],
               ["Refunded", `${usdt(refunded)} USDT`],
               ["Net", `${usdt(gross - refunded)} USDT`],
-              ["Verified on Whitechain", `${counted.length} of ${rows.length}`],
+              ["Verified records", `${counted.length} of ${rows.length}`],
             ]}
           />
           {rows.length === 0 ? (
@@ -507,84 +511,95 @@ export function BooksDemo({
               safe head (about 20 minutes).
             </p>
           ) : (
-            <table className="sbx-table">
-              <thead>
-                <tr>
-                  <th>Paid</th>
-                  <th>Order</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Chain</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.key}>
-                    <td>{r.paidAt.toLocaleString()}</td>
-                    <td>
-                      {r.details ? (
-                        <span title={r.orderId}>
-                          <KeyRound size={12} /> {r.details.orderRef}
-                          {r.details.description
-                            ? ` · ${r.details.description}`
-                            : ""}
-                          {r.details.customer?.email
-                            ? ` · ${r.details.customer.email}`
-                            : ""}
-                        </span>
-                      ) : (
-                        <code
-                          title={
-                            r.decryptFailed
-                              ? "Wrong view key for this record"
-                              : "Private details are encrypted; paste the merchant's view key"
+            <div
+              className="sbx-table-wrap"
+              tabIndex={0}
+              role="region"
+              aria-label="Payment records"
+            >
+              <table className="sbx-table">
+                <thead>
+                  <tr>
+                    <th>Paid</th>
+                    <th>Order</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Chain</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.key}>
+                      <td>{r.paidAt.toLocaleString()}</td>
+                      <td>
+                        {r.details ? (
+                          <span title={r.orderId}>
+                            <KeyRound size={12} /> {r.details.orderRef}
+                            {r.details.description
+                              ? ` · ${r.details.description}`
+                              : ""}
+                            {r.details.customer?.email
+                              ? ` · ${r.details.customer.email}`
+                              : ""}
+                          </span>
+                        ) : (
+                          <code
+                            title={
+                              r.decryptFailed
+                                ? "Wrong view key for this record"
+                                : "Private details are encrypted; paste the merchant's view key"
+                            }
+                          >
+                            {r.orderId.slice(0, 12)}…
+                          </code>
+                        )}
+                      </td>
+                      <td>
+                        {usdt(r.amount)}
+                        {r.refunded > ZERO ? ` (−${usdt(r.refunded)})` : ""}
+                      </td>
+                      <td>
+                        <Pill
+                          tone={
+                            r.status === "paid"
+                              ? "ok"
+                              : r.status === "reorged"
+                                ? "bad"
+                                : "warn"
                           }
                         >
-                          {r.orderId.slice(0, 12)}…
-                        </code>
-                      )}
-                    </td>
-                    <td>
-                      {usdt(r.amount)}
-                      {r.refunded > ZERO ? ` (−${usdt(r.refunded)})` : ""}
-                    </td>
-                    <td>
-                      <Pill
-                        tone={
-                          r.status === "paid"
-                            ? "ok"
-                            : r.status === "reorged"
-                              ? "bad"
-                              : "warn"
-                        }
-                      >
-                        {r.status.replace("_", " ")}
-                      </Pill>
-                    </td>
-                    <td>
-                      {r.verified ? (
-                        <a
-                          href={`https://explorer.testnet.whitechain.io/tx/${r.txHash}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <CheckCircle2 size={15} className="ok" />
-                        </a>
-                      ) : (
-                        <XCircle size={15} aria-label="Not found on-chain" />
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {r.status.replace("_", " ")}
+                        </Pill>
+                      </td>
+                      <td>
+                        {r.verified ? (
+                          <a
+                            href={`https://explorer.testnet.whitechain.io/tx/${r.txHash}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <CheckCircle2
+                              size={15}
+                              className="ok"
+                              aria-label="Verified on Whitechain"
+                            />
+                          </a>
+                        ) : (
+                          <XCircle size={15} aria-label="Not found on-chain" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Panel>
       )}
       {subs && subs.length > 0 && (
         <Panel
-          title={`${subs.length} subscription${subs.length === 1 ? "" : "s"} on Arkiv`}
-          hint="Recurring revenue, each record checked against its latest charge on Whitechain."
+          title="Subscriptions"
+          hint="Revenue verified against each subscription’s latest charge."
         >
           <KV
             rows={[
@@ -614,63 +629,74 @@ export function BooksDemo({
               ],
             ]}
           />
-          <table className="sbx-table">
-            <thead>
-              <tr>
-                <th>Subscriber</th>
-                <th>Plan</th>
-                <th>Cycles</th>
-                <th>Status</th>
-                <th>Chain</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subs.map((x) => (
-                <tr key={x.key}>
-                  <td>
-                    <code title={x.subscriber}>
-                      {x.subscriber.slice(0, 8)}…
-                    </code>
-                  </td>
-                  <td>
-                    <Repeat size={12} /> {usdt(x.amount)} USDT every{" "}
-                    {Number(x.interval) >= 86_400
-                      ? `${Number(x.interval) / 86_400} d`
-                      : `${Number(x.interval)} s`}
-                  </td>
-                  <td>
-                    {String(x.cycles)} · {usdt(x.total)} USDT
-                  </td>
-                  <td>
-                    <Pill
-                      tone={
-                        x.status === "active"
-                          ? "ok"
-                          : x.status === "cancelled"
-                            ? "bad"
-                            : "warn"
-                      }
-                    >
-                      {x.status.replace("_", " ")}
-                    </Pill>
-                  </td>
-                  <td>
-                    {x.verified ? (
-                      <a
-                        href={`https://explorer.testnet.whitechain.io/tx/${x.lastTx}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <CheckCircle2 size={15} className="ok" />
-                      </a>
-                    ) : (
-                      <XCircle size={15} aria-label="Not found on-chain" />
-                    )}
-                  </td>
+          <div
+            className="sbx-table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Subscription records"
+          >
+            <table className="sbx-table">
+              <thead>
+                <tr>
+                  <th>Subscriber</th>
+                  <th>Plan</th>
+                  <th>Cycles</th>
+                  <th>Status</th>
+                  <th>Chain</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {subs.map((x) => (
+                  <tr key={x.key}>
+                    <td>
+                      <code title={x.subscriber}>
+                        {x.subscriber.slice(0, 8)}…
+                      </code>
+                    </td>
+                    <td>
+                      <Repeat size={12} /> {usdt(x.amount)} USDT every{" "}
+                      {Number(x.interval) >= 86_400
+                        ? `${Number(x.interval) / 86_400} d`
+                        : `${Number(x.interval)} s`}
+                    </td>
+                    <td>
+                      {String(x.cycles)} · {usdt(x.total)} USDT
+                    </td>
+                    <td>
+                      <Pill
+                        tone={
+                          x.status === "active"
+                            ? "ok"
+                            : x.status === "cancelled"
+                              ? "bad"
+                              : "warn"
+                        }
+                      >
+                        {x.status.replace("_", " ")}
+                      </Pill>
+                    </td>
+                    <td>
+                      {x.verified ? (
+                        <a
+                          href={`https://explorer.testnet.whitechain.io/tx/${x.lastTx}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <CheckCircle2
+                            size={15}
+                            className="ok"
+                            aria-label="Verified on Whitechain"
+                          />
+                        </a>
+                      ) : (
+                        <XCircle size={15} aria-label="Not found on-chain" />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
     </div>

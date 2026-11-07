@@ -120,7 +120,11 @@ function OnArkiv({ on }: { on: boolean }) {
 }
 
 export function ClientViewDemo() {
-  const { data, reload } = useApi<View>("/api/sandbox/merchant-view", 10_000);
+  const {
+    data,
+    error: loadError,
+    reload,
+  } = useApi<View>("/api/sandbox/merchant-view", 10_000);
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
   const [ok, setOk] = useState<{ text: string; tx?: string }>();
@@ -146,8 +150,14 @@ export function ClientViewDemo() {
 
   if (!data)
     return (
-      <Panel title="Your business" hint="Loading…">
-        <p className="sbx-muted">Reading invoices and subscriptions…</p>
+      <Panel title="Overview">
+        {loadError ? (
+          <ErrorNote error={loadError} />
+        ) : (
+          <p className="sbx-muted" role="status">
+            Reading invoices and subscriptions…
+          </p>
+        )}
       </Panel>
     );
 
@@ -178,10 +188,9 @@ export function ClientViewDemo() {
   );
 
   return (
-    <div className="sbx-stack">
+    <div className="sbx-stack sbx-records sbx-client-view">
       <Panel
-        title="Your business"
-        hint="Everything this merchant issued. Payments go straight to its wallet; Sableye never holds them."
+        title="Overview"
         action={
           <Link className="sbx-link" href="/sandbox/books">
             <BookOpen size={14} /> Books on Arkiv
@@ -207,14 +216,6 @@ export function ClientViewDemo() {
             <b>{inv.filter((i) => i.status === "open").length}</b>
             <span>Open invoices</span>
           </div>
-          <div className="sbx-stat">
-            <b>{active.length}</b>
-            <span>Active subscriptions</span>
-          </div>
-          <div className="sbx-stat">
-            <b>{usdt(mrr)}</b>
-            <span>MRR (USDT)</span>
-          </div>
         </div>
         {data.arkiv && (
           <p className="sbx-hint">
@@ -223,7 +224,7 @@ export function ClientViewDemo() {
             {data.arkiv.failed
               ? `, ${data.arkiv.failed} failed (retrying)`
               : ""}
-            . Owned by the merchant's wallet.
+            .
           </p>
         )}
       </Panel>
@@ -233,19 +234,24 @@ export function ClientViewDemo() {
           {ok.text} {ok.tx && <TxLink hash={ok.tx} />}
         </OkNote>
       )}
-      <ErrorNote error={error} />
+      <ErrorNote error={error ?? loadError} />
 
-      <Panel
-        title="One-time payments"
-        hint="Invoices this merchant issued, newest first. Refunds go back to the payer from the merchant's wallet, capped at what was paid."
-      >
+      <Panel title="Payments">
         {inv.length === 0 ? (
           <p className="sbx-muted">
-            No invoices yet. Create one on the Invoices page, or buy something
-            in the shop.
+            No invoices yet.{" "}
+            <Link className="sbx-link" href="/sandbox/invoices">
+              Create an invoice
+            </Link>{" "}
+            to get started.
           </p>
         ) : (
-          <div className="sbx-table-wrap">
+          <div
+            className="sbx-table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Payment records"
+          >
             <table className="sbx-table">
               <thead>
                 <tr>
@@ -319,10 +325,7 @@ export function ClientViewDemo() {
                         )}
                       </td>
                       <td>
-                        <div
-                          className="sbx-row"
-                          style={{ justifyContent: "flex-end", gap: 6 }}
-                        >
+                        <div className="sbx-record-actions">
                           {paidOut && (
                             <>
                               <input
@@ -412,7 +415,7 @@ export function ClientViewDemo() {
 
       <Panel
         title="Subscriptions"
-        hint="Recurring billing. Each customer approved a spending cap once; the merchant's keeper charges every period on-chain, straight into the merchant's wallet."
+        hint="Recurring payments within each customer’s approved cap."
       >
         <div className="sbx-stats">
           <div className="sbx-stat">
@@ -442,11 +445,19 @@ export function ClientViewDemo() {
         </div>
         {subs.length === 0 ? (
           <p className="sbx-muted">
-            No subscribers yet. Subscribe from the Subscriptions page with a
-            test wallet.
+            No subscribers yet.{" "}
+            <Link className="sbx-link" href="/sandbox/subscriptions">
+              Try a subscription
+            </Link>{" "}
+            with a test wallet.
           </p>
         ) : (
-          <div className="sbx-table-wrap">
+          <div
+            className="sbx-table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Subscription records"
+          >
             <table className="sbx-table">
               <thead>
                 <tr>
@@ -555,6 +566,7 @@ export function ClientViewDemo() {
                             <Btn
                               variant="ghost"
                               aria-expanded={expanded}
+                              aria-label={`Payment history for ${short(s.payer)}`}
                               onClick={() =>
                                 setOpen(expanded ? undefined : s.subId)
                               }
