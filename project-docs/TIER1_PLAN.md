@@ -70,11 +70,11 @@ These are the Stripe features from the Tier 1 list that fit Sableye without a co
 ## Deployment notes (all four)
 - **Vercel:**
   - serves the sandbox UI, `/pay`, coupons, PDFs and invoice emails (the email outbox is in memory there);
-  - receipts, Arkiv publishing, the keeper and webhook delivery need a persistent server (indexer + outbox on disk);
+  - unattended confirmations, Arkiv publishing, the keeper and webhook delivery need a persistent server (indexer + outbox on disk);
   - `/sandbox/books` works anywhere, because it reads Arkiv from the browser.
 - **Emails on Vercel:**
   - The invoice email is sent at creation. The route calls `after(() => sableye.emails.flush())`, so the function stays alive until it's sent.
-  - **Receipts need the indexer process to know the customer.** In the sandbox, invoices are created on Vercel (in-memory order store) and the indexer runs elsewhere, so it sends the merchant's "you got paid" but has no customer address for a receipt. A real merchant shares one order store (a DB) between both.
+  - **Updated in 0.2.3:** verifyPayment queues receipts and merchant notices for paid orders in the same orderStore. Flush due email jobs before the request freezes. An indexer still supports unattended confirmation and refund emails and must share the order store; durable storage and retries remain required.
 - **Env to set on Vercel:**
   - `NEXT_PUBLIC_REOWN_PROJECT_ID`, `NEXT_PUBLIC_SITE_URL`;
-  - `MERCHANT_KEY`, and `SMTP_USER` / `SMTP_PASS` for email.
+  - `MERCHANT_KEY`, and `SABLEYE_SMTP_USER` / `SABLEYE_SMTP_PASS` (or `SABLEYE_RESEND_API_KEY` and `SABLEYE_EMAIL_FROM`) for email.

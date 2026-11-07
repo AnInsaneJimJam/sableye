@@ -4,6 +4,23 @@ Inspected checkout: `a0f1b0ff3df6537d997df4d3ea227a93d9dd36cb`.
 
 The website now lives in `frontend/src/app/docs/`, served at `/docs` by the main frontend. This audit was written before consolidation, when the app lived in `docs-site/`. `plan.md` uses its earlier `docs/` location. Root AGENTS.md and the current workspace configuration establish the current location. The root has no `check:sdk-lines` package script or demo/store directory in this checkout; the obsolete demo check in the plan is not applicable.
 
+## Current documentation refresh (2026-11-07)
+
+Updated against upstream/main `dc7dd52`, including the public `sableye` 0.3.0 package. The earlier audit and verification below are historical; they do not claim those suites were rerun in this refresh.
+
+The website, README and llms.txt now cover the interactive setup/agent wizard, Resend and SMTP, payout defaults, checkout appearance and the plain HTML browser bundle. Payment verification can queue receipts and merchant notices for stored orders without an indexer. Arkiv coverage includes subscription snapshots, manual synchronization, local entity maps and independent wallet unlocking. Added guides: `/docs/checkout/browser`, `/docs/cli/agents`, `/docs/sandbox`. Workspace package names remain internal implementation details.
+
+Validation for this refresh:
+
+- Frontend production build and TypeScript checks passed.
+- Public package build exported all 43 guides and the current llms.txt reference.
+- Checked unique guide routes and section anchors, complete navigation, Markdown sections/code, and syntax of the new examples.
+- Strictly type-checked the documented appearance/CheckoutProps, payout, Arkiv synchronization/entity maps, email flush and privacy exports against the assembled public package.
+- Browser-checked all 43 guide routes (200 with page titles), the new/updated guides at 320 and 1440 pixels, HTML syntax highlighting, search, and Markdown copy/download. Fixed narrow-screen header spacing and wrapping of long environment-variable names.
+- All six sandbox live-code checks passed after correcting its public import to sableye/server. git diff --check passed.
+
+No chain transactions or email delivery were performed. Existing contract and SDK runtime suites were not rerun for these documentation changes.
+
 ## Coverage
 
 | API family | Implementation inspected | Published routes |
@@ -46,7 +63,7 @@ The website now lives in `frontend/src/app/docs/`, served at `/docs` by the main
 - reconcile polls and reports mismatches; it does not rewrite contract receipts.
 - The current delivery queue prunes finished entries; it is not a permanent delivery audit log.
 - Date/bigint JSON convenience exists for selected server results only.
-- Mainnet defaults have no deployed addresses/tokens. WalletConnect is not implemented.
+- Mainnet defaults have no deployed addresses/tokens. WalletConnect is implemented as an optional @walletconnect/universal-provider integration; the plain browser bundle externalizes that provider.
 - Constructor and library failures need unknown-error handling in addition to SableyeError.
 
 ## Evidence and verification

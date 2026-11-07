@@ -609,6 +609,7 @@
   opacity: 1;
 }
 .docs-root .article-section p {
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 16px;
   line-height: 28px;
@@ -1463,5 +1464,6 @@
   .docs-root { --header-height: 64px; }
   .docs-root .icon-button { min-width: 40px; min-height: 40px; }
   .docs-root .header-actions { gap: 8px; }
+  .docs-root .header-actions .outline-button { padding-inline: 8px; }
 }
 .docs-root .sidebar { padding-inline: 24px; }

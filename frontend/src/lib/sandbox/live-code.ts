@@ -36,7 +36,7 @@ export function liveCode(
       fields.push(
         `  customer: { email: ${quote(values.email)}${values.name ? `, name: ${quote(values.name)}` : ""} },`,
       );
-    sableye = `import { Sableye } from '@sableye/server'
+    sableye = `import { Sableye } from 'sableye/server'
 
 const sableye = new Sableye({
   privateKey: process.env.MERCHANT_KEY,

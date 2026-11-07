@@ -12,6 +12,6 @@ Internal project records and reference material live here. The developer documen
 - [Tier 1 feature plan](TIER1_PLAN.md)
 - [Testing checklist](TESTING.md)
 
-Start the website from `frontend/` with `bun run dev`, or from the repository root with `pnpm --filter sableye-frontend dev`. Open http://localhost:3000/docs (use the port printed by Next.js).
+Start the website from `frontend/` with `pnpm dev`, or from the repository root with `pnpm --filter sableye-frontend dev`. Open http://localhost:3000/docs (use the port printed by Next.js).
 
 Website maintenance: [frontend documentation guide](../frontend/docs/DOCUMENTATION.md).

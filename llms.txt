@@ -2,7 +2,7 @@
 
 > Non-custodial USDT checkout on Whitechain. The merchant's server signs an EIP-712 invoice (no gas). The customer pays on-chain and funds go directly to the merchant's address. A typical integration is under 20 lines.
 
-Install: `npm install sableye viem` (add `react` for the checkout component). Imports: `sableye` (browser-safe core), `sableye/server`, `sableye/react`, `sableye/mcp`.
+Requires Node.js >=22 on the server. Install: `npm install sableye viem` (add `react` for the checkout component). Imports: `sableye` (browser-safe core), `sableye/server`, `sableye/react`, `sableye/mcp`.
 Or scaffold a working Next.js store: `npx sableye create --name my-store --framework next`
 Agent recipes and guardrails: skills/sableye/SKILL.md
 
@@ -15,11 +15,11 @@ Rules:
 ## sableye/server
 
 ### new Sableye(config)
-Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, subscriptions?, checkoutUrl?, relayUrl?, paymentLinkUrl?, linkStore?, couponStore?, business?, email?, orderStore?, outbox?, arkiv? }`
-- `business`: `{ name, address?, email? }`, shown on invoices, receipts and emails. Default name from `SABLEYE_BUSINESS_NAME`.
-- `email`: `{ user, pass, host?, port?, from?, notify? }`. Hosts that block SMTP (Railway Hobby): set `SABLEYE_RESEND_API_KEY` + `SABLEYE_EMAIL_FROM` (`"Shop" <receipts@yourdomain>`, domain verified in Resend) to send over HTTPS instead; it takes priority. Default from `SABLEYE_SMTP_USER`/`SABLEYE_SMTP_PASS`/`SABLEYE_SMTP_HOST`/`SABLEYE_SMTP_PORT`/`MERCHANT_EMAIL`. `false` turns email off. The SMTP server is detected for Gmail, Outlook, Yahoo, Zoho and iCloud.
+Config: `{ privateKey | signer, network, rpcUrl?, processor?, chain?, tokens?, subscriptions?, payout?, checkoutUrl?, relayUrl?, paymentLinkUrl?, linkStore?, couponStore?, business?, email?, orderStore?, outbox?, arkiv? }`
+- `business`: `{ name, address?, email? }`, shown on invoices, receipts and emails. Defaults from `SABLEYE_BUSINESS_NAME`, `SABLEYE_SUPPORT_EMAIL` and `SABLEYE_BUSINESS_ADDRESS`.
+- `email`: `{ user, pass, host?, port?, from?, notify?, resendApiKey? }`. Hosts that block SMTP (Railway Hobby): set `SABLEYE_RESEND_API_KEY` + `SABLEYE_EMAIL_FROM` (`"Shop" <receipts@yourdomain>`, domain verified in Resend) to send over HTTPS instead; it takes priority. Default from `SABLEYE_SMTP_USER`/`SABLEYE_SMTP_PASS`/`SABLEYE_SMTP_HOST`/`SABLEYE_SMTP_PORT`/`MERCHANT_EMAIL`. `false` turns email off. The SMTP server is detected for Gmail, Outlook, Yahoo, Zoho and iCloud.
 - `orderStore`: `fileOrderStore('.sableye/orders.json')` keeps customer details across restarts (default: memory). `outbox: { path: '.sableye/outbox.json' }` keeps email and Arkiv retries.
-- `arkiv`: `{ accessKey, statePath? }`, on by default when `ARKIV_ACCESS_KEY` is set. Publishes paid invoices and refunds to Arkiv, owned by the merchant wallet.
+- `arkiv`: `{ accessKey, statePath?, subscriptionSyncMs? }`, on by default when `ARKIV_ACCESS_KEY` is set. Publishes safe invoices, refunds and subscription snapshots to Arkiv, owned by a local-account merchant signer. Subscription synchronization defaults to 120000 ms; 0 disables the timer. Persist publisher state and the outbox for retries.
 - `signer`: any `{ address, signTypedData, signTransaction? }`, e.g. a KMS adapter.
 - `network`: `"whitechain-sepolia"`, or `"whitechain"` once the processor and USDT are on mainnet.
 - `checkoutUrl`: base of payment links. Default `http://localhost:3000/pay`.
@@ -33,7 +33,7 @@ const sableye = new Sableye({ privateKey: process.env.MERCHANT_KEY as `0x${strin
 ### sableye.invoices.create({ amount, token?, orderId?, expiresIn?, payout?, customer?, description?, items?, coupon? })
 Signs an invoice. No transaction, no gas. Returns `{ invoice, signature, chainId, processor, relayUrl?, orderRef, checkoutUrl }`. Safe to send to the browser, and works with `Response.json()`.
 `customer: { email?, name? }`, `description` and `items: { name, quantity?, amount? }[]` stay off-chain in the order store. With a customer email and email configured, the invoice is emailed with a PDF; the receipt follows on payment.
-Defaults: `token: 'USDT'`, `orderId`: random, `expiresIn: 1800` seconds, `payout`: the merchant address.
+Defaults: `token: 'USDT'`, `orderId`: random, `expiresIn: 1800` seconds, `payout`: per-invoice override, then config.payout, then SABLEYE_PAYOUT, then the merchant address. Invalid payout addresses throw invalid_payout.
 
 ```ts
 const inv = await sableye.invoices.create({ amount: '5.00', orderId: 'order_123' })
@@ -71,11 +71,11 @@ await sableye.coupons.quote('WELCOME10', '5.00')                                
 await sableye.coupons.deactivate('LAUNCH')
 ```
 
-A code that doesn't apply throws `CouponError` with `code` set to one of `coupon_not_found`, `coupon_inactive`, `coupon_expired`, `coupon_exhausted`, `coupon_min_amount` or `coupon_free_order`, each with a remedy. An open invoice reserves a redemption until it expires; the redemption is counted when the indexer sees the payment. Use `couponStore: fileCouponStore()` (or your DB) to keep coupons across restarts.
+A code that doesn't apply throws `CouponError` with `code` set to one of `coupon_not_found`, `coupon_inactive`, `coupon_expired`, `coupon_exhausted`, `coupon_min_amount` or `coupon_free_order`, each with a remedy. An open invoice reserves a redemption until it expires; the redemption is counted when verifyPayment on a stored paid order or the indexer sees the payment. Use `couponStore: fileCouponStore()` (or your DB) to keep coupons across restarts.
 
 ### Emails and PDFs
-Once email is configured (`npx sableye init --email`, `SABLEYE_SMTP_USER` + `SABLEYE_SMTP_PASS`, or `SABLEYE_RESEND_API_KEY` + `SABLEYE_EMAIL_FROM`), these go out automatically, triggered by `verifyPayment` on a paid order created by this server or by a running indexer, whichever sees the payment first (once per order): the invoice on create, a receipt plus a "you got paid" notice on `invoice.paid` (verified on-chain first), and a refund confirmation on `invoice.refunded`. Every email goes through a keyed outbox. Retained job keys suppress duplicate enqueueing; SMTP crash windows and pruning mean delivery is not guaranteed exactly once. SMTP failure does not reverse a payment.
-**Serverless (Vercel, Lambda):** the process may be frozen once the response is sent, so finish queued emails first: `after(() => sableye.emails.flush())` in Next.js, or `await sableye.emails.flush()`. Receipts, notices and refund emails come from the indexer, so they need a long-running server, and the order store (`orderStore`) must be shared with the server that creates the invoices. That server is the one that knows the customer's email.
+Once email is configured (`npx sableye init --email`, `SABLEYE_SMTP_USER` + `SABLEYE_SMTP_PASS`, or `SABLEYE_RESEND_API_KEY` + `SABLEYE_EMAIL_FROM`), these go out automatically, triggered by `verifyPayment` on a paid order created by this server or by a running indexer, whichever sees the payment first (with a shared paidHandledAt marker): the invoice on create, a receipt plus a "you got paid" notice on verified payment or `invoice.paid`, and a refund confirmation on `invoice.refunded`. Every email goes through a keyed outbox. Retained job keys suppress duplicate enqueueing; SMTP crash windows and pruning mean delivery is not guaranteed exactly once. SMTP failure does not reverse a payment.
+**Serverless (Vercel, Lambda):** the process may be frozen once the response is sent, so finish queued emails first: `after(() => sableye.emails.flush())` in Next.js, or `await sableye.emails.flush()`. verifyPayment can queue receipts and merchant notices without an indexer when the paid order is in its orderStore. Pass customer.email at invoice creation. An indexer provides unattended confirmation and refund emails; share the order store with that worker. flush drains jobs due now; future retries need a persistent worker or scheduled execution.
 
 ```ts
 await sableye.emails.test()                         // send yourself a test email
@@ -89,7 +89,9 @@ With `ARKIV_ACCESS_KEY` set (and tGLM for the merchant address), the indexer pub
 
 ```ts
 await sableye.arkiv.viewKey()   // share with an accountant (also: npx sableye view-key)
-await sableye.arkiv.records()   // read back, decrypted
+await sableye.arkiv.records()   // invoices only, decrypted when details are available
+sableye.arkiv.published()       // local { invoices, subscriptions } entity-key maps
+await sableye.arkiv.syncSubscriptions() // number of snapshots queued, not proof of delivery
 sableye.arkiv.status()          // { published, pending, failed, lastError? }
 ```
 
@@ -115,9 +117,11 @@ keeper.stop()             // server shutdown
 
 Renewals follow chain time. Defaults: retry failed charges after 3600 seconds; discover subscriptions from new blocks every 60 seconds. `retryAfterSeconds`, `discoverEverySeconds`, `maxSleepSeconds` and `onResult` configure the keeper. Discovery still polls, but no longer rescans all history each pass. Retry state is in memory and resets on restart; third-party callers of the permissionless contract are not bound by this backoff. `subscriptions.runDue()` remains available for cron jobs and bypasses keeper backoff.
 
+Subscription snapshots use `sableye.subscription.v1`: query the open schema directly with the Arkiv SDK (arkiv.records reads invoices only). It includes subscriber, plan, status, per-cycle amount, interval, cycles/total charged, timestamps and last_tx_hash; verify the last Charged receipt before trusting an external record. An independent reader can unlock encrypted invoices by requesting personal_sign of exactly "Sableye view key v1" from the same merchant wallet and applying viewKeyFromSignature. This needs the same signature bytes as the publisher; share view keys only with authorized readers. /sandbox/books demonstrates independent invoice/subscription reading, wallet unlocking and receipt verification; /sandbox/merchant demonstrates a public testnet client view, not a production authorization model.
+
 ## sableye/react
 
-### <Checkout invoice onSuccess? onError? className? processor? chain? rpcUrl? token? provider? fetch? qr? payUrl? walletConnectProjectId? />
+### <Checkout invoice appearance? onSuccess? onError? className? processor? chain? rpcUrl? token? provider? fetch? qr? payUrl? walletConnectProjectId? />
 The full flow: connect wallet, switch or add chain, check balance, pay, show the result. Styled by default (`appearance={{ theme: 'light' | 'night' | 'none', variables: { colorPrimary, colorPrimaryText, colorBackground, colorText, colorMuted, colorBorder, colorSuccess, colorDanger, borderRadius, fontFamily } }}`; styles are scoped to the widget). With `theme: 'none'` it's unstyled; style it through `className` and `data-sableye-*` attributes (`data-sableye-status` holds the current status).
 `invoice` can be the object, its JSON form, or an encoded link payload.
 The QR icon offers phone-wallet links; `qr={false}` hides it. `payUrl` overrides the hosted checkout URL, which must be reachable from the phone. Whitewallet has no wallet-specific deep link; enable walletConnectProjectId for its WalletConnect connection path.
@@ -133,6 +137,9 @@ The QR icon offers phone-wallet links; `qr={false}` hides it. `payUrl` overrides
 ```tsx
 <Checkout invoice={inv} onSuccess={({ txHash }) => location.assign(`/thanks?order=${inv.invoice.orderId}&tx=${txHash}`)} />
 ```
+
+### Plain HTML / JavaScript checkout
+Copy node_modules/sableye/browser/checkout.js into your public assets and load it with a script tag. SableyeCheckout.mount(target, invoice, options?) accepts a selector or Element, a server-created invoice object or serialized/encoded string, and Checkout props except invoice. Returns { unmount() }; a missing target throws. The bundle includes React internally and defaults to the light theme; appearance supports light/night/none and variables. The optional WalletConnect provider is external to this bundle; use the React/bundler integration for WalletConnect. A static site still needs a backend for signing and verification. Never put MERCHANT_KEY in page JavaScript.
 
 ### useCheckout(invoice, options?)
 For your own UI. Returns `{ state, wallets, pay, refresh }`; `refresh()` reloads on-chain status without prompting the wallet.
@@ -186,6 +193,7 @@ SDK payment errors use `SableyeError` with stable `code` and `remedy`. Missing c
 - `wrong_chain`: wallet or RPC is on another chain.
 - `unknown_network`, `unknown_token`: not configured; the remedy lists valid values.
 - `invalid_amount`: pass a positive decimal string.
+- `invalid_payout`: supply a valid EVM payout address.
 - `processor_not_deployed`: pass `processor`, or upgrade once deployed.
 - `secret_in_client`: the merchant key was used in a browser.
 - `invalid_payment_link`: the link is malformed; generate a new one.
@@ -228,4 +236,4 @@ Persistence is opt-in: fileOrderStore, fileCouponStore and indexer fileStore sui
 
 Privacy helpers exported by core: VIEW_KEY_MESSAGE, viewKeyFromSignature, encryptPrivate, decryptPrivate. View keys decrypt private customer/order details; do not publish them. Arkiv defaults to 180-day records with renewal checks every six hours while the publisher runs. Check arkiv/schema.md for the v1 open format.
 
-Detailed developer guides are served at /docs, including packages, cli/setup, checkout/walletconnect, coupons, emails, documents, storage, arkiv and cli/listen.
+Detailed developer guides are served at /docs, including packages, cli/setup, cli/agents, checkout/browser, checkout/react, checkout/walletconnect, coupons, emails, documents, storage, arkiv, sandbox and cli/listen.

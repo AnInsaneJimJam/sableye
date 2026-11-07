@@ -45,6 +45,10 @@ export const additions: Record<string, DocSection[]> = {
           ],
           ["rpcUrl", "Optional HTTP RPC; otherwise chain default."],
           [
+            "payout",
+            "Default recipient: config.payout, then SABLEYE_PAYOUT, then the merchant. Invoice payout overrides this; invalid addresses throw invalid_payout.",
+          ],
+          [
             "processor / subscriptions",
             "Override PaymentProcessor / SubscriptionManager. Zero addresses mean unavailable.",
           ],
@@ -140,7 +144,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "hook-contract",
       title: "Hook and styling contract",
-      body: "useCheckout(invoice, options) returns state, wallets, refresh():void, and pay(provider?, {chooseAccount?}):void. It loads on mount. onSuccess fires for mined success, including a previously paid invoice loaded from chain. It does not imply finality. Use className and data-sableye-* attributes for styling; see the component source for individual attributes. No bundled visual theme is imposed by the SDK.",
+      body: "useCheckout(invoice, options) returns state, wallets, refresh():void, and pay(provider?, {chooseAccount?}):void. It loads on mount. onSuccess fires for mined success, including a previously paid invoice loaded from chain. It does not imply finality. Use className and data-sableye-* attributes for styling; see the component source for individual attributes. Checkout is styled by default with the light theme. appearance.theme can be light, night or none; none omits the widget stylesheet. appearance.variables overrides the supported colors, border radius and font. Styling is scoped under data-sableye-theme and does not affect the rest of your app.",
     },
   ],
   "token-permissions": [
@@ -350,7 +354,7 @@ export const additions: Record<string, DocSection[]> = {
     {
       id: "fallback",
       title: "Handle unknown errors too",
-      body: "Most payment errors expose code/remedy through SableyeError. Missing constructor credentials throw TypeError, and RPC/transaction errors may propagate from viem. Handle unknown errors without exposing private server details. Additional implemented codes include subscriptions_not_deployed, invalid_interval, signer_cannot_sign_messages, invalid_payment_link, link_expired, link_deactivated, bad_request, relay_failed, would_revert and gas_cap; consult the feature source for exact cases.",
+      body: "Most payment errors expose code/remedy through SableyeError. Missing constructor credentials throw TypeError, and RPC/transaction errors may propagate from viem. Handle unknown errors without exposing private server details. Additional implemented codes include invalid_payout, subscriptions_not_deployed, invalid_interval, signer_cannot_sign_messages, invalid_payment_link, link_expired, link_deactivated, bad_request, relay_failed, would_revert and gas_cap; consult the feature source for exact cases.",
     },
   ],
   "api-reference": [

@@ -85,7 +85,11 @@ sableye.indexer({ store: fileStore('.sableye/state.json') }).start().catch(conso
 app.listen(3000)
 ```
 
-For the browser, render `<Checkout invoice={json} />`, or redirect to `json.checkoutUrl`.
+For React, render `<Checkout invoice={json} />` (styled light by default; `appearance.theme` supports light/night/none, with colors and typography in `appearance.variables`). For an existing HTML/JavaScript page, copy `node_modules/sableye/browser/checkout.js` to public assets and call `SableyeCheckout.mount(target, json, options)`, retaining its `unmount()` for cleanup. The standalone bundle externalizes the optional WalletConnect provider; use the React/bundler path for WalletConnect. Alternatively redirect to `json.checkoutUrl`, served by your checkout page. Signing and verification always stay on the backend.
+
+`verifyPayment` on a stored paid order queues a receipt and merchant notice without an indexer; pass customer.email at invoice creation. Share the order store with workers. Finish due email jobs before serverless execution freezes; future retries need durable scheduled execution.
+
+Optional Arkiv publishing includes invoice/refund records and `sableye.subscription.v1` snapshots (two-minute sync by default). `arkiv.records()` reads invoices only; `arkiv.published()` returns local invoice/subscription entity maps and `await arkiv.syncSubscriptions()` queues changed snapshots. Persist publisher state and the outbox. Independent readers can unlock private invoice data with a view key or the same merchant wallet signing `Sableye view key v1`; the signature must reproduce the publishing signer’s key. See the bundled Arkiv guide and open schema.
 
 ## Recipe: payment link (no frontend code)
 

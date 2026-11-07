@@ -3,7 +3,7 @@
 ## Writes (`sdk/packages/server/src/arkiv.ts`)
 
 1. The merchant's server runs Sableye's indexer, which watches Whitechain for its payments.
-2. When a payment reaches Whitechain's **`safe`** head, a job is queued in a persisted outbox (`.sableye/outbox.json`). Payments never wait on Arkiv.
+2. When a payment reaches Whitechain's **`safe`** head, a job is queued in the side-effect outbox. Persist it with outbox.path (for example `.sableye/outbox.json`); memory is the default. Payments never wait on Arkiv.
 3. The job reads the contract's receipt and creates a **`sableye.invoice.v1`** entity:
    - signed by the **merchant key**, so `$owner` is the merchant's wallet;
    - with indexed columns `order_id`, `merchant`, `status`, `network`, `token`, `amount` and `paid_at`, and stored columns `payer`, `payout`, `tx_hash`, `refunded` and `chain_id`;
@@ -18,7 +18,7 @@
 8. **Expiry:** entities are written for 180 days, and a renewal loop calls `extendEntity` on anything within 30 days of expiry.
 9. **Failures** (Arkiv down, rate limit) retry with backoff: 5 s, 30 s, 2 min … up to 6 h.
 
-The view key is `keccak256(sign("Sableye view key v1"))`. It's deterministic, so it's never stored. `npx sableye view-key` prints it for the merchant to share with an accountant.
+The view key is `keccak256(sign("Sableye view key v1"))`. It can be derived again when the signer reproduces the same signature; protect the key if you store or share it. `npx sableye view-key` prints it for the merchant to share with an accountant.
 
 ## Reads
 
@@ -26,11 +26,12 @@ The view key is `keccak256(sign("Sableye view key v1"))`. It's deterministic, so
   1. You enter a merchant address. It runs `select().from(Invoices).ownedBy(merchant).orderBy(desc('paid_at'))`.
   2. For each record, it fetches the Whitechain transaction and checks that the official PaymentProcessor emitted `InvoicePaid` with the same order id, merchant and amount. That's the ✅ / ❌ column.
   3. It totals gross, refunded and net, and exports CSV.
-  4. **Subscriptions:** it reads `sableye.subscription.v1` the same way, checks each record's `last_tx_hash` for a `Charged` event from the official SubscriptionManager, and shows recurring revenue (MRR) and the total charged.
-  5. **Private fields:** the merchant clicks "unlock with my wallet". The page asks the wallet to sign "Sableye view key v1", hashes the signature into the view key, and decrypts the private columns with its own 10-line WebCrypto function, written from `schema.md` and not imported from Sableye. An accountant can paste the view key instead.
-  6. `pnpm check:books` fails if this file ever imports `@sableye/*`.
+  4. **Subscriptions:** it reads `sableye.subscription.v1`, checks each record's `last_tx_hash` for a `Charged` event from the official SubscriptionManager, and shows recurring revenue (MRR) and the total charged.
+  5. **Private fields:** use a pasted view key or connect the same merchant wallet and sign `Sableye view key v1`. The page hashes the signature into the view key and decrypts the private columns with its own WebCrypto function, written from `schema.md` and not imported from Sableye. The signature must reproduce the publisher's signature-derived key.
+  6. `pnpm --filter sableye-frontend check:books` fails if this file ever imports `@sableye/*`.
 - **`/sandbox/merchant`** (the client view) marks every invoice and subscription that is already on Arkiv.
-- **`sableye.arkiv.records()`** gives the merchant's server the same read-back, already decrypted.
+- **`sableye.arkiv.records()`** reads invoice records on the merchant server, including decrypted details when available. It does not return subscriptions.
+- **Subscriptions:** the publisher synchronizes chain snapshots every two minutes by default (`arkiv.subscriptionSyncMs`; 0 disables the timer). `await sableye.arkiv.syncSubscriptions()` queues changed snapshots; the result is a queued count, not a delivery guarantee. `sableye.arkiv.published()` returns local invoice/subscription entity maps. Query subscription records directly using the open schema. Persist the publisher state and outbox and arrange a live worker or scheduled execution.
 
 ## The demo moment
 

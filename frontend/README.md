@@ -1,6 +1,6 @@
 # Sableye frontend
 
-The Sableye marketing site. Sableye is a USDT checkout for real businesses on Whitechain.
+The Sableye landing page, documentation, hosted checkout and live Sandbox. Sableye is a USDT checkout for real businesses on Whitechain.
 
 ## Stack
 
@@ -13,7 +13,7 @@ The Sableye marketing site. Sableye is a USDT checkout for real businesses on Wh
 | Components | shadcn/ui v4 on Base UI primitives, `base-nova` style |
 | Icons | lucide-react |
 | Animation | motion |
-| Theming | next-themes, class strategy, light and dark tokens in OKLCH |
+| Theming | Fixed Midnight Blue palette; Ice colors scoped to the Gradient Waves hero artwork |
 | Lint and format | Biome 2 |
 | Package manager | pnpm 10.24.0 (repository workspace) |
 
@@ -72,8 +72,11 @@ Never use a `NEXT_PUBLIC_` variable for the key.
 ```
 src/
   app/
-    layout.tsx        root layout: fonts, theme provider, header, footer
+    layout.tsx        root layout: fonts, fixed palette, shared metadata
     page.tsx          home page
+    docs/             documentation routes and scoped styles
+    sandbox/          overview and product demos
+    pay/              hosted invoice checkout
     not-found.tsx     404 page
     globals.css       Tailwind entry plus design tokens
     sitemap.ts        sitemap.xml
@@ -135,3 +138,9 @@ To check the rendered product content, run the app, then `pnpm check:render`
 ## Documentation
 
 The same application serves `/docs` and its guide routes. Run the usual frontend dev/build/start commands. Content and maintenance instructions: [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md). No separate documentation deployment is required.
+
+## Documentation and merchant records
+
+Guides, navigation and Markdown exports share `src/lib/docs/content.ts` and its `content/` modules. See [the documentation maintenance guide](docs/DOCUMENTATION.md). Docs use native buttons; the website has no appearance switchers.
+
+The Client view at `/sandbox/merchant` shows the public testnet merchant’s invoices and subscriptions. `/sandbox/books` reads invoice/subscription records directly from Arkiv, verifies Whitechain receipts, and supports a view key or merchant-wallet signature to unlock private invoice details. It remains independent of the Sableye SDK. Optional publisher state and the shared outbox must persist on the always-on server.

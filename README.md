@@ -31,7 +31,7 @@ npx sableye init
 ```sh
 npx sableye create --name my-store
 cd my-store && npm install
-npx sableye init         # merchant key, business name, email (SMTP), Arkiv → .env
+npx sableye init         # merchant key, business name, email (Resend or SMTP), hosting, checkout theme, Arkiv → .env
 npx sableye doctor       # every check should pass before you sell anything (init runs it too)
 npm run dev
 ```
@@ -77,7 +77,7 @@ For AI agents: [`llms.txt`](llms.txt) has every API with an example, and [`skill
 
 A card rail (Stripe) can't do any of the following:
 
-- **Settle in about 1 second, final, into the merchant's own wallet.** There are no 2–7 day payout holds and no reserves.
+- **Receive funds in the merchant's own wallet on block inclusion (about 1 second).** Inclusion is not finality; choose pending, safe or final confirmation for your business. There are no 2–7 day payout holds and no reserves.
 - **Avoid chargebacks** while still allowing merchant-issued refunds, which are enforced on-chain and capped at what was paid.
 - **Accept the 40M WhiteBIT users** who already hold USDT, with no card and no bank account.
 - **Serve merchants in countries Stripe doesn't support.**
@@ -102,10 +102,13 @@ One npm package, `sableye`, with an entry point per side:
 | `sableye` | Network/token config, ABI, EIP-712 types, payment links, typed errors with a remedy, and the framework-free checkout engine (`createCheckout`) |
 | `sableye/server` | `invoices.create`, `invoices.cancel`, `verifyPayment` (plus indexer, webhooks, reconcile and CSV in Level 2) |
 | `sableye/react` | `<Checkout/>` and `useCheckout`: connect → switch chain → pay → receipt |
+| `sableye/browser/checkout.js` (static asset) | `SableyeCheckout.mount()` for existing HTML/JavaScript pages; copy to your public assets |
 | `sableye/mcp` | MCP server for AI agents (`npx sableye mcp`) |
-| `npx sableye` | CLI: `create`, `init`, `doctor`, `view-key`, `listen`, `mcp` |
+| `npx sableye` | CLI: `create`, `init`, `agents`, `doctor`, `view-key`, `listen`, `mcp` |
 | `sdk/packages/checkout` (repo only) | Static payment-link page: no server, host it anywhere |
 | `sdk/contracts` | `PaymentProcessor.sol`: OpenZeppelin `SignatureChecker` (EOA + ERC-1271 / Safe), `SafeERC20`, reentrancy guard |
+
+The React checkout is styled by default. Set `appearance={{ theme: 'night' }}` for dark sites, use `appearance.variables` for colors and typography, or choose `theme: 'none'` for your own CSS. For a site without React, copy `node_modules/sableye/browser/checkout.js` to your public assets and call `SableyeCheckout.mount(target, invoice, options)`. Signing and verification still require your backend. See the [browser checkout guide](frontend/src/lib/docs/content/merchant.ts), served at `/docs/checkout/browser`.
 
 ## Gasless relayer: who pays and why it can't be drained (Scale track)
 
@@ -164,17 +167,17 @@ Both contracts are **fully verified** on the Whitechain explorer (exact match, S
 
 ## Emails, PDFs and merchant-owned records (Arkiv)
 
-**Email.** `npx sableye init` asks for your email address and an app password. It detects the SMTP server, sends you a test email, and saves the details to `.env` (or add `SABLEYE_SMTP_USER` / `SABLEYE_SMTP_PASS` later). From then on:
+**Email.** `npx sableye init` offers Resend, SMTP or no email. Resend uses `SABLEYE_RESEND_API_KEY` and a verified sender in `SABLEYE_EMAIL_FROM`; SMTP uses `SABLEYE_SMTP_USER` / `SABLEYE_SMTP_PASS` with optional host/port overrides. Reconfigure with `npx sableye init --email`. With customer details and delivery configured:
 - customers get the **invoice** (PDF attached) and the **receipt** (PDF, after the payment is confirmed on-chain);
 - you get a **"you got paid"** notice;
 - refunds send a **refund confirmation**.
 
-Emails go through a keyed outbox, so a replayed event never sends twice and an SMTP failure never touches a payment. PDFs are also available directly: `sableye.documents.invoicePdf(ref)` / `receiptPdf(ref)`.
+`verifyPayment` on a stored paid order queues the customer receipt and merchant notice, as does a running indexer. Both share the order’s `paidHandledAt` marker; refund confirmations use indexer events. Share the order store with workers. Emails use a keyed retry outbox: retained keys suppress duplicates, but crash windows and pruning prevent an exactly-once delivery guarantee. Provider failures do not reverse payments. On serverless, finish due jobs with `await sableye.emails.flush()` or your host’s background lifecycle; future retries need a durable worker or cron. PDFs are also available directly: `sableye.documents.invoicePdf(ref)` / `receiptPdf(ref)`.
 
-**Arkiv.** With `ARKIV_ACCESS_KEY` set, every paid invoice, refund and **subscription** (cycles and total charged, status, patched on every charge) is published to Arkiv (testnet "Rabdi"), **signed by the merchant key**, so the merchant's wallet owns the records.
+**Arkiv.** With `ARKIV_ACCESS_KEY` set and a funded local-account signer, the indexer publishes safe invoices and refunds to Arkiv (testnet "Rabdi"). The publisher also synchronizes subscription snapshots every two minutes, updating cycles, total charged and status as they change. Writes are **signed by the merchant key**, so the merchant's wallet owns the records. Persist the publisher state and outbox, and keep the worker running.
 - **Public columns** hold only what's already public on Whitechain (amount, token, payer, tx hash, time).
 - **Encrypted:** the order reference, items and customer, with the merchant's view key (`npx sableye view-key`).
-- **Reading:** any app can read the records without us. `/sandbox/books` does it in the browser with no Sableye code: it verifies each invoice and subscription against its Whitechain transaction, shows recurring revenue, exports CSV, and lets the merchant unlock the private fields by signing with their wallet. `/sandbox/merchant` (the client view) marks which records are already on Arkiv.
+- **Reading:** `arkiv.records()` reads invoices; query `sableye.subscription.v1` directly for subscriptions. `arkiv.published()` exposes local invoice/subscription entity maps, and `arkiv.syncSubscriptions()` manually queues changed snapshots (`subscriptionSyncMs: 0` disables its timer). Any app can read the records without us. `/sandbox/books` does it in the browser with no Sableye code: it verifies invoices and subscriptions against their Whitechain transactions, shows recurring revenue, and exports CSV. Unlock encrypted invoice details with a view key or a signature from the same merchant wallet; the signature must reproduce the publisher’s signature-derived key. `/sandbox/merchant` (the client view) marks which records are already on Arkiv.
 - **Format:** [`arkiv/schema.md`](arkiv/schema.md).
 - **Background:** [`why-arkiv.md`](arkiv/why-arkiv.md) · [`how-you-use-arkiv.md`](arkiv/how-you-use-arkiv.md) · [`reach.md`](arkiv/reach.md) · [`friction.md`](arkiv/friction.md).
 

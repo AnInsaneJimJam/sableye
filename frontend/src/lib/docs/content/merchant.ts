@@ -3,6 +3,94 @@ import type { DocPage, DocSection } from "../content";
 /** Integration guides checked against the SDK source, not future roadmap APIs. */
 export const merchantPages: DocPage[] = [
   {
+    slug: "checkout/browser",
+    title: "HTML & JavaScript checkout",
+    group: "Accept Payments",
+    description:
+      "Mount the styled checkout on an existing page without React or a frontend build.",
+    sections: [
+      {
+        id: "asset",
+        title: "Serve the browser bundle",
+        body: "Install sableye and viem in the project that serves your assets. Copy the bundled checkout into your public directory during deployment. The bundle includes React internally; your page does not need React or a bundler. Serve it from your own origin and update the copied file when upgrading sableye.",
+        code: "npm install sableye viem\nmkdir -p public/sableye\ncp node_modules/sableye/browser/checkout.js public/sableye/checkout.js",
+        language: "bash",
+      },
+      {
+        id: "mount",
+        title: "Mount in your existing payment step",
+        body: "Your backend must authenticate the order, choose its amount and create the invoice with sableye/server. This example assumes POST /api/invoice returns a CreatedInvoice for an order already held in the server session; GET /api/payment-status verifies that same order on the server. Adapt these routes to your app. Never accept a browser-supplied amount or fulfil from onSuccess alone.",
+        code: "<div id=\"pay\"></div>\n<script src=\"/sableye/checkout.js\"></script>\n<script>\n  async function showCheckout() {\n    const response = await fetch('/api/invoice', { method: 'POST' })\n    if (!response.ok) throw new Error('Could not create invoice')\n    const invoice = await response.json()\n    const checkout = SableyeCheckout.mount('#pay', invoice, {\n      appearance: { theme: 'night' },\n      onSuccess: async () => {\n        const status = await fetch('/api/payment-status')\n        if (!status.ok) throw new Error('Could not verify payment')\n        const result = await status.json()\n        if (result.paid) document.querySelector('#pay').textContent = 'Payment confirmed'\n      },\n      onError: (error) => console.error(error.remedy || error.message),\n    })\n    // When removing this view, call checkout.unmount().\n  }\n  showCheckout().catch(console.error)\n</script>",
+        language: "html",
+      },
+      {
+        id: "options",
+        title: "Mount options and lifecycle",
+        body: "SableyeCheckout.mount(target, invoice, options?) accepts a CSS selector or Element, an invoice object or serialized/encoded invoice string, and Checkout props except invoice. It returns {unmount()}; a missing target throws. Options include appearance, qr, payUrl, className, onSuccess and onError. The default theme is light; night suits dark sites and none omits the styles. Use appearance.variables for colors, borderRadius and fontFamily. The optional WalletConnect provider is external to this bundle; use the React/bundler integration when enabling WalletConnect. Injected wallets and supported mobile deep links remain available.",
+      },
+      {
+        id: "backend",
+        title: "A static page still needs a merchant backend",
+        body: "The browser bundle never signs invoices with a merchant key. Host signing, verification and any gasless relay on a server or serverless function. Use HTTPS and a public checkout URL for mobile wallets. verifyPayment reports on-chain receipt status; choose additional safe/final confirmations for fulfilment when your business needs them.",
+      },
+    ],
+  },
+  {
+    slug: "cli/agents",
+    title: "Coding agent setup",
+    group: "Resources",
+    description:
+      "Generate integration instructions for your installed SDK and selected features.",
+    sections: [
+      {
+        id: "generate",
+        title: "Generate the agent files",
+        body: "Run init first to select features, hosting, email and appearance. To refresh only agent instructions, run npx sableye agents in your application. It uses the saved sableye configuration in package.json and prompts where needed. It updates a managed Sableye block in AGENTS.md, adds an @AGENTS.md pointer to CLAUDE.md, and installs the integration skill in .claude/skills/sableye/. Keep your application instructions outside the managed block.",
+        code: "npx sableye init\n# After changing configuration or upgrading the SDK:\nnpx sableye agents",
+        language: "bash",
+      },
+      {
+        id: "docs",
+        title: "Use the version-matched reference",
+        body: "The installed package includes node_modules/sableye/docs/ and AGENTS.index.md. Read those guides for the version your app actually uses. Give the printed integration prompt to your coding agent and review its changes: server-controlled prices, server-only keys, verification before fulfilment, and integration into the existing payment step. Choices saved in package.json guide generated instructions; your server still needs the corresponding Sableye configuration.",
+      },
+      {
+        id: "hosting",
+        title: "Choose how confirmations run",
+        body: "For a long-running server, start one indexer and share persistent order records with the invoice routes. For serverless, verify the order on the server when the customer returns, finish due email jobs before the request freezes, and arrange durable cron or workers for retries and unattended confirmations. Starting a timer in a short-lived function does not provide a persistent worker.",
+      },
+    ],
+  },
+  {
+    slug: "sandbox",
+    title: "Sandbox walkthrough",
+    group: "Resources",
+    description:
+      "Explore the real testnet demos, merchant view and independent Arkiv reader.",
+    sections: [
+      {
+        id: "try",
+        title: "Use test funds",
+        body: "Open /sandbox to choose a product, then use its Try it panel and live Sableye code. Payments run on Whitechain Sepolia (1874) using the official test USDT. Claim WBT from the testnet faucet and swap it on testnet.yetitrade.fi. This is a public demo merchant: do not use production customer information, secrets or real funds. Refunds and cancels are restricted to sandbox orders, and gas-spending actions and email delivery are rate-limited.",
+      },
+      {
+        id: "client",
+        title: "Client view",
+        body: "The Client view shows the sandbox merchant’s recent invoices and subscriptions, payment states and local Arkiv publication markers. It is a testnet demonstration, not an authenticated production dashboard. Your own merchant view needs authentication, tenant isolation and server-side authorization; a publication marker alone is not proof of a verified Arkiv entity.",
+      },
+      {
+        id: "books",
+        title: "Books without Sableye",
+        body: "Open /sandbox/books to read merchant-owned invoice and subscription records directly through the Arkiv SDK and verify their Whitechain receipts. Enter a merchant address to inspect public data. Unlock private invoice details with its view key, or connect the same merchant wallet and sign the message Sableye view key v1. This is a message signature, not a transaction or token approval. Wallet unlocking requires the same signature-derived key used by the publisher. The reader uses no Sableye SDK or private merchant signing key; treat a shared view key as access to all encrypted details under that key.",
+      },
+      {
+        id: "deploy",
+        title: "Run the full demo",
+        body: "From the repository root, install with pnpm install, then run pnpm --filter sableye-frontend dev. Follow the repository README for server environment and persistent hosting. The full demo needs a writable persistent data directory and an always-on process for indexing, delivery retries, subscriptions and Arkiv publishing. Serverless deployments intentionally reject operations that require persistent sandbox storage.",
+      },
+    ],
+  },
+  {
     slug: "packages",
     title: "Choose your integration",
     group: "Get Started",
@@ -26,7 +114,7 @@ export const merchantPages: DocPage[] = [
             ],
             [
               "sableye/react",
-              "Checkout, useCheckout and optional WalletConnect provider integration.",
+              "Styled Checkout, appearance themes and variables, useCheckout and optional WalletConnect integration.",
             ],
             [
               "sableye/mcp",
@@ -38,7 +126,7 @@ export const merchantPages: DocPage[] = [
             ],
             [
               "sableye CLI",
-              "The sableye command: create, init, doctor, view-key, listen and mcp.",
+              "The sableye command: create, init, agents, doctor, view-key, listen and mcp.",
             ],
           ],
         },
@@ -46,12 +134,12 @@ export const merchantPages: DocPage[] = [
       {
         id: "paths",
         title: "Choose a checkout",
-        body: "Use Checkout for ready-made React UI, useCheckout for your own React UI, or createCheckout for another browser framework. Alternatively, redirect the customer to the invoice checkoutUrl and deploy the static checkout. All paths need server-side invoice creation and payment verification. The starter currently supports Next.js only; server APIs and the headless engine can be integrated manually with other applications.",
+        body: "Use Checkout for ready-made React UI, useCheckout for your own React UI, SableyeCheckout.mount for an HTML or non-React site, or createCheckout for a custom browser UI. Alternatively, redirect the customer to the invoice checkoutUrl and deploy the static checkout. All paths need server-side invoice creation and payment verification. The starter currently supports Next.js only; server APIs and the headless engine can be integrated manually with other applications.",
       },
       {
         id: "responsibilities",
         title: "What the merchant supplies",
-        body: "Provide the server signing credential, payout address, server-controlled prices, order database, authentication and idempotent fulfilment. Configure public checkout/relay URLs and durable workers if using webhooks, receipts, Arkiv or renewals. Sableye does not host your backend or provide an AI model. Whitechain Sepolia is the bundled usable deployment; the mainnet configuration has no bundled processor or USDT.",
+        body: "Provide the server signing credential, payout address, server-controlled prices, order database, authentication and idempotent fulfilment. Configure public checkout/relay URLs and durable workers for webhooks, unattended confirmations, retries, Arkiv or renewals. Sableye does not host your backend or provide an AI model. Whitechain Sepolia is the bundled usable deployment; the mainnet configuration has no bundled processor or USDT.",
       },
     ],
   },
@@ -60,18 +148,18 @@ export const merchantPages: DocPage[] = [
     title: "Merchant setup",
     group: "Resources",
     description:
-      "Set Sableye up in your app with one command: install, key, business name, email, Arkiv and your AI coding agent.",
+      "Configure your app, payment features, email, hosting and coding agent.",
     sections: [
       {
         id: "init",
         title: "Run interactive setup",
-        body: "Run it in your app's folder. It detects your framework, package manager and hosting, offers to install sableye and viem, then asks each choice: merchant key (and an optional payout wallet), business name, support email and address, payment features (gasless, payment links, subscriptions, refunds, coupons, WalletConnect), emails (Resend recommended, SMTP, or none; it sends a test email), webhooks, where the app runs (long-running server or serverless, which decides how payments are confirmed), the checkout look and Arkiv. Choices are saved in the \"sableye\" section of package.json; secrets are merged into .env (backed up as .env.bak, git-ignored, nothing replaced without a yes). Last, it writes AGENTS.md instructions generated from your choices, installs the skill, runs doctor and prints a prompt that integrates into your existing payment flow without redesigning it. Re-running opens with your saved choices; npx sableye agents regenerates the instructions. Non-interactive: npx sableye init --yes --features gasless,refunds --emails resend --hosting server --theme light (add --dry-run to preview).",
+        body: 'Run it in your app\'s folder. It detects your framework, package manager and hosting, offers to install sableye and viem, then asks each choice: merchant key (and an optional payout wallet), business name, support email and address, payment features (gasless, payment links, subscriptions, refunds, coupons, WalletConnect), emails (Resend recommended, SMTP, or none; it sends a test email), webhooks, where the app runs (long-running server or serverless, which decides how payments are confirmed), the checkout look and Arkiv. Choices are saved in the "sableye" section of package.json; secrets are merged into .env (backed up as .env.bak, git-ignored, nothing replaced without a yes). Last, it writes AGENTS.md instructions generated from your choices, installs the skill, runs doctor and prints a prompt that integrates into your existing payment flow without redesigning it. Re-running opens with your saved choices; npx sableye agents regenerates the instructions. Non-interactive: npx sableye init --yes --features gasless,refunds --emails resend --hosting server --theme light (add --dry-run to preview).',
         code: "npx sableye init\n# paste the printed prompt into Claude Code, Cursor, Codex or Copilot\nnpm run dev",
       },
       {
         id: "email-only",
         title: "Configure email later",
-        body: "The --email option reruns only SMTP setup. Skipping email or Arkiv leaves payment acceptance available. Use an SMTP app password when your provider requires one. Setup is interactive; without a terminal, fill in .env yourself. Email settings use SABLEYE_SMTP_* names so your app's own SMTP_* settings are never touched.",
+        body: "The --email option reruns email-provider selection: Resend, SMTP or none. Use an SMTP app password when required, or a verified Resend sender. For unattended setup, pass --yes with --emails, --features, --hosting and --theme; --dry-run previews configuration without saving files or installing packages. It still runs wizard steps, which can generate a temporary credential and perform configured email checks; it is not an offline mode.",
         code: "npx sableye init --email",
       },
       {
@@ -82,6 +170,14 @@ export const merchantPages: DocPage[] = [
           headers: ["Variable", "Used for"],
           rows: [
             ["MERCHANT_KEY", "Server-only merchant private key."],
+            [
+              "SABLEYE_PAYOUT",
+              "Default payout wallet; config.payout or invoice payout can override it.",
+            ],
+            [
+              "SABLEYE_SUPPORT_EMAIL / SABLEYE_BUSINESS_ADDRESS",
+              "Reply-To/support contact and business address on emails and document footers.",
+            ],
             [
               "SABLEYE_BUSINESS_NAME",
               "Default business name on documents and emails.",
@@ -166,7 +262,7 @@ export const merchantPages: DocPage[] = [
       {
         id: "apply",
         title: "Sign the discounted invoice",
-        body: "Choose the subtotal on your server. Pass the customer's code to invoices.create; the signature covers the final discounted amount. quote is only a preview and reserves nothing. Invoice creation reserves a redemption until its expiry. A running indexer converts a paid order's reservation to a redeemed count. Deactivation stops future use but leaves already signed invoices payable.",
+        body: "Choose the subtotal on your server. Pass the customer's code to invoices.create; the signature covers the final discounted amount. quote is only a preview and reserves nothing. Invoice creation reserves a redemption until its expiry. verifyPayment on a stored paid order or a running indexer converts its reservation to a redeemed count. Deactivation stops future use but leaves already signed invoices payable.",
         code: "const invoice = await sableye.invoices.create({\n  amount: '5.00', coupon: 'WELCOME10',\n})\nawait sableye.coupons.deactivate('WELCOME10')",
       },
       {
@@ -181,12 +277,12 @@ export const merchantPages: DocPage[] = [
     title: "Emails and notifications",
     group: "Manage Payments",
     description:
-      "Send invoices, receipts and refund notices through your own SMTP account.",
+      "Send invoices, receipts and refund notices through Resend or SMTP.",
     sections: [
       {
         id: "configure",
-        title: "Configure SMTP",
-        body: "Run sableye init --email or set SABLEYE_SMTP_USER and SABLEYE_SMTP_PASS. Known provider domains have SMTP host/port detection; custom providers need SABLEYE_SMTP_HOST and optionally SABLEYE_SMTP_PORT. SABLEYE_SMTP_FROM overrides the sender. MERCHANT_EMAIL changes the merchant notice recipient; off disables those notices. Alternatively pass email: {user,pass,host?,port?,from?,notify?}; email:false disables mail.",
+        title: "Choose Resend or SMTP",
+        body: "Run npx sableye init --email to select Resend, SMTP or none. For Resend, set SABLEYE_RESEND_API_KEY and SABLEYE_EMAIL_FROM with a verified sender domain. These take precedence over SMTP environment settings. For SMTP, set SABLEYE_SMTP_USER and SABLEYE_SMTP_PASS. Known provider domains have SMTP host/port detection; custom providers need SABLEYE_SMTP_HOST and optionally SABLEYE_SMTP_PORT. SABLEYE_SMTP_FROM overrides the sender. MERCHANT_EMAIL changes the merchant notice recipient; off disables those notices. Alternatively pass email: {user,pass,host?,port?,from?,notify?,resendApiKey?}; email:false disables mail.",
         code: "const sableye = getSableye()\nconsole.log(sableye.emails.enabled)\nawait sableye.emails.test() // sends to SMTP user by default\nconsole.log(sableye.emails.log()) // pending / sent / skipped / failed",
       },
       {
@@ -197,13 +293,13 @@ export const merchantPages: DocPage[] = [
       },
       {
         id: "events",
-        title: "Run the indexer for payment emails",
-        body: "An attached running indexer queues customer receipts and merchant notices on invoice.paid, and refund confirmations on invoice.refunded. The mail handler rereads payment state before sending a receipt. These events do not imply safe/final confirmation. The worker must access the same order details as the invoice route. Use the Orders and storage guide for a persistent worker. Reusable links do not collect a customer's email automatically.",
+        title: "Confirm payments and send receipts",
+        body: "verifyPayment queues the customer receipt and merchant notice when it confirms a paid order present in the same orderStore. A running indexer also triggers them on invoice.paid, so it can confirm orders after the customer closes the tab. Both paths share paidHandledAt on the order to suppress repeat handling. An indexer queues refund confirmations on invoice.refunded. These events do not imply safe/final confirmation. A separate worker must share the invoice route's order records; reusable links do not collect customer email automatically.",
       },
       {
         id: "retries",
         title: "Delivery and serverless execution",
-        body: "The keyed side-effect outbox retries failed jobs; SMTP failure does not reverse a payment. flush() drains jobs due now, not future retries, and does not guarantee delivery; inspect log() for failures. Before a serverless response finishes, await emails.flush() or use the host's supported background lifecycle. Timers do not reliably run after the process freezes. Persist the queue and arrange future worker runs for retries. Job keys suppress duplicates while retained; pruning and SMTP crash windows mean this is not an exactly-once delivery guarantee.",
+        body: "The keyed side-effect outbox retries failed jobs; an email-provider failure does not reverse a payment. flush() drains jobs due now, not future retries, and does not guarantee delivery; inspect log() for failures. Before a serverless response finishes, await emails.flush() or use the host's supported background lifecycle. Timers do not reliably run after the process freezes. Persist the queue and arrange future worker runs for retries. Job keys suppress duplicates while retained; pruning and SMTP crash windows mean this is not an exactly-once delivery guarantee.",
       },
     ],
   },
@@ -267,24 +363,40 @@ export const merchantPages: DocPage[] = [
       {
         id: "enable",
         title: "Enable optional publishing",
-        body: "The Arkiv integration is implemented. It uses Rabdi and the merchant's local-account signing key; a generic KMS signer does not automatically enable publishing. Configure an Arkiv access key and fund that merchant address with the Arkiv test gas token. The SDK does not provision either. The public format is defined in arkiv/schema.md in the repository.",
+        body: "Arkiv publishing uses Rabdi and the merchant's local-account signing key; a generic KMS signer does not enable it automatically. Set ARKIV_ACCESS_KEY and fund the same merchant address with Rabdi test gas. Use durable publisher state and outbox storage on a persistent worker. The open invoice, refund, subscription and merchant schemas are defined in arkiv/schema.md.",
         code: "import { Sableye, fileStore, fileOrderStore } from 'sableye/server'\nconst sableye = new Sableye({\n  privateKey: process.env.MERCHANT_KEY as `0x${string}`,\n  network: 'whitechain-sepolia',\n  orderStore: fileOrderStore('.sableye/orders.json'),\n  outbox: { path: '.sableye/outbox.json' },\n  arkiv: { accessKey: process.env.ARKIV_ACCESS_KEY, statePath: '.sableye/arkiv.json' },\n})\nconst indexer = sableye.indexer({ store: fileStore('.sableye/indexer.json') })\nawait indexer.start()\nconsole.log(sableye.arkiv.enabled, sableye.arkiv.status())",
       },
       {
         id: "lifecycle",
         title: "Publishing lifecycle",
-        body: "invoice.safe enqueues a sableye.invoice.v1 record. Refunds create sableye.refund.v1 records and update invoice totals. Reorg events mark the affected payment record reorged. A merchant profile uses sableye.merchant.v1. Writes belong to the merchant wallet and run through the retry queue. Records last 180 days; the running publisher checks every six hours and extends records within 30 days of expiry. Publishing depends on the indexer's confirmation policy and RPC tag support; safe is not an independent Arkiv settlement guarantee.",
+        body: "invoice.safe enqueues a sableye.invoice.v1 record. Refunds create sableye.refund.v1 records and update invoice totals. Reorg events mark the affected payment record reorged. Subscription snapshots use sableye.subscription.v1 and are synchronized every two minutes by default. A merchant profile uses sableye.merchant.v1. Writes belong to the merchant wallet and run through the retry queue. Records last 180 days; the running publisher checks every six hours and extends records within 30 days of expiry. Publishing depends on the indexer's confirmation policy and RPC tag support; safe is not an independent Arkiv settlement guarantee.",
       },
       {
         id: "read",
         title: "Read and monitor records",
-        body: "arkiv.records(limit=100) returns merchant-owned records newest first with entityKey, orderId, status, token, bigint amount/refunded, payer/payout, paidAt Date, txHash and optional decrypted details. arkiv.status() returns published, pending, failed and optional lastError from local state/jobs. Persist both publisher state and outbox for restart recovery. arkiv:false disables publishing even if ARKIV_ACCESS_KEY exists.",
+        body: "arkiv.records(limit=100) returns merchant-owned records newest first with entityKey, orderId, status, token, bigint amount/refunded, payer/payout, paidAt Date, txHash and optional decrypted details. arkiv.status() returns published, pending, failed and optional lastError from local state/jobs; published counts invoice, refund and subscription entities. arkiv.published() returns local invoice/subscription ID-to-entity-key maps, not a chain verification result. arkiv.records() reads invoices only; read subscriptions through their open Arkiv schema. Persist both publisher state and outbox for restart recovery. arkiv:false disables publishing even if ARKIV_ACCESS_KEY exists.",
         code: "const records = await sableye.arkiv.records(50)\nconsole.log(sableye.arkiv.status())\n// Server-side only; authorize the recipient before sharing:\nconst viewKey = await sableye.arkiv.viewKey()",
       },
       {
         id: "privacy",
         title: "View keys and independent readers",
-        body: "Public fields mirror on-chain payment facts. Order reference, customer, description and items are AES-256-GCM encrypted. The view key is keccak256 of the merchant's signature of VIEW_KEY_MESSAGE ('Sableye view key v1'); ciphertext is a 12-byte IV followed by authenticated encrypted JSON. Core exports viewKeyFromSignature, encryptPrivate and decryptPrivate for independent readers. A view key reveals private details across records using that key; share it only with authorized readers and never publish it. The CLI view-key command prints it locally. Keep the v1 schema unchanged for third-party readers; new formats require a new schema version.",
+        body: "Public fields mirror on-chain payment facts. Order reference, customer, description and items are AES-256-GCM encrypted. The view key is keccak256 of the merchant's signature of VIEW_KEY_MESSAGE ('Sableye view key v1'); ciphertext is a 12-byte IV followed by authenticated encrypted JSON. Core exports viewKeyFromSignature, encryptPrivate and decryptPrivate for independent readers. A view key reveals private details across records using that key; share it only with authorized readers and never publish it. The CLI view-key command prints it locally. A browser wallet for the same merchant address can sign VIEW_KEY_MESSAGE with personal_sign and derive the key with viewKeyFromSignature; this is a message signature, not a payment or approval. The signer must reproduce the signature used to encrypt the records; do not assume every smart-wallet or KMS signing implementation produces the same signature bytes. Keep the v1 schema unchanged for third-party readers; new formats require a new schema version.",
+      },
+      {
+        id: "subscription-records",
+        title: "Publish and read subscriptions",
+        body: "The publisher synchronizes subscription snapshots using sableye.subscription.v1. Public fields include subscription_id, merchant, subscriber, status, plan_id, network, chain_id, token, amount, interval, cycles_charged, total_charged, started_at, next_charge_at and last_tx_hash. Amounts are base-unit integers and times are Unix seconds. Query this schema directly with the Arkiv SDK; arkiv.records() returns invoices only. Verify last_tx_hash against the SubscriptionManager Charged receipt before trusting an external record. See arkiv/schema.md for types and field meanings.",
+        code: "const queued = await sableye.arkiv.syncSubscriptions()\nconsole.log({ queued, published: sableye.arkiv.published() })\n// queued is the number scheduled, not a delivery confirmation.",
+      },
+      {
+        id: "subscription-sync",
+        title: "Control synchronization",
+        body: "Set arkiv.subscriptionSyncMs to change the two-minute default; 0 disables the automatic subscription timer. A serverless deployment must schedule syncSubscriptions() and run the shared outbox in a supported lifecycle or durable worker. Persist arkiv.statePath and outbox.path to retain entity mappings and retries. published() returns {invoices, subscriptions} maps from local publisher state, while status() reports aggregate publication jobs.",
+      },
+      {
+        id: "wallet-unlock",
+        title: "Unlock with a merchant wallet",
+        body: "An independent reader can request personal_sign of the exact message Sableye view key v1 from the merchant account, then derive the key with viewKeyFromSignature. This only decrypts data encrypted under that same signature-derived key: the wallet must reproduce the publishing signer’s signature. It is not a transaction or an approval. Check the connected address, keep the derived key private, and never request the merchant private key. Books demonstrates this flow without importing Sableye.",
       },
     ],
   },
@@ -326,7 +438,7 @@ export const merchantAdditions: Record<string, DocSection[]> = {
           ],
           [
             "email",
-            "EmailConfig or false; defaults from SMTP environment variables.",
+            "EmailConfig or false; defaults from Resend or SMTP environment variables.",
           ],
           ["orderStore", "OrderStore adapter; defaults to memoryOrderStore()."],
           [
@@ -387,7 +499,7 @@ export const merchantAdditions: Record<string, DocSection[]> = {
     {
       id: "merchant-apis",
       title: "Additional merchant APIs",
-      body: "Public server families also include coupons.create/get/list/quote/deactivate, emails.enabled/test/log/flush, documents.invoicePdf/receiptPdf, arkiv.enabled/viewKey/records/status, indexer.revenue/events/resend/deliveries and subscriptions.stats. File/memory order and coupon stores, createOutbox, email configuration/SMTP helpers, PDF generation functions, Arkiv types, and core privacy helpers are exported. The package directory, task guides and source types describe the appropriate runtime and persistence boundaries.",
+      body: "Public server families also include coupons.create/get/list/quote/deactivate, emails.enabled/test/log/flush, documents.invoicePdf/receiptPdf, arkiv.enabled/viewKey/records/status/published/syncSubscriptions, indexer.revenue/events/resend/deliveries and subscriptions.stats. File/memory order and coupon stores, createOutbox, email configuration/SMTP helpers, PDF generation functions, Arkiv types, and core privacy helpers are exported. The package directory, task guides and source types describe the appropriate runtime and persistence boundaries.",
     },
   ],
   core: [
