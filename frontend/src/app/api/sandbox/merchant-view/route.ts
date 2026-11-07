@@ -44,11 +44,20 @@ export const GET = () =>
         onArkiv: !!published.invoices[o.orderId.toLowerCase()],
       };
     });
-    const subscriptions = (await sableye.subscriptions.list()).map((s) => ({
-      ...s,
-      cycles: s.amount ? Number(s.charged / s.amount) : 0,
-      onArkiv: !!published.subscriptions[s.subId.toLowerCase()],
-    }));
+    const [list, history] = await Promise.all([
+      sableye.subscriptions.list(),
+      sableye.subscriptions.history(),
+    ]);
+    const subscriptions = list
+      .map((s) => ({
+        ...s,
+        cycles: s.amount ? Number(s.charged / s.amount) : 0,
+        onArkiv: !!published.subscriptions[s.subId.toLowerCase()],
+        payments: history
+          .filter((h) => h.subId.toLowerCase() === s.subId.toLowerCase())
+          .reverse(), // newest first
+      }))
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
     return json({
       invoices,
       subscriptions,

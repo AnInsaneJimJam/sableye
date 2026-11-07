@@ -8,5 +8,9 @@ export const GET = () =>
     const { indexer } = merchant();
     const t = Date.now();
     const mismatches = await indexer.reconcile();
-    return json({ checked: indexer.invoices().length, mismatches, ms: Date.now() - t });
+    return json({
+      checked: indexer.invoices().length,
+      mismatches,
+      ms: Date.now() - t,
+    });
   });

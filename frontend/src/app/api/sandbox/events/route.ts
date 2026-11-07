@@ -15,7 +15,14 @@ export const GET = () =>
     const { indexer } = merchant();
     await indexer.poll();
     const [latest, safe, finalized] = await Promise.all(
-      (["latest", "safe", "finalized"] as const).map((blockTag) => client.getBlock({ blockTag }).then((b) => b.number)),
+      (["latest", "safe", "finalized"] as const).map((blockTag) =>
+        client.getBlock({ blockTag }).then((b) => b.number),
+      ),
     );
-    return json({ heads: { latest, safe, finalized }, invoices: indexer.invoices().slice(0, 30), webhooks: webhookLog.all().slice(0, 40), deliveries: indexer.deliveries });
+    return json({
+      heads: { latest, safe, finalized },
+      invoices: indexer.invoices().slice(0, 30),
+      webhooks: webhookLog.all().slice(0, 40),
+      deliveries: indexer.deliveries,
+    });
   });

@@ -577,3 +577,6 @@
 .sbx-table-wrap {
   overflow-x: auto;
 }
+.sbx-product-page[data-product="merchant"] .sbx-stats {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}

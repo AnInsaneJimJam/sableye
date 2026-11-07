@@ -6,6 +6,9 @@ export async function GET() {
   const { indexer } = merchant();
   await indexer.poll();
   return new Response(indexer.exportCsv(), {
-    headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": 'attachment; filename="sableye-payments.csv"' },
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": 'attachment; filename="sableye-payments.csv"',
+    },
   });
 }

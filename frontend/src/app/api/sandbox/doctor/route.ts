@@ -8,5 +8,10 @@ export const GET = () =>
   handle(async () => {
     await connection();
     const { sableye } = merchant();
-    return json(await doctor({ network: "whitechain-sepolia", merchant: sableye.merchant }));
+    return json(
+      await doctor({
+        network: "whitechain-sepolia",
+        merchant: sableye.merchant,
+      }),
+    );
   });

@@ -11,6 +11,15 @@ export const GET = (req: Request) =>
   handle(async () => {
     await connection();
     const hash = new URL(req.url).searchParams.get("hash") as Hex;
-    const [tx, receipt] = await Promise.all([client.getTransaction({ hash }), client.getTransactionReceipt({ hash })]);
-    return json({ from: tx.from, to: tx.to, gasUsed: receipt.gasUsed, feeWbt: formatEther(receipt.gasUsed * receipt.effectiveGasPrice), selector: tx.input.slice(0, 10) });
+    const [tx, receipt] = await Promise.all([
+      client.getTransaction({ hash }),
+      client.getTransactionReceipt({ hash }),
+    ]);
+    return json({
+      from: tx.from,
+      to: tx.to,
+      gasUsed: receipt.gasUsed,
+      feeWbt: formatEther(receipt.gasUsed * receipt.effectiveGasPrice),
+      selector: tx.input.slice(0, 10),
+    });
   });
