@@ -407,7 +407,12 @@ export function SubscriptionsDemo() {
     expiry: BigInt(offer.plan.expiry),
   };
   const cap = plan.amount * BigInt(cycles);
-  const live = sub && (sub.status === "active" || sub.status === "past_due");
+  const onChainActive =
+    !!sub && (sub.status === "active" || sub.status === "past_due");
+  // A subscription whose cap can't cover another period has ended, though the contract still says "active".
+  const ended =
+    onChainActive && BigInt(sub.charged) + plan.amount > BigInt(sub.cap);
+  const live = onChainActive && !ended;
   const secsLeft =
     sub && now
       ? Math.max(
@@ -428,6 +433,18 @@ export function SubscriptionsDemo() {
         return setError(e as ApiError);
       }
     }
+    // The contract only allows a new subscription to the same plan once the old one is closed.
+    if (ended && sub)
+      await send("close", (w) =>
+        w.writeContract({
+          address: offer.subscriptions,
+          abi: subscriptionManagerAbi,
+          functionName: "cancel",
+          args: [sub.subId],
+          account: account as Address,
+          chain: net.chain,
+        }),
+      );
     const allowance = await reader.readContract({
       address: plan.token,
       abi: erc20Abi,
@@ -577,16 +594,32 @@ export function SubscriptionsDemo() {
                   </select>
                 </label>
                 <Btn
-                  busy={busy === "approve" || busy === "subscribe"}
+                  busy={
+                    busy === "close" ||
+                    busy === "approve" ||
+                    busy === "subscribe"
+                  }
                   onClick={() => void subscribe()}
                 >
-                  {busy === "approve"
-                    ? "Approving cap…"
-                    : busy === "subscribe"
-                      ? "Subscribing…"
-                      : "Subscribe"}
+                  {busy === "close"
+                    ? "Closing the ended subscription…"
+                    : busy === "approve"
+                      ? "Approving cap…"
+                      : busy === "subscribe"
+                        ? "Subscribing…"
+                        : ended
+                          ? "Subscribe again"
+                          : "Subscribe"}
                 </Btn>
               </div>
+            )}
+            {ended && sub && (
+              <p className="sbx-muted">
+                Your last subscription used its whole {usdt(sub.cap)} USDT cap (
+                {usdt(sub.charged)} charged), so it has ended. Subscribing again
+                first closes it on-chain (one extra signature), then starts a
+                new one.
+              </p>
             )}
             {sub?.status === "cancelled" && (
               <p className="sbx-muted">

@@ -110,6 +110,7 @@ sableye.arkiv.status()          // { published, pending, failed, lastError? }
 
 ### sableye.subscriptions.keeper(options?)
 Start once in a long-running server after creating signed plans with `subscriptions.createPlan({ planId, amount, interval })`. The customer approves a cap and calls `SubscriptionManager.subscribe(plan, signature, cap)`; the first cycle charges immediately.
+A subscription whose cap can't cover another period has **ended** (no more charges, and `stats()` counts it as ended), but the contract still reports `active`. The same wallet can only subscribe to the same plan again after the old one is cancelled, so a "Subscribe again" button should send `SubscriptionManager.cancel(subId)` from the customer's wallet first, then approve and subscribe.
 
 ```ts
 const keeper = sableye.subscriptions.keeper()
