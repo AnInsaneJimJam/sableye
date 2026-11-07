@@ -7,7 +7,8 @@ These are the problems we actually hit while integrating `@arkiv-network/sdk` 1.
 3. **No access key means a warning and a heavily rate-limited endpoint.** That's fine, but a browser-only reader (our Books page) has nowhere to keep a key without exposing it. A documented read-only, origin-restricted key, or a looser public read limit, would help public readers.
 4. **The 182-day maximum lifetime makes renewal mandatory.** Records that are business archives need an `extendEntity` loop running somewhere forever. We built one, but "the merchant's books" shouldn't silently expire if their server is off for six months. A longer maximum, or prepaid long-term storage, would fit archival data better.
 5. **Writes need tGLM on a separate chain.** Merchants already juggle WBT for Whitechain gas; a second faucet and token is one more onboarding step. `npx sableye init` links the faucet, but sponsored writes or a paymaster would remove the step.
-6. **Bigint literals and the browser.** Not Arkiv's fault, but worth documenting: `u256`/`u64` values are bigints, and Next.js apps targeting < ES2020 can't use `0n` literals in the reader.
+6. **`str` columns are capped at 128 bytes.** It's enforced at write time, with a clear error and a remedy ("store the long form in a bytes column"), which is good. But it isn't stated where schemas are introduced, so we only found it when an invoice-sized value threw. **Suggestion:** mention the limit next to `str()` in the README and the typed docs.
+7. **Bigint literals and the browser.** Not Arkiv's fault, but worth documenting: `u256`/`u64` values are bigints, and Next.js apps targeting < ES2020 can't use `0n` literals in the reader.
 
 **What worked well:**
 - The typed `defineSchema` plus query builder (`ownedBy`, `orderBy`, indexed-only `where` checked at compile time) caught mistakes early.

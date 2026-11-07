@@ -169,10 +169,10 @@ The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye.xyz/
 
 Emails go through a keyed outbox, so a replayed event never sends twice and an SMTP failure never touches a payment. PDFs are also available directly: `sableye.documents.invoicePdf(ref)` / `receiptPdf(ref)`.
 
-**Arkiv.** With `ARKIV_ACCESS_KEY` set, every paid invoice and refund is published to Arkiv (testnet "Rabdi"), **signed by the merchant key**, so the merchant's wallet owns the records.
+**Arkiv.** With `ARKIV_ACCESS_KEY` set, every paid invoice, refund and **subscription** (cycles and total charged, status, patched on every charge) is published to Arkiv (testnet "Rabdi"), **signed by the merchant key**, so the merchant's wallet owns the records.
 - **Public columns** hold only what's already public on Whitechain (amount, token, payer, tx hash, time).
 - **Encrypted:** the order reference, items and customer, with the merchant's view key (`npx sableye view-key`).
-- **Reading:** any app can read the records without us. `/sandbox/books` does it in the browser with no Sableye code, verifies each record against its Whitechain transaction, and exports CSV.
+- **Reading:** any app can read the records without us. `/sandbox/books` does it in the browser with no Sableye code: it verifies each invoice and subscription against its Whitechain transaction, shows recurring revenue, exports CSV, and lets the merchant unlock the private fields by signing with their wallet. `/sandbox/merchant` (the client view) marks which records are already on Arkiv.
 - **Format:** [`arkiv/schema.md`](arkiv/schema.md).
 - **Background:** [`why-arkiv.md`](arkiv/why-arkiv.md) · [`how-you-use-arkiv.md`](arkiv/how-you-use-arkiv.md) · [`reach.md`](arkiv/reach.md) · [`friction.md`](arkiv/friction.md).
 
