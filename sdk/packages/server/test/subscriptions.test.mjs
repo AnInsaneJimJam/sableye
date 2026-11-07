@@ -216,3 +216,45 @@ test('stats: a subscription that used up its cap has ended: not active, no MRR',
   const others = (await sableye.subscriptions.list()).filter((x) => x.subId !== subId && x.status !== 'cancelled' && x.charged + x.amount <= x.cap)
   assert.equal(st.active + st.pastDue, others.length, 'the capped one is not counted as active')
 })
+
+test('subscription emails: confirmation, renewal receipt and cancellation to the customer, notices to the merchant, each once', async () => {
+  const nodemailer = (await import('nodemailer')).default
+  const sent = []
+  const transport = nodemailer.createTransport({ jsonTransport: true })
+  const send = transport.sendMail.bind(transport)
+  transport.sendMail = async (m) => { sent.push(m); return send(m) }
+  const shop = new Sableye({
+    privateKey: KEY, network: 'local', chain, processor: sableye.network.processor, subscriptions: sm, rpcUrl: RPC,
+    tokens: { USDT: { symbol: 'USDT', address: usdt, decimals: 6 } }, business: { name: 'Acme Coffee' },
+    email: { user: 'shop@example.com', pass: 'x', transport, notify: 'owner@example.com' }, arkiv: false,
+  })
+  const check = async () => { await shop.subscriptions.checkEmails(); await shop.emails.flush() }
+  await check() // first check: records history, sends nothing
+  assert.equal(sent.length, 0, 'no emails about subscriptions that existed before')
+
+  const offer = await shop.subscriptions.createPlan({ planId: 'mail_plan', amount: '2', interval: 120 })
+  const w = await customer(10_000_000n)
+  await mined(await w.writeContract({ address: sm, abi: subscriptionManagerAbi, functionName: 'subscribe', args: [offer.plan, offer.signature, 6_000_000n] }))
+  const subId = await shop.subscriptions.id('mail_plan', w.account.address)
+  await shop.subscriptions.setCustomer(subId, { email: 'ada@example.com', name: 'Ada' })
+  await check()
+  const to = (addr) => sent.filter((m) => m.to === addr).map((m) => m.subject)
+  assert.deepEqual(to('ada@example.com'), ['Subscription confirmed: Acme Coffee'])
+  assert.match(to('owner@example.com')[0], /New subscriber: 2 USDT every 2 minutes/)
+
+  await later(121)
+  assert.equal((await shop.subscriptions.charge(subId)).result, 'charged')
+  await check()
+  assert.match(to('ada@example.com')[1], /Receipt from Acme Coffee: 2 USDT/)
+  assert.match(to('owner@example.com')[1], /You got paid: 2 USDT \(subscription renewal\)/)
+
+  await mined((await shop.subscriptions.cancel(subId)).txHash)
+  await check()
+  await check() // nothing new: nothing sent twice
+  assert.deepEqual(to('ada@example.com').slice(2), ['Subscription canceled: Acme Coffee'])
+  assert.match(to('owner@example.com').at(-1), /Subscription canceled/)
+  assert.equal(sent.length, 6)
+  const body = sent.find((m) => m.subject.startsWith('Subscription confirmed')).text
+  assert.match(body, /Hi Ada,/)
+  assert.match(body, /Next payment:/)
+})

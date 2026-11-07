@@ -108,7 +108,25 @@ export function smtpTransport(cfg: EmailConfig): Transporter {
   })
 }
 
-export type EmailKind = 'invoice' | 'receipt' | 'merchant_notice' | 'refund' | 'test'
+export type EmailKind = 'invoice' | 'receipt' | 'merchant_notice' | 'refund' | 'test' | 'subscription' | 'subscription_notice'
+
+/** Something that happened to a subscription, as the chain shows it. */
+export type SubscriptionEvent = 'started' | 'renewed' | 'failed' | 'cancelled' | 'ended'
+export interface SubscriptionEmail {
+  event: SubscriptionEvent
+  subId: Hex
+  payer: string
+  /** Base units per period, total charged so far, and the approved cap. */
+  amount: string
+  charged: string
+  cap: string
+  /** Seconds per period. */
+  interval: number
+  /** Unix ms. */
+  nextChargeAt: number
+  failedCharges: number
+  txHash?: Hex
+}
 
 /** A job payload: just ids. The message is built when it's sent, from the current on-chain state. */
 interface EmailJob {
@@ -119,6 +137,7 @@ interface EmailJob {
   amount?: string
   /** merchant_notice: the order was created by this server (else only recent payments are announced). */
   ours?: boolean
+  sub?: SubscriptionEmail
 }
 
 /** One entry of {@link Emails.log}. */
@@ -145,6 +164,8 @@ export interface EmailDeps {
   explorerTx(txHash: string): string | undefined
   /** Token amount (base units, decimal string) → human. */
   format(baseUnits: string): string
+  /** The subscriber's contact, if the app recorded one (`subscriptions.setCustomer`). */
+  subscriber?(subId: Hex): Promise<{ email?: string; name?: string } | undefined>
 }
 
 /** `sableye.emails` */
@@ -251,6 +272,49 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
       return send(to, `You got paid: ${payment.amountFormatted} ${token} (${ref.slice(0, 34)})`, lines.join('\n'))
     }
 
+    if (job.kind === 'subscription' || job.kind === 'subscription_notice') {
+      const x = job.sub!
+      const amt = `${deps.format(x.amount)} USDT`
+      const every = x.interval % 86_400 === 0 ? (x.interval === 86_400 ? 'day' : `${x.interval / 86_400} days`) : x.interval % 3600 === 0 ? (x.interval === 3600 ? 'hour' : `${x.interval / 3600} hours`) : `${Math.round(x.interval / 60)} minutes`
+      const plan = `${amt} every ${every}`
+      const tx = x.txHash ? deps.explorerTx(x.txHash) : undefined
+      const next = new Date(x.nextChargeAt).toUTCString()
+      const capLeft = `${deps.format((BigInt(x.cap) - BigInt(x.charged)).toString())} USDT left of the ${deps.format(x.cap)} USDT you approved`
+      if (job.kind === 'subscription') {
+        const who = await deps.subscriber?.(x.subId)
+        const to = who?.email
+        if (!to) return 'skipped' as const
+        const hi = who.name ? `Hi ${who.name},` : 'Hi,'
+        const m: Record<SubscriptionEvent, [string, string[]]> = {
+          started: [`Subscription confirmed: ${deps.businessName}`, [hi, '', `Your subscription to ${deps.businessName} is active: ${plan}.`, `First payment: ${amt}.`, ...(tx ? [`Transaction: ${tx}`] : []), `Next payment: ${next}.`, `Spending cap: ${capLeft}.`, '', 'Payments come from your wallet automatically each period, up to your cap. You can cancel any time.']],
+          renewed: [`Receipt from ${deps.businessName}: ${amt}`, [hi, '', `We received your subscription payment of ${amt} (${plan}). Thank you!`, ...(tx ? [`Transaction: ${tx}`] : []), `Next payment: ${next}.`, `Spending cap: ${capLeft}.`]],
+          failed: [`Payment failed: ${deps.businessName} subscription`, [hi, '', `Your ${amt} subscription payment to ${deps.businessName} didn't go through. Usually the wallet didn't have enough USDT, or the approval was reduced.`, '', 'Add USDT to the wallet you subscribed with; it will be retried. After 3 failed payments in a row the subscription is canceled.']],
+          cancelled: [`Subscription canceled: ${deps.businessName}`, [hi, '', `Your subscription to ${deps.businessName} (${plan}) is canceled. No further payments will be taken.`, `Paid in total: ${deps.format(x.charged)} USDT.`]],
+          ended: [`Your ${deps.businessName} subscription has ended`, [hi, '', `Your subscription (${plan}) used up the ${deps.format(x.cap)} USDT spending cap you approved, so no further payments will be taken.`, '', 'To continue, subscribe again with a new cap.']],
+        }
+        const [subject, lines] = m[x.event]
+        return send(to, subject, lines.join('\n'))
+      }
+      const to = notifyTo()
+      if (!to) return 'skipped' as const
+      const m: Partial<Record<SubscriptionEvent, string>> = {
+        started: `New subscriber: ${plan}`,
+        renewed: `You got paid: ${amt} (subscription renewal)`,
+        failed: `Subscription payment failed: ${amt}`,
+        cancelled: `Subscription canceled: ${plan}`,
+      }
+      if (!m[x.event]) return 'skipped' as const
+      const lines = [
+        `${m[x.event]}.`, '',
+        `Subscriber: ${x.payer}`,
+        `Collected so far: ${deps.format(x.charged)} of ${deps.format(x.cap)} USDT approved`,
+        ...(x.event === 'failed' ? [`Failed payments in a row: ${x.failedCharges}`] : []),
+        ...(tx ? [`Transaction: ${tx}`] : []),
+        `Subscription: ${x.subId}`,
+      ]
+      return send(to, `${m[x.event]} (${deps.businessName})`, lines.join('\n'))
+    }
+
     if (job.kind === 'refund') {
       if (!order?.customer?.email) return 'skipped' as const
       const amount = job.amount ? deps.format(job.amount) : ''
@@ -296,6 +360,12 @@ export function attachEmails(cfg: EmailConfig | undefined, outbox: Outbox, deps:
       if (!cfg) return
       if (order?.customer?.email) queue(`receipt:${orderId}`, { kind: 'receipt', orderId, to: order.customer.email })
       queue(`notice:${orderId}`, { kind: 'merchant_notice', orderId, ours: !!order, to: notifyTo() })
+    },
+    /** A subscription event → the subscriber's email (if they left one) and the merchant's notice. Keyed: sent once. */
+    onSubscription(x: SubscriptionEmail, key: string) {
+      if (!cfg) return
+      queue(`sub:${key}`, { kind: 'subscription', sub: x })
+      queue(`subm:${key}`, { kind: 'subscription_notice', sub: x })
     },
     /** Indexer events → refund confirmations (payments go through onPaid). Keys make replays and reorgs harmless. */
     async onEvent(e: WebhookEvent) {

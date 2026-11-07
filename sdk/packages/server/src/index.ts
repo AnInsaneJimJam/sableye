@@ -41,8 +41,8 @@ import { RateLimiter, RelayRejectedError, relayRouteHandler, type RelayOptions }
 import { startKeeper, type Keeper, type KeeperOptions } from './keeper.js'
 import { decodeLink, encodeLink, memoryLinkStore, PaymentLinkError, type LinkStore, type PaymentLink, type PaymentLinkData } from './links.js'
 import { privateKeyToAccount } from 'viem/accounts'
-import { attachEmails, emailConfigFromEnv, type EmailConfig, type Emails } from './email.js'
-import { memoryOrderStore, type Customer, type LineItem, type OrderDetails, type OrderStore } from './orders.js'
+import { attachEmails, emailConfigFromEnv, type EmailConfig, type Emails, type SubscriptionEvent } from './email.js'
+import { memoryOrderStore, memorySubscriberStore, type Customer, type LineItem, type OrderDetails, type OrderStore, type SubscriberStore } from './orders.js'
 import { createOutbox, type Outbox, type OutboxOptions } from './outbox.js'
 import { invoicePdf, receiptPdf, type BusinessInfo } from './pdf.js'
 import { arkivConfigFromEnv, attachArkiv, type ArkivApi, type ArkivConfig, type SubscriptionSnapshot } from './arkiv.js'
@@ -117,6 +117,8 @@ export interface SableyeConfig {
   email?: EmailConfig | false
   /** Where order details (customer, description, items) are kept. Default: in memory. Use `fileOrderStore()` or your DB. */
   orderStore?: OrderStore
+  /** Subscribers' contact details, for subscription emails. Default: in memory; `fileSubscriberStore()` survives restarts. */
+  subscriberStore?: SubscriberStore
   /** Queue for emails (and other side effects). Pass `{ path: '.sableye/outbox.json' }` so retries survive restarts. */
   outbox?: OutboxOptions
   /**
@@ -215,6 +217,9 @@ export class Sableye {
   private readonly checkoutUrl: string
   private readonly payout?: Address
   private readonly blockTimes = new Map<bigint, Date>()
+  private readonly subscribers: SubscriberStore
+  /** Subscription email jobs already seen (the first check only records the current state: no emails about the past). */
+  private subEmailSeen?: Set<string>
   /** The RPC URL in use (undefined = the network's public default). */
   readonly rpcUrl?: string
   private readonly relayUrl?: string
@@ -247,6 +252,7 @@ export class Sableye {
     this.paymentLinkUrl = config.paymentLinkUrl ?? 'http://localhost:3000/api/pay'
     this.linkStore = config.linkStore ?? memoryLinkStore()
     this.orders = config.orderStore ?? memoryOrderStore()
+    this.subscribers = config.subscriberStore ?? memorySubscriberStore()
     this.couponStore = config.couponStore ?? memoryCouponStore()
     this.outbox = createOutbox(config.outbox)
     this.business = config.business ?? {
@@ -264,6 +270,7 @@ export class Sableye {
       receiptPdf: (id, order) => this.receipt(id, order, true),
       explorerTx: (hash) => (this.network.chain.blockExplorers ? `${this.network.chain.blockExplorers.default.url}/tx/${hash}` : undefined),
       format: (units) => formatAmount(BigInt(units), getToken(this.network, 'USDT').decimals),
+      subscriber: (id) => this.subscribers.get(id),
     })
     const account = (this.signer as Partial<LocalAccount>).signTransaction && this.signer.signMessage ? (this.signer as LocalAccount) : undefined
     this.records = attachArkiv(config.arkiv === false ? undefined : (config.arkiv ?? arkivConfigFromEnv()), this.outbox, {
@@ -326,7 +333,7 @@ export class Sableye {
     for (const l of charged) lastTx.set(l.args.subId!, l.transactionHash)
     return Promise.all([...plan.keys()].map(async (id) => {
       const x = await this.subscriptions.get(id)
-      return { subId: id, planId: plan.get(id)!, payer: x.payer, status: x.status, token: x.token, amount: x.amount, interval: x.interval, charged: x.charged, startedAt: x.startedAt, nextChargeAt: x.nextChargeAt, lastTxHash: lastTx.get(id) }
+      return { subId: id, planId: plan.get(id)!, payer: x.payer, status: x.status, token: x.token, amount: x.amount, interval: x.interval, charged: x.charged, startedAt: x.startedAt, nextChargeAt: x.nextChargeAt, lastTxHash: lastTx.get(id), cap: x.cap, failedCharges: x.failedCharges }
     }))
   }
 
@@ -756,6 +763,48 @@ export class Sableye {
         .sort((x, y) => Number(x.block - y.block))
     },
 
+    /**
+     * Record a subscriber's contact so they get subscription emails (confirmation, receipts, failed payment,
+     * cancellation). The chain only knows their wallet; call this when your app learns their email.
+     */
+    setCustomer: async (subId: Hex, customer: Customer): Promise<void> => {
+      await this.subscribers.put(subId, customer)
+    },
+    customer: (subId: Hex) => this.subscribers.get(subId),
+
+    /**
+     * Compare every subscription's on-chain state with the last check and queue the emails for what changed:
+     * started, renewed, failed (past due), cancelled, ended (cap reached). Runs every minute while an indexer
+     * runs; call it yourself from a cron otherwise. The first check only records the current state.
+     */
+    checkEmails: async (): Promise<number> => {
+      if (!this.mail.emails.enabled || !this.network.subscriptions || this.network.subscriptions === zeroAddress) return 0
+      const first = !this.subEmailSeen
+      const seen = (this.subEmailSeen ??= new Set())
+      let queued = 0
+      for (const x of await this.subscriptionSnapshots()) {
+        const cycles = x.amount ? x.charged / x.amount : 0n
+        const events: [SubscriptionEvent, string][] = []
+        if (x.status === 'cancelled') events.push(['cancelled', `${x.subId}:cancelled:${x.startedAt.getTime()}`])
+        else if (x.status === 'past_due') events.push(['failed', `${x.subId}:failed:${x.startedAt.getTime()}:${x.failedCharges}`])
+        // "Confirmed" once per subscription even if fast renewals happened before this check; then one receipt per new charge level.
+        if (cycles >= 1n) events.push(['started', `${x.subId}:started:${x.startedAt.getTime()}`])
+        if (cycles >= 2n) events.push(['renewed', `${x.subId}:charge:${x.startedAt.getTime()}:${x.charged}`])
+        if (x.status !== 'cancelled' && x.charged + x.amount > x.cap) events.push(['ended', `${x.subId}:ended:${x.startedAt.getTime()}`])
+        for (const [event, key] of events) {
+          if (seen.has(key)) continue
+          seen.add(key)
+          if (first) continue
+          this.mail.onSubscription({
+            event, subId: x.subId, payer: x.payer, amount: x.amount.toString(), charged: x.charged.toString(), cap: x.cap.toString(),
+            interval: x.interval, nextChargeAt: x.nextChargeAt.getTime(), failedCharges: x.failedCharges, txHash: x.lastTxHash,
+          }, key)
+          queued++
+        }
+      }
+      return queued
+    },
+
     /** Cancel on-chain as the merchant. */
     cancel: async (subId: Hex): Promise<{ txHash: Hex }> => {
       const address = requireSubscriptions(this.network)
@@ -843,14 +892,31 @@ export class Sableye {
    */
   indexer(options: IndexerOptions = {}): Indexer {
     requireProcessor(this.network)
-    this.attachedIndexer = new Indexer(this.client, this.network, this.merchant, options)
+    const idx = (this.attachedIndexer = new Indexer(this.client, this.network, this.merchant, options))
     // Emails only enqueue here, so they never slow down or break indexing.
-    this.attachedIndexer.on('*', async (e) => {
+    idx.on('*', async (e) => {
       if (e.type === 'invoice.paid') await this.onPaid(e.data.orderId as Hex)
       this.records.onEvent(e)
       await this.mail.onEvent(e)
     })
-    return this.attachedIndexer
+    // A running indexer means a long-running server: it also watches subscriptions for their emails.
+    if (this.mail.emails.enabled && this.network.subscriptions && this.network.subscriptions !== zeroAddress) {
+      let timer: ReturnType<typeof setInterval> | undefined
+      const start = idx.start.bind(idx)
+      const stop = idx.stop.bind(idx)
+      idx.start = async () => {
+        void this.subscriptions.checkEmails().catch(() => {})
+        timer ??= setInterval(() => void this.subscriptions.checkEmails().catch(() => {}), options.subscriptionEmailsMs ?? 60_000)
+        timer.unref?.()
+        return start()
+      }
+      idx.stop = () => {
+        clearInterval(timer)
+        timer = undefined
+        stop()
+      }
+    }
+    return idx
   }
 
   /**

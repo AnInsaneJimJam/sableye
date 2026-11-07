@@ -7,7 +7,7 @@ import { HighlightedCode } from "./highlighted-code";
 import { useDemoValues } from "./live-example";
 import type { Product, ProductSlug } from "@/lib/sandbox/products";
 
-/** Switch between the Sableye integration and its Stripe equivalent. */
+/** Switch between the Sableye integration and its Stripe equivalent (when there is one). */
 export function CodeCompare({
   code,
   product,
@@ -22,7 +22,10 @@ export function CodeCompare({
   const [copiedCode, setCopiedCode] = useState("");
   const id = useId();
   const examples = liveCode(product, code, useDemoValues());
-  const ex = examples[tab];
+  const tabs = examples.stripe
+    ? (["sableye", "stripe"] as const)
+    : (["sableye"] as const);
+  const ex = examples[tab] ?? examples.sableye;
   const select = (next: typeof tab) => {
     setTab(next);
     setCopyState("idle");
@@ -53,22 +56,23 @@ export function CodeCompare({
               ?.focus();
           }}
         >
-          {(["sableye", "stripe"] as const).map((t) => (
-            <SandboxButton
-              key={t}
-              size="default"
-              type="button"
-              role="tab"
-              id={`${id}-${t}`}
-              data-implementation={t}
-              aria-selected={tab === t}
-              aria-controls={`${id}-code`}
-              tabIndex={tab === t ? 0 : -1}
-              onClick={() => select(t)}
-            >
-              {t === "sableye" ? "Sableye" : "Stripe"}
-            </SandboxButton>
-          ))}
+          {tabs.length > 1 &&
+            tabs.map((t) => (
+              <SandboxButton
+                key={t}
+                size="default"
+                type="button"
+                role="tab"
+                id={`${id}-${t}`}
+                data-implementation={t}
+                aria-selected={tab === t}
+                aria-controls={`${id}-code`}
+                tabIndex={tab === t ? 0 : -1}
+                onClick={() => select(t)}
+              >
+                {t === "sableye" ? "Sableye" : "Stripe"}
+              </SandboxButton>
+            ))}
         </div>
         <SandboxButton
           size="default"

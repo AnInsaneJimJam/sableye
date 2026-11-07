@@ -20,11 +20,15 @@ export interface Product {
   tagline: string;
   /** One paragraph: what it does for a business. */
   summary: string;
-  stripe: { name: string; how: string };
+  /** How Stripe does it. Absent where there's no fair equivalent (e.g. developer tooling). */
+  stripe?: { name: string; how: string };
   /** The bits that differ from Stripe, as short facts. */
   differences: string[];
   steps: string[];
-  code: { sableye: { file: string; code: string }; stripe: { file: string; code: string } };
+  code: {
+    sableye: { file: string; code: string };
+    stripe?: { file: string; code: string };
+  };
 }
 
 export const products: Product[] = [
@@ -35,9 +39,22 @@ export const products: Product[] = [
     tagline: "Signed payment requests. No gas, no database.",
     summary:
       "Your server signs an invoice for an order: amount, payout wallet, expiry. It costs nothing and sends no transaction. The customer can pay it exactly once, for exactly that amount, to exactly that wallet.",
-    stripe: { name: "PaymentIntents / Invoices", how: "Four API calls create a customer, a draft invoice and a line item, then finalize it. Stripe stores it and is the source of truth." },
-    differences: ["Coupons are applied before signing: the contract only ever sees the final amount, so a customer can't edit the discount", "Signed locally in milliseconds; nothing is stored anywhere until it's paid", "Pay-once and exact amount are enforced by the contract, not by a vendor", "The blockchain is the source of truth: nobody can alter or lose a payment"],
-    steps: ["Server signs the invoice (EIP-712)", "Customer opens the checkout link", "Contract checks the signature, expiry and pay-once", "USDT moves straight to your wallet"],
+    stripe: {
+      name: "PaymentIntents / Invoices",
+      how: "Four API calls create a customer, a draft invoice and a line item, then finalize it. Stripe stores it and is the source of truth.",
+    },
+    differences: [
+      "Coupons are applied before signing: the contract only ever sees the final amount, so a customer can't edit the discount",
+      "Signed locally in milliseconds; nothing is stored anywhere until it's paid",
+      "Pay-once and exact amount are enforced by the contract, not by a vendor",
+      "The blockchain is the source of truth: nobody can alter or lose a payment",
+    ],
+    steps: [
+      "Server signs the invoice (EIP-712)",
+      "Customer opens the checkout link",
+      "Contract checks the signature, expiry and pay-once",
+      "USDT moves straight to your wallet",
+    ],
     code: {
       sableye: {
         file: "app/api/invoice/route.ts",
@@ -85,9 +102,21 @@ const final = await stripe.invoices.finalizeInvoice(invoice.id)
     tagline: "A drop-in widget that pays from any wallet.",
     summary:
       "One React component runs the whole flow inside your page: verify the invoice, connect the wallet, switch to Whitechain, check the balance, then pay the best way the token supports, falling back automatically.",
-    stripe: { name: "Payment Element / Embedded Checkout", how: "An iframe from Stripe.js collects card details inside your page and confirms the PaymentIntent." },
-    differences: ["No iframe, no card data: the wallet signs, so no payment data touches your page", "The invoice and the balance are checked before the customer is asked for anything", "Picks gasless → permit → approve automatically"],
-    steps: ["Verify invoice (signature, expiry, contract)", "Connect wallet and switch network", "Check balance before any prompt", "Sign or confirm, then the receipt"],
+    stripe: {
+      name: "Payment Element / Embedded Checkout",
+      how: "An iframe from Stripe.js collects card details inside your page and confirms the PaymentIntent.",
+    },
+    differences: [
+      "No iframe, no card data: the wallet signs, so no payment data touches your page",
+      "The invoice and the balance are checked before the customer is asked for anything",
+      "Picks gasless → permit → approve automatically",
+    ],
+    steps: [
+      "Verify invoice (signature, expiry, contract)",
+      "Connect wallet and switch network",
+      "Check balance before any prompt",
+      "Sign or confirm, then the receipt",
+    ],
     code: {
       sableye: {
         file: "components/pay.tsx",
@@ -125,9 +154,21 @@ export function Pay({ invoice }) {
     tagline: "One permanent link. Every visit is its own order.",
     summary:
       "Create a link for a product and share it anywhere: an invoice email, a QR code, a chat. Every visitor gets a fresh pay-once invoice, so refunds, webhooks and exports still work per order.",
-    stripe: { name: "Payment Links", how: "A permanent hosted URL for a product price; each visit creates a Checkout Session." },
-    differences: ["The price lives inside the link, signed by your key: an edited link is rejected", "No vendor-hosted page: one route on your server", "Deactivate any time; already-opened invoices simply expire"],
-    steps: ["Create the link (signed, nothing on-chain)", "Customer scans or opens it", "Your server mints a fresh invoice", "Customer pays; each visit is a separate order"],
+    stripe: {
+      name: "Payment Links",
+      how: "A permanent hosted URL for a product price; each visit creates a Checkout Session.",
+    },
+    differences: [
+      "The price lives inside the link, signed by your key: an edited link is rejected",
+      "No vendor-hosted page: one route on your server",
+      "Deactivate any time; already-opened invoices simply expire",
+    ],
+    steps: [
+      "Create the link (signed, nothing on-chain)",
+      "Customer scans or opens it",
+      "Your server mints a fresh invoice",
+      "Customer pays; each visit is a separate order",
+    ],
     code: {
       sableye: {
         file: "app/api/pay/route.ts",
@@ -162,9 +203,21 @@ await stripe.paymentLinks.update(link.id, { active: false })`,
     tagline: "Your customer signs. You pay the network fee.",
     summary:
       "Customers holding only USDT can pay. They sign one authorization; your server submits it and pays the WBT fee (about a hundredth of a cent). The authorization is bound to the invoice, so it can't be redirected or reused.",
-    stripe: { name: "No equivalent", how: "Card customers never pay network fees. On a blockchain they normally do. This removes that step entirely." },
-    differences: ["Zero crypto steps for the customer: no gas token, no transaction to confirm", "The relayer only sponsors your own invoices and simulates before sending", "One sponsored transaction per invoice: it can't be drained"],
-    steps: ["Customer signs ReceiveWithAuthorization (EIP-3009)", "Checkout posts it to your relay route", "Server simulates, then submits and pays the WBT fee", "USDT lands in your wallet"],
+    stripe: {
+      name: "No equivalent",
+      how: "Card customers never pay network fees. On a blockchain they normally do. This removes that step entirely.",
+    },
+    differences: [
+      "Zero crypto steps for the customer: no gas token, no transaction to confirm",
+      "The relayer only sponsors your own invoices and simulates before sending",
+      "One sponsored transaction per invoice: it can't be drained",
+    ],
+    steps: [
+      "Customer signs ReceiveWithAuthorization (EIP-3009)",
+      "Checkout posts it to your relay route",
+      "Server simulates, then submits and pays the WBT fee",
+      "USDT lands in your wallet",
+    ],
     code: {
       sableye: {
         file: "app/api/relay/route.ts",
@@ -179,8 +232,11 @@ export const POST = sableye.relayHandler()
 export const OPTIONS = POST
 // <Checkout/> uses it automatically.`,
       },
-      stripe: { file: "n/a", code: `// Stripe has no equivalent: card payments
-// never ask the customer to pay a network fee.` },
+      stripe: {
+        file: "n/a",
+        code: `// Stripe has no equivalent: card payments
+// never ask the customer to pay a network fee.`,
+      },
     },
   },
   {
@@ -190,9 +246,21 @@ export const OPTIONS = POST
     tagline: "Refund on-chain, capped at what was paid.",
     summary:
       "Refund all or part of an order back to the customer's wallet, in one call. The contract caps refunds at the amount paid. Cancel an unpaid invoice, or revoke every outstanding one at once.",
-    stripe: { name: "Refunds / void invoice", how: "Refund a charge in full or part; void an open invoice; deactivate a link. Customers can also file chargebacks." },
-    differences: ["No chargebacks: only the merchant can refund", "Refund ≤ paid is enforced by the contract", "No setup step: missing allowance is approved for the exact refund amount; existing approvals are reused"],
-    steps: ["Refund all or part of a paid order, in one call", "SDK approves exactly that amount (if needed), then refunds", "USDT returns to the payer's wallet", "Unpaid invoices can be cancelled on-chain"],
+    stripe: {
+      name: "Refunds / void invoice",
+      how: "Refund a charge in full or part; void an open invoice; deactivate a link. Customers can also file chargebacks.",
+    },
+    differences: [
+      "No chargebacks: only the merchant can refund",
+      "Refund ≤ paid is enforced by the contract",
+      "No setup step: missing allowance is approved for the exact refund amount; existing approvals are reused",
+    ],
+    steps: [
+      "Refund all or part of a paid order, in one call",
+      "SDK approves exactly that amount (if needed), then refunds",
+      "USDT returns to the payer's wallet",
+      "Unpaid invoices can be cancelled on-chain",
+    ],
     code: {
       sableye: {
         file: "server.ts",
@@ -219,9 +287,21 @@ await stripe.invoices.voidInvoice('in_125')`,
     tagline: "Recurring USDT, with a cap the customer sets.",
     summary:
       "The customer subscribes once and sets a spending cap. The plan charges once per interval, never more often and never above the cap. A failed charge goes past-due and retries; three in a row cancels. The payer or merchant can cancel on-chain.",
-    stripe: { name: "Billing subscriptions", how: "Prices with a recurring interval; Smart Retries and dunning for failed payments; test clocks to simulate time." },
-    differences: ["The customer, not the merchant, sets the maximum total", "One charge per interval is enforced by the contract", "This demo plan renews every 2 minutes so you can watch it"],
-    steps: ["Merchant signs a plan", "Customer approves a cap and subscribes (first cycle paid)", "A keeper charges each interval", "Failed → past-due → retry; cancel stops everything"],
+    stripe: {
+      name: "Billing subscriptions",
+      how: "Prices with a recurring interval; Smart Retries and dunning for failed payments; test clocks to simulate time.",
+    },
+    differences: [
+      "The customer, not the merchant, sets the maximum total",
+      "One charge per interval is enforced by the contract",
+      "This demo plan renews every 2 minutes so you can watch it",
+    ],
+    steps: [
+      "Merchant signs a plan",
+      "Customer approves a cap and subscribes (first cycle paid)",
+      "A keeper charges each interval",
+      "Failed → past-due → retry; cancel stops everything",
+    ],
     code: {
       sableye: {
         file: "server.ts",
@@ -253,9 +333,22 @@ await stripe.subscriptions.create({
     tagline: "Pending, safe, final. Signed and de-duplicated.",
     summary:
       "An indexer follows your payments on-chain with a block cursor, backfill and reorg rollback. Each payment moves from pending to safe to final, and every step is delivered to your server as an HMAC-signed webhook with a stable id.",
-    stripe: { name: "Webhooks + Events", how: "Stripe signs events with a Stripe-Signature header; you verify them with constructEvent." },
-    differences: ["Replay any past event with indexer.resend(id); develop locally with npx sableye listen", "Confirmation depth is explicit: fulfil at pending, safe or final", "A reorg emits invoice.reorged instead of silently changing history", "Same signing scheme as Stripe: t=…,v1=HMAC"],
-    steps: ["Payment included in a block: invoice.paid", "Chain's safe head passes it: invoice.safe", "Finalized on Ethereum: invoice.final", "Your endpoint verifies and dedupes by id"],
+    stripe: {
+      name: "Webhooks + Events",
+      how: "Stripe signs events with a Stripe-Signature header; you verify them with constructEvent.",
+    },
+    differences: [
+      "Replay any past event with indexer.resend(id); develop locally with npx sableye listen",
+      "Confirmation depth is explicit: fulfil at pending, safe or final",
+      "A reorg emits invoice.reorged instead of silently changing history",
+      "Same signing scheme as Stripe: t=…,v1=HMAC",
+    ],
+    steps: [
+      "Payment included in a block: invoice.paid",
+      "Chain's safe head passes it: invoice.safe",
+      "Finalized on Ethereum: invoice.final",
+      "Your endpoint verifies and dedupes by id",
+    ],
     code: {
       sableye: {
         file: "server.ts",
@@ -293,9 +386,21 @@ if (event.type === 'payment_intent.succeeded') fulfil(event.data.object)`,
     tagline: "Your books, checked against the chain.",
     summary:
       "Reconcile compares every indexed payment with the contract's on-chain receipt. Export gives your accountant a CSV with amounts, refunds, net, payer, transaction and explorer link.",
-    stripe: { name: "Reports & reconciliation", how: "Balance and payout reconciliation reports, downloadable from the dashboard or the Reporting API." },
-    differences: ["Verifiable by anyone: every row links to its on-chain transaction", "Reconcile reads the contract directly, so there's no vendor to trust", "Net = paid − refunded, per order"],
-    steps: ["Indexer records every payment and refund", "Reconcile re-reads each receipt on-chain", "Any difference is listed", "Export the CSV"],
+    stripe: {
+      name: "Reports & reconciliation",
+      how: "Balance and payout reconciliation reports, downloadable from the dashboard or the Reporting API.",
+    },
+    differences: [
+      "Verifiable by anyone: every row links to its on-chain transaction",
+      "Reconcile reads the contract directly, so there's no vendor to trust",
+      "Net = paid − refunded, per order",
+    ],
+    steps: [
+      "Indexer records every payment and refund",
+      "Reconcile re-reads each receipt on-chain",
+      "Any difference is listed",
+      "Export the CSV",
+    ],
     code: {
       sableye: {
         file: "server.ts",
@@ -320,9 +425,20 @@ const stats = indexer.stats()                 // volume, refund rate, conversion
     tagline: "Revenue over time, refunds, conversion, MRR and churn.",
     summary:
       "The numbers a business watches, computed from on-chain data: payment volume, refund rate, invoice conversion, and for subscriptions MRR, churn and failed-charge rate.",
-    stripe: { name: "Dashboard home & Billing analytics", how: "Gross volume, successful payments, MRR, churn and retries in the Stripe Dashboard." },
-    differences: ["Computed from events anyone can audit", "No vendor database: lose the server, rebuild from the chain", "MRR is normalised to 30 days for any interval"],
-    steps: ["Indexer stats and a revenue series for one-off payments", "Subscription stats from contract events", "Rendered here, refreshed live"],
+    stripe: {
+      name: "Dashboard home & Billing analytics",
+      how: "Gross volume, successful payments, MRR, churn and retries in the Stripe Dashboard.",
+    },
+    differences: [
+      "Computed from events anyone can audit",
+      "No vendor database: lose the server, rebuild from the chain",
+      "MRR is normalised to 30 days for any interval",
+    ],
+    steps: [
+      "Indexer stats and a revenue series for one-off payments",
+      "Subscription stats from contract events",
+      "Rendered here, refreshed live",
+    ],
     code: {
       sableye: {
         file: "server.ts",
@@ -336,8 +452,11 @@ usdt.averageOrder
 const { mrr, churnRate, failedChargeRate, active } =
   await sableye.subscriptions.stats()`,
       },
-      stripe: { file: "n/a", code: `// Stripe: Dashboard → Home and Billing → Overview.
-// The API exposes the raw objects; analytics live in the UI.` },
+      stripe: {
+        file: "n/a",
+        code: `// Stripe: Dashboard → Home and Billing → Overview.
+// The API exposes the raw objects; analytics live in the UI.`,
+      },
     },
   },
   {
@@ -347,14 +466,22 @@ const { mrr, churnRate, failedChargeRate, active } =
     tagline: "Payments and subscriptions, in your hands.",
     summary:
       "The merchant's own view. Every invoice the business issued, with its status read from Whitechain (open, paid, partially refunded, refunded, cancelled): refund it in full or in part, cancel an unpaid one, download the receipt. Below, every subscription with the cycles charged and the next charge. Each record shows whether it's on Arkiv, owned by the merchant's wallet.",
-    stripe: { name: "Dashboard → Payments, Invoices and Subscriptions", how: "Stripe's dashboard shows what Stripe holds: the money and the records sit in Stripe's account until payout." },
+    stripe: {
+      name: "Dashboard → Payments, Invoices and Subscriptions",
+      how: "Stripe's dashboard shows what Stripe holds: the money and the records sit in Stripe's account until payout.",
+    },
     differences: [
       "Status comes from the chain, not a vendor's database: a payment is paid because Whitechain says so",
       "Refunds go from the merchant's own wallet straight back to the payer, capped on-chain at what was paid",
       "Subscriptions are charged by the merchant's keeper against a cap the customer approved",
       "Every paid invoice and subscription is also on Arkiv, so the books survive without this server",
     ],
-    steps: ["Customers pay invoices and subscribe", "The indexer reads InvoicePaid, refunds and Charged events", "The merchant refunds or cancels from this view", "Paid records are published to Arkiv at Whitechain's safe head"],
+    steps: [
+      "Customers pay invoices and subscribe",
+      "The indexer reads InvoicePaid, refunds and Charged events",
+      "The merchant refunds or cancels from this view",
+      "Paid records are published to Arkiv at Whitechain's safe head",
+    ],
     code: {
       sableye: {
         file: "dashboard.ts",
@@ -378,14 +505,22 @@ const subs = await stripe.subscriptions.list()`,
     tagline: "Your records. Your wallet. Read them anywhere.",
     summary:
       "Every paid invoice and refund is published to Arkiv, signed by your merchant key, so your wallet owns the records. Any app (your accountant's, a tax tool, a lender) can read them without our server or our permission. Amounts and tx hashes are public, because they already are on-chain; order references, items and customer details are encrypted with your view key.",
-    stripe: { name: "Sigma / Data Pipeline / CSV exports", how: "Your payment data lives in Stripe's database. You read it through Stripe's API, Sigma (paid) or exports, with Stripe's keys and permission." },
+    stripe: {
+      name: "Sigma / Data Pipeline / CSV exports",
+      how: "Your payment data lives in Stripe's database. You read it through Stripe's API, Sigma (paid) or exports, with Stripe's keys and permission.",
+    },
     differences: [
       "The records belong to the merchant's wallet, not to a vendor's database",
       "This page reads them with no Sableye code: only the Arkiv SDK and viem",
       "Each record is verified against its Whitechain transaction before it counts",
       "Private columns are AES-GCM encrypted; share the view key only with your accountant",
     ],
-    steps: ["Payment reaches Whitechain's safe head", "The merchant's server writes a sableye.invoice.v1 entity, owned by its wallet", "Any app queries ownedBy(merchant), checks each tx_hash on-chain", "With the view key, it decrypts order and customer details"],
+    steps: [
+      "Payment reaches Whitechain's safe head",
+      "The merchant's server writes a sableye.invoice.v1 entity, owned by its wallet",
+      "Any app queries ownedBy(merchant), checks each tx_hash on-chain",
+      "With the view key, it decrypts order and customer details",
+    ],
     code: {
       sableye: {
         file: "books.ts (any app; no Sableye import)",
@@ -414,26 +549,37 @@ const charges = await stripe.charges.list({ limit: 100 })
     tagline: "Doctor, scaffolder, MCP server, Agent Skill.",
     summary:
       "Check a setup in one command, scaffold a working store, let an AI agent manage invoices without spending power, and integrate with an Agent Skill that passed our AI eval 3 out of 3 times.",
-    stripe: { name: "Stripe CLI, samples, agent toolkit", how: "stripe listen / trigger, stripe samples create, and an MCP server for agents." },
-    differences: ["doctor checks the SDK's invoice hash against the deployed contract", "MCP refunds return an unsigned transaction: agents never move money out", "Every error carries a remedy string, for people and agents"],
-    steps: ["npx sableye create --name my-store", "npx sableye doctor", "claude mcp add sableye -- npx sableye mcp", "Ship"],
+    differences: [
+      "doctor checks the SDK's invoice hash against the deployed contract",
+      "MCP refunds return an unsigned transaction: agents never move money out",
+      "Every error carries a remedy string, for people and agents",
+    ],
+    steps: [
+      "npx sableye create --name my-store",
+      "npx sableye doctor",
+      "claude mcp add sableye -- npx sableye mcp",
+      "Ship",
+    ],
     code: {
       sableye: {
         file: "terminal",
-        code: `npx sableye create --name my-store
-cd my-store && npm install
+        code: `npx sableye init            # existing app: settings, .env, your AI agent + its prompt
+npx sableye create --name my-store   # or a new store
 npx sableye doctor          # RPC, chain, contract, token, key
+npx sableye listen --forward-to http://localhost:3000/api/webhook
 
 # Let an AI agent manage invoices (refunds come back unsigned)
 claude mcp add sableye -e MERCHANT_KEY=0x… -- npx sableye mcp`,
       },
-      stripe: { file: "terminal", code: `stripe samples create accept-a-payment
-stripe login
-stripe listen --forward-to localhost:3000/webhook
-stripe trigger payment_intent.succeeded` },
     },
   },
 ];
 
-export const productBySlug = (slug: string) => products.find((p) => p.slug === slug);
-export const groups = ["Accept payments", "Manage", "Operate", "Developers"] as const;
+export const productBySlug = (slug: string) =>
+  products.find((p) => p.slug === slug);
+export const groups = [
+  "Accept payments",
+  "Manage",
+  "Operate",
+  "Developers",
+] as const;

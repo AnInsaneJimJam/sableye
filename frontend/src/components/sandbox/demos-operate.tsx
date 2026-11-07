@@ -11,7 +11,6 @@ import {
   CircleAlert,
   Download,
   Mail,
-  Play,
   RefreshCw,
   ShieldCheck,
   Stethoscope,
@@ -303,6 +302,7 @@ export function SubscriptionsDemo() {
   const [provider, setProvider] = useState<WalletProvider>();
   const [account, setAccount] = useState<Address>();
   const [cycles, setCycles] = useDemoField<number>("cycles", 3);
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<ApiError>();
   const { data: sub, reload } = useApi<Sub>(
@@ -381,17 +381,6 @@ export function SubscriptionsDemo() {
     }
     setBusy(undefined);
   };
-  const renew = async () => {
-    setBusy("renew");
-    setError(undefined);
-    try {
-      await post("/api/sandbox/renewals");
-      await Promise.all([reload(), reloadAll()]);
-    } catch (e) {
-      setError(e as ApiError);
-    }
-    setBusy(undefined);
-  };
 
   if (!offer)
     return (
@@ -406,7 +395,12 @@ export function SubscriptionsDemo() {
     expiry: BigInt(offer.plan.expiry),
   };
   const cap = plan.amount * BigInt(cycles);
-  const live = sub && (sub.status === "active" || sub.status === "past_due");
+  const onChainActive =
+    !!sub && (sub.status === "active" || sub.status === "past_due");
+  // A subscription whose cap can't cover another period has ended, though the contract still says "active".
+  const ended =
+    onChainActive && BigInt(sub.charged) + plan.amount > BigInt(sub.cap);
+  const live = onChainActive && !ended;
   const secsLeft =
     sub && now
       ? Math.max(
@@ -415,6 +409,30 @@ export function SubscriptionsDemo() {
         )
       : 0;
   const subscribe = async () => {
+    // Saved before subscribing (the subscription id is known in advance), so the confirmation email can't miss it.
+    if (email.trim()) {
+      try {
+        await post("/api/sandbox/subscription/customer", {
+          payer: account,
+          period,
+          email: email.trim(),
+        });
+      } catch (e) {
+        return setError(e as ApiError);
+      }
+    }
+    // The contract only allows a new subscription to the same plan once the old one is closed.
+    if (ended && sub)
+      await send("close", (w) =>
+        w.writeContract({
+          address: offer.subscriptions,
+          abi: subscriptionManagerAbi,
+          functionName: "cancel",
+          args: [sub.subId],
+          account: account as Address,
+          chain: net.chain,
+        }),
+      );
     const allowance = await reader.readContract({
       address: plan.token,
       abi: erc20Abi,
@@ -442,6 +460,11 @@ export function SubscriptionsDemo() {
         chain: net.chain,
       }),
     );
+    // Tell the merchant's keeper now, so even a 5-second plan renews on time (otherwise it finds it within minutes).
+    await post("/api/sandbox/subscription/track", {
+      payer: account,
+      period,
+    }).catch(() => {});
   };
   return (
     <div className="sbx-stack">
@@ -496,9 +519,6 @@ export function SubscriptionsDemo() {
                   ]}
                 />
                 <div className="sbx-row">
-                  <Btn variant="ghost" busy={busy === "renew"} onClick={renew}>
-                    <Play size={14} /> Run renewals now
-                  </Btn>
                   <Btn
                     variant="ghost"
                     busy={busy === "cancel"}
@@ -540,6 +560,16 @@ export function SubscriptionsDemo() {
                   </select>
                 </label>
                 <label>
+                  Email for receipts (optional)
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                </label>
+                <label>
                   Spending cap
                   <select
                     value={cycles}
@@ -554,16 +584,32 @@ export function SubscriptionsDemo() {
                   </select>
                 </label>
                 <Btn
-                  busy={busy === "approve" || busy === "subscribe"}
+                  busy={
+                    busy === "close" ||
+                    busy === "approve" ||
+                    busy === "subscribe"
+                  }
                   onClick={() => void subscribe()}
                 >
-                  {busy === "approve"
-                    ? "Approving cap…"
-                    : busy === "subscribe"
-                      ? "Subscribing…"
-                      : "Subscribe"}
+                  {busy === "close"
+                    ? "Closing the ended subscription…"
+                    : busy === "approve"
+                      ? "Approving cap…"
+                      : busy === "subscribe"
+                        ? "Subscribing…"
+                        : ended
+                          ? "Subscribe again"
+                          : "Subscribe"}
                 </Btn>
               </div>
+            )}
+            {ended && sub && (
+              <p className="sbx-muted">
+                Your last subscription used its whole {usdt(sub.cap)} USDT cap (
+                {usdt(sub.charged)} charged), so it has ended. Subscribing again
+                first closes it on-chain (one extra signature), then starts a
+                new one.
+              </p>
             )}
             {sub?.status === "cancelled" && (
               <p className="sbx-muted">

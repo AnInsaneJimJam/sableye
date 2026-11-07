@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   fileCouponStore,
   fileOrderStore,
+  fileSubscriberStore,
   fileStore,
   type Indexer,
   type Keeper,
@@ -45,6 +46,7 @@ function boot(): Merchant {
     // to .sableye/ on a normal server; on Vercel they stay in memory (no writable disk).
     ...(process.env.VERCEL !== "1" && {
       orderStore: fileOrderStore(".sableye/orders.json"),
+      subscriberStore: fileSubscriberStore(".sableye/subscribers.json"),
       couponStore: fileCouponStore(".sableye/coupons.json"),
       outbox: { path: ".sableye/outbox.json" },
       ...(process.env.ARKIV_ACCESS_KEY && {
