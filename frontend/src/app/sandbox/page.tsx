@@ -1,4 +1,10 @@
-import { Cabinet, Plot, Relay, Riffle, Terminal } from "@lucasmarkes/hairline/react";
+import {
+  Cabinet,
+  Plot,
+  Relay,
+  Riffle,
+  Terminal,
+} from "@lucasmarkes/hairline/react";
 import {
   ArrowUpRight,
   BookOpen,
@@ -8,6 +14,7 @@ import {
   FileCheck2,
   FileText,
   Link2,
+  PanelsTopLeft,
   Radio,
   RefreshCw,
   Undo2,
@@ -69,6 +76,11 @@ const demos = [
     slug: "reconcile",
     Icon: FileCheck2,
     text: "Check your records. Export your books.",
+  },
+  {
+    slug: "merchant",
+    Icon: PanelsTopLeft,
+    text: "Manage payments and subscriptions in one place.",
   },
   {
     slug: "books",
