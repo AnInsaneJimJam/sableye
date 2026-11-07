@@ -231,14 +231,18 @@ export default function Page() {
 
 ![npx sableye init](docs/readme/screenshots/cli-init.png)
 
-<!-- TODO: add cli-doctor.png, cli-agent-prompt.png, cli-listen.png, cli-create.png and cli-view-key.png to docs/readme/screenshots/ -->
+<!--
+TODO: add cli-doctor.png, cli-agent-prompt.png, cli-listen.png, cli-create.png and cli-view-key.png
+to docs/readme/screenshots/, then uncomment this table and drop the single image above.
 
----|---|
+| **`npx sableye init`** | **`npx sableye doctor`** |
+|---|---|
 | ![sableye init](docs/readme/screenshots/cli-init.png) | ![sableye doctor](docs/readme/screenshots/cli-doctor.png) |
 | **Agent prompt printed by `init`** | **`npx sableye listen`** |
 | ![agent prompt](docs/readme/screenshots/cli-agent-prompt.png) | ![sableye listen](docs/readme/screenshots/cli-listen.png) |
 | **`npx sableye create`** | **`npx sableye view-key`** |
 | ![sableye create](docs/readme/screenshots/cli-create.png) | ![sableye view-key](docs/readme/screenshots/cli-view-key.png) |
+-->
 
 ---
 
@@ -267,9 +271,13 @@ export default function Page() {
 |---|---|
 | ![Invoices](docs/readme/screenshots/sandbox-invoices.png) | ![Payment links](docs/readme/screenshots/sandbox-payment-links.png) |
 
-<!-- TODO: add sandbox-overview, sandbox-checkout, sandbox-gasless, sandbox-refunds, sandbox-subscriptions, sandbox-events, sandbox-reconcile, sandbox-dashboard and sandbox-books PNGs to docs/readme/screenshots/ -->
+<!--
+TODO: add sandbox-overview, sandbox-checkout, sandbox-gasless, sandbox-refunds, sandbox-subscriptions,
+sandbox-events, sandbox-reconcile, sandbox-dashboard and sandbox-books PNGs to
+docs/readme/screenshots/, then uncomment this table and fold the two images above into it.
 
----|---|
+| **Sandbox overview** | **Checkout** |
+|---|---|
 | ![Sandbox overview](docs/readme/screenshots/sandbox-overview.png) | ![Checkout](docs/readme/screenshots/sandbox-checkout.png) |
 | **Gasless checkout** | **Payment links + QR** |
 | ![Gasless](docs/readme/screenshots/sandbox-gasless.png) | ![Payment links](docs/readme/screenshots/sandbox-payment-links.png) |
@@ -279,6 +287,7 @@ export default function Page() {
 | ![Events](docs/readme/screenshots/sandbox-events.png) | ![Reconcile](docs/readme/screenshots/sandbox-reconcile.png) |
 | **Dashboard** | **Books on Arkiv** |
 | ![Dashboard](docs/readme/screenshots/sandbox-dashboard.png) | ![Books](docs/readme/screenshots/sandbox-books.png) |
+-->
 
 ---
 
@@ -292,15 +301,18 @@ export default function Page() {
 - **Reference:** API reference, core utilities, contracts
 - **Resources:** CLI (installation, setup, listen, doctor), deployment, AI & MCP, security, errors & remedies, changelog
 
-### Screenshots
+<!--
+TODO: drop docs-intro.png, docs-quickstart.png, docs-api-reference.png and docs-ai.png into
+docs/readme/screenshots/, then uncomment this section.
 
-<!-- TODO: drop the PNGs into docs/readme/screenshots/ with these names -->
+### Screenshots
 
 | Introduction | Quickstart |
 |---|---|
 | ![Docs introduction](docs/readme/screenshots/docs-intro.png) | ![Docs quickstart](docs/readme/screenshots/docs-quickstart.png) |
 | **API reference** | **AI & MCP** |
 | ![Docs API reference](docs/readme/screenshots/docs-api-reference.png) | ![Docs AI & MCP](docs/readme/screenshots/docs-ai.png) |
+-->
 
 ---
 
@@ -498,6 +510,8 @@ Open an issue on this repo, or email us at _TBD_. <!-- TODO: contact email -->
 - **Finality is a trade-off.** `safe` lags the chain tip by about 19 minutes. The SDK reports pending, safe and final states, and each merchant chooses which one to fulfil on.
 - **The issuer can blacklist addresses** and the chain depends on Whitechain's OP Stack sequencer. Both are outside our control.
 
+---
+
 ## Roadmap
 
 1. **Phase 1, core SDK:** accept, operate (refunds, webhooks, CSV), scale (gasless, subscriptions). ✅ Built.
@@ -506,9 +520,13 @@ Open an issue on this repo, or email us at _TBD_. <!-- TODO: contact email -->
 4. **Phase 4, assurance:** extend the formal verification, and get Certora access if possible.
 5. **Mainnet launch** on Whitechain (chain 1875) as soon as official USDT is live, with pilot merchants first.
 
+---
+
 ## AI usage
 
 Much of this project was written with AI coding assistants (Claude Code), with human review. Every contract change was checked by tests and Slither.
+
+---
 
 ## License
 
