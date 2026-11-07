@@ -149,8 +149,10 @@ The demo is the **Sableye Sandbox** (`/sandbox`), live at **https://sableye.xyz/
 
 | Network | PaymentProcessor | Explorer |
 |---|---|---|
-| Whitechain Sepolia (1874) | PaymentProcessor `0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5` · SubscriptionManager `0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78` | [processor ✅ verified](https://explorer.testnet.whitechain.io/address/0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5) · [subscriptions ✅ verified](https://explorer.testnet.whitechain.io/address/0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78) |
+| Whitechain Sepolia (1874) | PaymentProcessor `0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5` · SubscriptionManager `0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78` | [processor ✅ verified](https://explorer.testnet.whitechain.io/address/0x8312552Ec716F0c159D88F73230Fff98C4aeCfB5?tab=contract) · [subscriptions ✅ verified](https://explorer.testnet.whitechain.io/address/0x4E2571F08f6399b769F5F04ED7a54CE55729Bb78?tab=contract) |
 | Whitechain mainnet (1875) | _pending; official USDT isn't on mainnet yet_ | |
+
+Both contracts are **fully verified** on the Whitechain explorer (exact match, Solidity 0.8.30), deployed from commit `6213a42` (`sdk/contracts/broadcast/Deploy.s.sol/1874/run-latest.json`). The verified source is byte-identical to `sdk/contracts/src` in this repo, all 26 and 24 files including the OpenZeppelin dependencies, so what you read on the explorer is the code that's tested and formally verified here.
 
 **Real USDT payment:** 1 USDT for order `chai_order_3`, paid through the hosted checkout with `payWithPermit` (one transaction, no approve): [0x4229f7de…c4e9](https://explorer.testnet.whitechain.io/tx/0x4229f7de327de2a1c9e48660cc225483cba6430e3ec5ee51152ed4a99149c4e9). Payer `0x3Cf8…897a` → merchant `0xF9B1…EE08`; the processor's balance stayed 0.
 
